@@ -1,0 +1,133 @@
+/* SIDEBAR ENTERPRISE STYLING */
+
+.sidebar-enterprise {
+  background: #1a1f36;
+  color: #f8fafc;
+  padding: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, #1a1f36 0%, #0f1523 100%);
+}
+
+.sidebar-logo {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* SECTION STRUCTURE */
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nav-section-label {
+  padding: 12px 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #8893a6;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* NAVIGATION LINKS */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  color: #cbd5e1;
+  font-weight: 500;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  border-left: 3px solid transparent;
+  margin: 0 8px;
+  border-radius: 0 8px 8px 0;
+}
+
+.nav-link:hover {
+  background: rgba(15, 90, 255, 0.08);
+  color: #fff;
+  border-left-color: rgba(15, 90, 255, 0.3);
+}
+
+.nav-link.active {
+  background: rgba(15, 90, 255, 0.12);
+  color: #0f5aff;
+  border-left-color: #0f5aff;
+  font-weight: 600;
+}
+
+.nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.nav-text {
+  flex: 1;
+}
+
+/* RESPONSIVE BEHAVIOR */
+@media (max-width: 900px) {
+  .sidebar-enterprise {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 260px;
+    transform: translateX(-110%);
+    z-index: 30;
+    box-shadow: 10px 0 45px rgba(0, 0, 0, 0.3);
+  }
+
+  .sidebar-enterprise.sidebar-open {
+    transform: translateX(0);
+  }
+}
+
+/* SCROLLBAR STYLING */
+.sidebar-enterprise::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-enterprise::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-enterprise::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.sidebar-enterprise::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
