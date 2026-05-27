@@ -1,99 +1,109 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import ReportFilters from "../components/reports/ReportFilters";
+import ReportsTable from "../components/reports/ReportsTable";
+import ReportAnalytics from "../components/reports/ReportAnalytics";
+import ReportHistory from "../components/reports/ReportHistory";
+import "./reports.css";
 
 function Reports() {
-  const [activeTab, setActiveTab] = useState("events");
-  const [eventForm, setEventForm] = useState({ title: "", description: "", projectId: "", headId: "" });
-  const [events, setEvents] = useState([]);
-  const [templateForm, setTemplateForm] = useState({ name: "UC Basic Template", type: "UC", json: "{\"sections\":[{\"title\":\"Grant Summary\"}]}" , html: "<h1>{{ project_name }}</h1><p>Total spent: {{ total_spent }}</p>" });
-  const [placeholders, setPlaceholders] = useState([]);
-  const [previewHtml, setPreviewHtml] = useState("");
+  const [reports, setReports] = useState([]);
+  const [appliedFilters, setAppliedFilters] = useState({});
 
-  const handleEventChange = (event) => {
-    const { name, value } = event.target;
-    setEventForm((current) => ({ ...current, [name]: value }));
+  useEffect(() => {
+    const savedReports = localStorage.getItem("reports");
+    if (savedReports) {
+      setReports(JSON.parse(savedReports));
+    } else {
+      // Initialize with sample data
+      const sampleReports = [
+        {
+          id: "RPT-001",
+          name: "UC Basic Template Report",
+          department: "Finance",
+          generatedBy: "Admin",
+          createdDate: new Date().toISOString(),
+          status: "Generated",
+          reportType: "UC",
+          exportType: "PDF",
+        },
+        {
+          id: "RPT-002",
+          name: "Statement of Expenditure Q1",
+          department: "Operations",
+          generatedBy: "Manager",
+          createdDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "Generated",
+          reportType: "SoE",
+          exportType: "CSV",
+        },
+      ];
+      setReports(sampleReports);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("reports", JSON.stringify(reports));
+  }, [reports]);
+
+  const handleApplyFilters = (filters) => {
+    setAppliedFilters(filters);
   };
 
-  const createEvent = () => {
-    setEvents((current) => [...current, { id: current.length + 1, title: eventForm.title || "New event", project: eventForm.projectId, head: eventForm.headId, start: new Date().toISOString().slice(0, 10) }]);
-    setEventForm({ title: "", description: "", projectId: "", headId: "" });
+  const handleGenerateReport = () => {
+    const newReport = {
+      id: `RPT-${String(reports.length + 1).padStart(3, "0")}`,
+      name: "New Report - " + new Date().toLocaleDateString(),
+      department: appliedFilters.department || "General",
+      generatedBy: "Current User",
+      createdDate: new Date().toISOString(),
+      status: "Generated",
+      reportType: appliedFilters.reportType || "General",
+      exportType: "PDF",
+    };
+    setReports((prev) => [newReport, ...prev]);
   };
 
-  const savePlaceholder = () => {
-    setPlaceholders((current) => [...current, { id: current.length + 1, name: `Placeholder ${current.length + 1}` }]);
-  };
-
-  const generateReport = () => {
-    setPreviewHtml(`<div><h2>${templateForm.name}</h2><p>Generated report preview</p></div>`);
+  const handleDeleteReport = (reportId) => {
+    if (window.confirm("Are you sure you want to delete this report?")) {
+      setReports((prev) => prev.filter((r) => r.id !== reportId));
+    }
   };
 
   return (
-    <main className="page page-reports">
-      <section className="card">
-        <h2>Events & Reports</h2>
-        <div className="tab-row">
-          <button type="button" className={activeTab === "events" ? "active" : ""} onClick={() => setActiveTab("events")}>Events</button>
-          <button type="button" className={activeTab === "reports" ? "active" : ""} onClick={() => setActiveTab("reports")}>Reports</button>
+    <div className="reports-page">
+      <div className="page-header">
+        <h1 className="page-title">Reports Management</h1>
+        <div className="breadcrumb">
+          <span>Home</span>
+          <span className="separator">/</span>
+          <span>Reports</span>
         </div>
+      </div>
 
-        {activeTab === "events" ? (
-          <div className="subview active">
-            <div className="grid2">
-              <input name="title" value={eventForm.title} onChange={handleEventChange} placeholder="Event title" />
-              <input name="description" value={eventForm.description} onChange={handleEventChange} placeholder="Description" />
-              <input name="projectId" value={eventForm.projectId} onChange={handleEventChange} placeholder="Project ID" />
-              <input name="headId" value={eventForm.headId} onChange={handleEventChange} placeholder="Budget Head ID" />
-            </div>
-            <div className="row">
-              <button type="button" onClick={createEvent}>Create Event</button>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Title</th>
-                  <th>Project</th>
-                  <th>Budget Head</th>
-                  <th>Start</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id}>
-                    <td>{event.id}</td>
-                    <td>{event.title}</td>
-                    <td>{event.project}</td>
-                    <td>{event.head}</td>
-                    <td>{event.start}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="reports-container">
+        <ReportAnalytics reports={reports} />
+
+        <div className="reports-main">
+          <ReportFilters onApplyFilters={handleApplyFilters} />
+
+          <div className="generation-actions">
+            <button onClick={handleGenerateReport} className="btn-generate">
+              📊 Generate Report
+            </button>
+            <button className="btn-export-pdf">
+              📥 Export PDF
+            </button>
+            <button className="btn-export-csv">
+              📥 Export CSV
+            </button>
           </div>
-        ) : (
-          <div className="subview active">
-            <h3>Template & Builder</h3>
-            <div className="grid2">
-              <input name="name" value={templateForm.name} onChange={(event) => setTemplateForm((current) => ({ ...current, name: event.target.value }))} placeholder="Template name" />
-              <select name="type" value={templateForm.type} onChange={(event) => setTemplateForm((current) => ({ ...current, type: event.target.value }))}>
-                <option>UC</option>
-                <option>SoE</option>
-                <option>PriorApproval</option>
-                <option>EventReport</option>
-                <option>Newsletter</option>
-              </select>
-            </div>
-            <textarea value={templateForm.json} rows={4} onChange={(event) => setTemplateForm((current) => ({ ...current, json: event.target.value }))} />
-            <textarea value={templateForm.html} rows={4} onChange={(event) => setTemplateForm((current) => ({ ...current, html: event.target.value }))} />
-            <div className="row">
-              <button type="button" onClick={savePlaceholder}>Save Placeholder</button>
-              <button type="button" onClick={generateReport}>Generate</button>
-            </div>
-            <div className="form-note">Saved placeholders: {placeholders.length}</div>
-            <div className="report-preview" dangerouslySetInnerHTML={{ __html: previewHtml }} />
-          </div>
-        )}
-      </section>
-    </main>
+
+          <ReportsTable reports={reports} onDelete={handleDeleteReport} />
+
+          <ReportHistory reports={reports} />
+        </div>
+      </div>
+    </div>
   );
 }
 

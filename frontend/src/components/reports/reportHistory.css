@@ -1,0 +1,282 @@
+/* REPORT HISTORY STYLING */
+
+.report-history-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html[data-theme="dark"] .report-history-card {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+html[data-theme="dark"] .history-header {
+  border-bottom-color: #374151;
+}
+
+.history-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+html[data-theme="dark"] .history-title {
+  color: #f3f4f6;
+}
+
+.history-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+html[data-theme="dark"] .history-badge {
+  background: #374151;
+  color: #d1d5db;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+}
+
+.history-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  align-items: start;
+  padding: 16px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+html[data-theme="dark"] .history-item {
+  border-bottom-color: #374151;
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.history-content {
+  min-width: 0;
+}
+
+.history-title-item {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+html[data-theme="dark"] .history-title-item {
+  color: #f3f4f6;
+}
+
+.history-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+html[data-theme="dark"] .history-details {
+  color: #d1d5db;
+}
+
+.detail-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+html[data-theme="dark"] .detail-badge {
+  background: #374151;
+  color: #d1d5db;
+}
+
+.detail-text {
+  color: #6b7280;
+}
+
+html[data-theme="dark"] .detail-text {
+  color: #d1d5db;
+}
+
+.history-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.history-status {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+html[data-theme="dark"] .history-status {
+  background: #374151;
+  color: #d1d5db;
+}
+
+.history-date {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .history-date {
+  color: #9ca3af;
+}
+
+.history-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #f3f4f6;
+  margin-top: 8px;
+}
+
+html[data-theme="dark"] .history-divider {
+  background: #374151;
+}
+
+.history-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+html[data-theme="dark"] .history-empty {
+  color: #9ca3af;
+}
+
+/* ACTIVITY STATUS COLORS */
+.activity-generated {
+  border-left: 3px solid #10b981;
+  padding-left: 16px;
+}
+
+.activity-pending {
+  border-left: 3px solid #f59e0b;
+  padding-left: 16px;
+}
+
+.activity-failed {
+  border-left: 3px solid #ef4444;
+  padding-left: 16px;
+}
+
+.activity-archived {
+  border-left: 3px solid #6b7280;
+  padding-left: 16px;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 900px) {
+  .report-history-card {
+    padding: 18px;
+  }
+
+  .history-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .history-item {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .history-details {
+    font-size: 0.8rem;
+  }
+
+  .history-meta {
+    flex-direction: row;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .report-history-card {
+    padding: 16px;
+  }
+
+  .history-title {
+    font-size: 1rem;
+  }
+
+  .history-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  .history-icon {
+    font-size: 1.25rem;
+    margin-bottom: -4px;
+  }
+
+  .history-title-item {
+    font-size: 0.9rem;
+  }
+
+  .history-details {
+    font-size: 0.75rem;
+  }
+
+  .history-meta {
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .history-status {
+    font-size: 0.7rem;
+  }
+
+  .history-date {
+    font-size: 0.75rem;
+  }
+}

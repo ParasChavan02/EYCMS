@@ -5,13 +5,14 @@ import Topbar from "../components/common/Topbar";
 
 function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="layout">
-      <Sidebar isOpen={sidebarOpen} onLinkClick={() => setSidebarOpen(false)} />
+    <div className={`layout ${sidebarCollapsed ? 'layout-collapsed' : ''}`}>
+      <Sidebar isOpen={sidebarOpen} onLinkClick={() => setSidebarOpen(false)} isCollapsed={sidebarCollapsed} />
 
       <div className="main-content">
-        <Topbar onMenuClick={() => setSidebarOpen((state) => !state)} />
+        <Topbar onMenuClick={() => setSidebarOpen((state) => !state)} onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} />
         <Outlet />
       </div>
     </div>

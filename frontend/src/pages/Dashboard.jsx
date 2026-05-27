@@ -2,6 +2,9 @@ import { useState } from "react";
 import StatCard from "../components/dashboard/StatCard";
 import QuickActions from "../components/dashboard/QuickActions";
 import RecentActivity from "../components/dashboard/RecentActivity";
+import AlertsWidget from "../components/dashboard/AlertsWidget";
+import ResponsiveSetupChecklist from "../components/dashboard/ResponsiveSetupChecklist";
+import FinanceCard from "../components/dashboard/FinanceCard";
 import "./dashboard-enterprise.css";
 
 function Dashboard() {
@@ -68,6 +71,13 @@ function Dashboard() {
         </div>
       </section>
 
+      {/* OPERATIONAL ALERTS */}
+      <section className="dashboard-section">
+        <div className="container-fluid">
+          <AlertsWidget />
+        </div>
+      </section>
+
       {/* QUICK ACTIONS & RECENT ACTIVITY */}
       <section className="dashboard-section">
         <div className="container-fluid">
@@ -85,34 +95,7 @@ function Dashboard() {
       {/* SETUP CHECKLIST */}
       <section className="dashboard-section">
         <div className="container-fluid">
-          <div className="setup-card card-enterprise">
-            <h3 className="card-title">Setup Checklist</h3>
-            <p className="card-subtitle">Finish setup in 4 steps to complete configuration</p>
-            
-            <div className="checklist-container">
-              {steps.map((step) => (
-                <div key={step.id} className={`checklist-item ${step.status === "done" ? "completed" : "pending"}`}>
-                  <div className="checklist-marker">
-                    {step.status === "done" ? "✓" : "○"}
-                  </div>
-                  <span className="checklist-label">{step.label}</span>
-                  <span className="checklist-status">{step.status}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="checklist-actions">
-              <button type="button" className="btn btn-action" onClick={refreshChecklist}>
-                🔄 Refresh Status
-              </button>
-              <button type="button" className="btn btn-action" onClick={() => window.location.assign("/users")}>
-                👥 Manage Users
-              </button>
-              <button type="button" className="btn btn-action" onClick={() => window.location.assign("/master")}>
-                ⚙️ Master Data
-              </button>
-            </div>
-          </div>
+          <ResponsiveSetupChecklist steps={steps} onRefresh={refreshChecklist} />
         </div>
       </section>
 
@@ -121,34 +104,54 @@ function Dashboard() {
         <div className="container-fluid">
           <div className="summary-card card-enterprise">
             <h3 className="card-title">Centre Finance Summary</h3>
-            <div className="table-responsive">
-              <table className="summary-table">
-                <thead>
-                  <tr>
-                    <th>Budget Head</th>
-                    <th className="text-right">Sanctioned</th>
-                    <th className="text-right">Spent</th>
-                    <th className="text-right">Remaining</th>
-                    <th className="text-right">Usage %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summaryRows.map((row) => (
-                    <tr key={row.head}>
-                      <td className="fw-500">{row.head}</td>
-                      <td className="text-right">${(row.sanctioned / 1000).toFixed(0)}K</td>
-                      <td className="text-right">${(row.spent / 1000).toFixed(0)}K</td>
-                      <td className="text-right">${(row.remaining / 1000).toFixed(0)}K</td>
-                      <td className="text-right">
-                        <div className="progress-bar-inline">
-                          <div className="progress-fill" style={{ width: `${row.percent}%` }}></div>
-                          <span className="progress-text">{row.percent}%</span>
-                        </div>
-                      </td>
+
+            {/* DESKTOP TABLE VIEW */}
+            <div className="table-view">
+              <div className="table-responsive">
+                <table className="summary-table">
+                  <thead>
+                    <tr>
+                      <th>Budget Head</th>
+                      <th className="text-right">Sanctioned</th>
+                      <th className="text-right">Spent</th>
+                      <th className="text-right">Remaining</th>
+                      <th className="text-right">Usage %</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {summaryRows.map((row) => (
+                      <tr key={row.head}>
+                        <td className="fw-500">{row.head}</td>
+                        <td className="text-right">${(row.sanctioned / 1000).toFixed(0)}K</td>
+                        <td className="text-right">${(row.spent / 1000).toFixed(0)}K</td>
+                        <td className="text-right">${(row.remaining / 1000).toFixed(0)}K</td>
+                        <td className="text-right">
+                          <div className="progress-bar-inline">
+                            <div className="progress-fill" style={{ width: `${row.percent}%` }}></div>
+                            <span className="progress-text">{row.percent}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* MOBILE CARD VIEW */}
+            <div className="cards-view">
+              <div className="finance-cards-grid">
+                {summaryRows.map((row) => (
+                  <FinanceCard
+                    key={row.head}
+                    head={row.head}
+                    sanctioned={row.sanctioned}
+                    spent={row.spent}
+                    remaining={row.remaining}
+                    percent={row.percent}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>

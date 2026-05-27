@@ -3,14 +3,15 @@
 .topbar-enterprise {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 16px 24px;
+  gap: 16px;
+  padding: 10px 20px;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
   z-index: 10;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  min-height: 56px;
 }
 
 .topbar-left {
@@ -30,7 +31,7 @@
 
 .page-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #1f2937;
   white-space: nowrap;
@@ -39,9 +40,9 @@
 .breadcrumb {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: #6b7280;
+  gap: 3px;
+  font-size: 0.75rem;
+  color: #9ca3af;
   flex-wrap: wrap;
 }
 
@@ -80,19 +81,19 @@
 .search-form {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 7px;
+  padding: 6px 10px;
   transition: all 0.2s ease;
 }
 
 .search-form:focus-within {
   background: #fff;
   border-color: #0f5aff;
-  box-shadow: 0 0 0 3px rgba(15, 90, 255, 0.05);
+  box-shadow: 0 0 0 2px rgba(15, 90, 255, 0.05);
 }
 
 .search-input {
@@ -128,54 +129,7 @@
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: #f3f4f6;
-}
-
-.user-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0f5aff, #0d47d1);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 0.95rem;
-}
-
-.user-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1f2937;
-  white-space: nowrap;
-}
-
-.logout-button {
-  padding: 8px 16px;
-  background: #f3f4f6;
-  color: #1f2937;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-weight: 500;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.logout-button:hover {
-  background: #e5e7eb;
-  border-color: #d1d5db;
+  gap: 8px;
 }
 
 .menu-button {
@@ -184,9 +138,9 @@
   background: transparent;
   color: #1f2937;
   font-size: 1.3rem;
-  padding: 8px;
+  padding: 6px;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 6px;
   transition: background-color 0.2s ease;
 }
 
@@ -194,49 +148,33 @@
   background: #f3f4f6;
 }
 
+.collapse-button {
+  display: none;
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  font-size: 1rem;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  font-weight: bold;
+}
+
+.collapse-button:hover {
+  background: #f3f4f6;
+}
+
 /* RESPONSIVE DESIGN */
 @media (max-width: 1024px) {
   .topbar-enterprise {
-    gap: 16px;
-    padding: 14px 16px;
-  }
-
-  .topbar-center {
-    flex: 0 0 250px;
-  }
-
-  .page-title {
-    font-size: 1.1rem;
-  }
-
-  .breadcrumb {
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 900px) {
-  .topbar-enterprise {
-    flex-wrap: wrap;
     gap: 12px;
-  }
-
-  .menu-button {
-    display: inline-flex;
-  }
-
-  .topbar-left {
-    flex: 1 1 100%;
-    order: 1;
+    padding: 9px 16px;
+    min-height: 52px;
   }
 
   .topbar-center {
-    flex: 0 1 100%;
-    order: 3;
-  }
-
-  .topbar-right {
-    flex: 1;
-    order: 2;
+    flex: 0 0 200px;
   }
 
   .page-title {
@@ -244,35 +182,97 @@
   }
 
   .breadcrumb {
-    display: none;
+    font-size: 0.75rem;
   }
 
-  .user-name {
-    display: none;
-  }
-}
-
-@media (max-width: 640px) {
-  .topbar-enterprise {
-    padding: 12px;
-    gap: 8px;
-  }
-
-  .topbar-center {
-    flex: 0 0 100%;
-    order: 3;
+  .search-form {
+    padding: 5px 8px;
+    gap: 4px;
   }
 
   .search-input {
     font-size: 0.85rem;
   }
+}
+
+@media (max-width: 900px) {
+  .topbar-enterprise {
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding: 10px 14px;
+    min-height: 52px;
+  }
+
+  .menu-button {
+    display: inline-flex;
+    padding: 5px;
+  }
+
+  .topbar-left {
+    flex: 1;
+    gap: 8px;
+  }
+
+  .page-header {
+    gap: 2px;
+  }
 
   .page-title {
     font-size: 0.95rem;
+    margin: 0;
   }
 
-  .logout-button {
-    padding: 6px 12px;
-    font-size: 0.85rem;
+  .breadcrumb {
+    display: none;
+  }
+
+  .topbar-center {
+    flex: 0 0 auto;
+    order: 0;
+  }
+
+  .search-form {
+    display: none;
+  }
+
+  .search-button {
+    display: block !important;
+    padding: 6px;
+    font-size: 1rem;
+  }
+
+  .topbar-right {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar-enterprise {
+    padding: 8px 12px;
+    gap: 6px;
+    min-height: 48px;
+  }
+
+  .menu-button {
+    font-size: 1.2rem;
+    padding: 4px;
+  }
+
+  .collapse-button {
+    display: none;
+  }
+
+  .page-header {
+    gap: 0;
+  }
+
+  .page-title {
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  .search-button {
+    font-size: 0.95rem;
   }
 }

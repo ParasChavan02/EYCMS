@@ -3,6 +3,11 @@
   grid-template-columns: 260px 1fr;
   min-height: 100vh;
   background: #f9fafb;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.layout.layout-collapsed {
+  grid-template-columns: 70px 1fr;
 }
 
 .sidebar {
@@ -13,7 +18,7 @@
   top: 0;
   height: 100vh;
   overflow-y: auto;
-  transition: transform 0.25s ease;
+  transition: width 0.3s ease;
 }
 
 .main-content {
@@ -28,14 +33,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 18px 24px;
+  gap: 12px;
+  padding: 12px 20px;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
   z-index: 10;
   flex-shrink: 0;
+  min-height: 60px;
 }
 
 .menu-button {
@@ -44,13 +50,55 @@
   background: transparent;
   color: #1f2937;
   font-size: 1.3rem;
-  padding: 10px;
+  padding: 8px;
   cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.menu-button:hover {
+  background: #f3f4f6;
+}
+
+.collapse-button {
+  display: none;
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  font-size: 1.2rem;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.collapse-button:hover {
+  background: #f3f4f6;
 }
 
 /* RESPONSIVE LAYOUT */
+@media (max-width: 1200px) {
+  .layout {
+    grid-template-columns: 240px 1fr;
+  }
+
+  .layout.layout-collapsed {
+    grid-template-columns: 70px 1fr;
+  }
+
+  .collapse-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 @media (max-width: 900px) {
   .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .layout.layout-collapsed {
     grid-template-columns: 1fr;
   }
 
@@ -74,11 +122,20 @@
     align-items: center;
     justify-content: center;
   }
+
+  .collapse-button {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .topbar {
+    padding: 10px 16px;
+    gap: 8px;
   }
 }
 

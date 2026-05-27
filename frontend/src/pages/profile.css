@@ -1,0 +1,116 @@
+/* PROFILE PAGE STYLING */
+
+.profile-page {
+  padding: 24px;
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+html[data-theme="dark"] .profile-page {
+  background: #111827;
+}
+
+.page-header {
+  margin-bottom: 28px;
+}
+
+.page-title {
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+html[data-theme="dark"] .page-title {
+  color: #f3f4f6;
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+html[data-theme="dark"] .page-subtitle {
+  color: #d1d5db;
+}
+
+.profile-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-sidebar {
+  display: flex;
+  flex-direction: column;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 1200px) {
+  .profile-page {
+    padding: 20px;
+  }
+
+  .page-header {
+    margin-bottom: 24px;
+  }
+
+  .page-title {
+    font-size: 1.6rem;
+  }
+
+  .profile-container {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 900px) {
+  .profile-page {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+  }
+
+  .profile-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .profile-main {
+    order: 1;
+  }
+
+  .profile-sidebar {
+    order: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-page {
+    padding: 12px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+  }
+
+  .page-title {
+    font-size: 1.2rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .profile-container {
+    gap: 12px;
+  }
+}

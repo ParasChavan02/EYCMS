@@ -3,9 +3,10 @@ import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
 import NotificationBell from "./NotificationBell";
+import ProfileDropdown from "./ProfileDropdown";
 import "./topbar-enterprise.css";
 
-function Topbar({ onMenuClick }) {
+function Topbar({ onMenuClick, onToggleSidebar }) {
   const { user, signOut } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
@@ -47,13 +48,6 @@ function Topbar({ onMenuClick }) {
   const pageTitle = getPageTitle(location.pathname);
   const breadcrumbs = getBreadcrumb(location.pathname);
 
-  const handleLogout = () => {
-    const userName = currentUser?.name || "User";
-    addNotification(`👋 ${userName} logged out successfully.`, 'info', 3000, true);
-    signOut();
-    navigate("/");
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -62,17 +56,15 @@ function Topbar({ onMenuClick }) {
     }
   };
 
-  // Get first letter of name for avatar
-  const getInitial = (name) => {
-    if (!name) return "U";
-    return name.charAt(0).toUpperCase();
-  };
-
   return (
     <header className="topbar topbar-enterprise">
       <div className="topbar-left">
         <button className="menu-button" type="button" onClick={onMenuClick} title="Menu">
           ☰
+        </button>
+
+        <button className="collapse-button" type="button" onClick={onToggleSidebar} title="Toggle Sidebar">
+          ‖
         </button>
 
         <div className="page-header">
@@ -111,15 +103,7 @@ function Topbar({ onMenuClick }) {
 
       <div className="topbar-right">
         <NotificationBell />
-        {currentUser && (
-          <div className="user-profile">
-            <div className="user-avatar">{getInitial(currentUser.name)}</div>
-            <span className="user-name">{currentUser.name}</span>
-          </div>
-        )}
-        <button type="button" className="logout-button" onClick={handleLogout}>
-          Logout
-        </button>
+        <ProfileDropdown currentUser={currentUser} />
       </div>
     </header>
   );

@@ -4,8 +4,8 @@
 .subcard {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 22px;
+  border-radius: 12px;
+  padding: 18px;
 }
 
 .checklist {

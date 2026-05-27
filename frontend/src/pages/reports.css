@@ -1,0 +1,130 @@
+/* REPORTS PAGE STYLING */
+
+.reports-page {
+  padding: 24px;
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+html[data-theme="dark"] .reports-page {
+  background: #111827;
+}
+
+.reports-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.report-analytics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.reports-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.generation-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-generate,
+.btn-export-pdf,
+.btn-export-csv {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-generate {
+  background: #0f5aff;
+  color: white;
+}
+
+.btn-generate:hover {
+  background: #0d47d1;
+  box-shadow: 0 2px 8px rgba(15, 90, 255, 0.2);
+}
+
+.btn-export-pdf {
+  background: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-export-pdf:hover {
+  background: #e5e7eb;
+}
+
+.btn-export-csv {
+  background: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-export-csv:hover {
+  background: #e5e7eb;
+}
+
+html[data-theme="dark"] .btn-export-pdf,
+html[data-theme="dark"] .btn-export-csv {
+  background: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+html[data-theme="dark"] .btn-export-pdf:hover,
+html[data-theme="dark"] .btn-export-csv:hover {
+  background: #4b5563;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 1200px) {
+  .reports-page {
+    padding: 20px;
+  }
+
+  .report-analytics {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .reports-page {
+    padding: 16px;
+  }
+
+  .report-analytics {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .generation-actions {
+    flex-direction: column;
+  }
+
+  .btn-generate,
+  .btn-export-pdf,
+  .btn-export-csv {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .reports-page {
+    padding: 12px;
+  }
+
+  .report-analytics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

@@ -1,0 +1,218 @@
+/* SECURITY SETTINGS STYLING */
+
+.security-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.security-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.security-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.security-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group-security {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-label {
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  padding-right: 40px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1f2937;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #0f5aff;
+  box-shadow: 0 0 0 3px rgba(15, 90, 255, 0.05);
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.password-hint {
+  margin: 6px 0 0 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.password-message {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.password-message.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.password-message.success {
+  background: #d1fae5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.btn-change-password {
+  align-self: flex-start;
+  padding: 10px 24px;
+  background: #0f5aff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.btn-change-password:hover {
+  background: #0d47d1;
+  box-shadow: 0 2px 8px rgba(15, 90, 255, 0.2);
+}
+
+/* DARK MODE SUPPORT */
+html[data-theme="dark"] .security-card {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .security-header {
+  border-bottom-color: #374151;
+}
+
+html[data-theme="dark"] .security-title {
+  color: #f3f4f6;
+}
+
+html[data-theme="dark"] .form-label {
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .form-input {
+  background: #111827;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+html[data-theme="dark"] .form-input::placeholder {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .form-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+html[data-theme="dark"] .password-hint {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .password-message.error {
+  background: #7f1d1d;
+  color: #fca5a5;
+  border-color: #ef4444;
+}
+
+html[data-theme="dark"] .password-message.success {
+  background: #064e3b;
+  color: #86efac;
+  border-color: #10b981;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 900px) {
+  .security-card {
+    padding: 18px;
+  }
+
+  .form-input {
+    padding: 9px 10px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .security-card {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .security-title {
+    font-size: 1rem;
+  }
+
+  .security-form {
+    gap: 14px;
+  }
+
+  .form-label {
+    font-size: 0.8rem;
+  }
+
+  .form-input {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .btn-change-password {
+    width: 100%;
+    margin-top: 12px;
+  }
+}
