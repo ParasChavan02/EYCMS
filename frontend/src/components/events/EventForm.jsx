@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import "../../../public/common.css";
 import "./eventForm.css";
 
 function EventForm({ onEventCreated, onCancel, editingEvent }) {
