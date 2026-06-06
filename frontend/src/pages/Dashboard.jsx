@@ -3,27 +3,15 @@ import StatCard from "../components/dashboard/StatCard";
 import QuickActions from "../components/dashboard/QuickActions";
 import RecentActivity from "../components/dashboard/RecentActivity";
 import AlertsWidget from "../components/dashboard/AlertsWidget";
-import ResponsiveSetupChecklist from "../components/dashboard/ResponsiveSetupChecklist";
 import FinanceCard from "../components/dashboard/FinanceCard";
 import "./dashboard-enterprise.css";
 
 function Dashboard() {
-  const [steps, setSteps] = useState([
-    { id: "stepUsers", label: "Users", status: "pending" },
-    { id: "stepProjects", label: "Projects/Fellows", status: "pending" },
-    { id: "stepHeads", label: "Budget Heads", status: "pending" },
-    { id: "stepAccounts", label: "Accounts & Bank", status: "pending" },
-  ]);
-
   const [summaryRows] = useState([
     { head: "Project Support", sanctioned: 120000, spent: 45000, remaining: 75000, percent: 38 },
     { head: "Travel", sanctioned: 40000, spent: 22000, remaining: 18000, percent: 55 },
     { head: "Equipment", sanctioned: 20000, spent: 12000, remaining: 8000, percent: 60 },
   ]);
-
-  const refreshChecklist = () => {
-    setSteps((current) => current.map((step) => ({ ...step, status: step.status === "pending" ? "done" : step.status })));
-  };
 
   return (
     <main className="page dashboard-enterprise">
@@ -89,13 +77,6 @@ function Dashboard() {
               <RecentActivity />
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* SETUP CHECKLIST */}
-      <section className="dashboard-section">
-        <div className="container-fluid">
-          <ResponsiveSetupChecklist steps={steps} onRefresh={refreshChecklist} />
         </div>
       </section>
 

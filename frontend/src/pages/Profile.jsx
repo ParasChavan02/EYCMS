@@ -1,13 +1,17 @@
 import { useAuth } from "../hooks/useAuth";
+import { useLocation } from "react-router-dom";
 import ProfileHeader from "../components/profile/ProfileHeader";
 import ProfileInfoForm from "../components/profile/ProfileInfoForm";
 import ProfileAvatarUpload from "../components/profile/ProfileAvatarUpload";
 import SecuritySettings from "../components/profile/SecuritySettings";
 import ActivityTimeline from "../components/profile/ActivityTimeline";
+import { ROUTES, isAdminRole } from "../constants/routes";
 import "./profile.css";
 
 function Profile() {
   const { user } = useAuth();
+  const { pathname } = useLocation();
+  const adminProfile = pathname.startsWith(ROUTES.ADMIN_ROOT) || isAdminRole(user);
 
   const handleEditClick = () => {
     console.log("Edit profile clicked");
@@ -16,8 +20,12 @@ function Profile() {
   return (
     <div className="profile-page">
       <div className="page-header">
-        <h1 className="page-title">My Profile</h1>
-        <p className="page-subtitle">Manage your personal information and account settings</p>
+        <h1 className="page-title">{adminProfile ? "Admin Profile" : "My Profile"}</h1>
+        <p className="page-subtitle">
+          {adminProfile
+            ? "Manage administrator identity, security, and recent activity."
+            : "Manage your personal information and account settings."}
+        </p>
       </div>
 
       <div className="profile-container">

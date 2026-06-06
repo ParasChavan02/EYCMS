@@ -5,10 +5,11 @@ import { useNotification } from "../hooks/useNotification";
 import { login, signup } from "../services/authService";
 import Button from "../components/common/Button";
 import FormInput from "../components/common/FormInput";
+import { getHomeRoute } from "../constants/routes";
 
 function Login() {
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ email: "", password: "", name: "", role: "USER" });
+  const [form, setForm] = useState({ email: "", password: "", name: "", role: "USER", adminToken: "" });
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [redirectPending, setRedirectPending] = useState(false);
@@ -18,17 +19,21 @@ function Login() {
 
   // Redirect to dashboard after successful login
   useEffect(() => {
-    console.log('🔍 useEffect running - redirectPending:', redirectPending, 'user:', user)
     if (redirectPending && user) {
-      console.log('🔄 User state updated, navigating to dashboard...')
-      navigate("/dashboard");
+      navigate(getHomeRoute(user));
       setRedirectPending(false);
     }
   }, [user, redirectPending, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => {
+      const updated = { ...current, [name]: value };
+      if (name === "role" && value === "USER") {
+        updated.adminToken = "";
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = async (event) => {
@@ -43,6 +48,11 @@ function Login() {
 
     if (mode === "signup" && !form.name) {
       setMessage("Please enter your full name to sign up.");
+      return;
+    }
+
+    if (mode === "signup" && form.role === "ADMIN" && !form.adminToken) {
+      setMessage("Admin access token is required.");
       return;
     }
 
@@ -61,16 +71,10 @@ function Login() {
 
       if (result.success) {
         addNotification(`✅ Welcome ${result.user.name}! Logged in successfully.`, 'success', 3000)
-        console.log('✅ Auth successful, setting redirect flag and updating user...')
-        console.log('👉 Calling signIn with:', result.user)
-        // Save to localStorage as backup
         localStorage.setItem('current_user', JSON.stringify(result.user))
-        console.log('💾 Saved user to localStorage')
         setRedirectPending(true);
         signIn(result.user);
-        console.log('✋ After signIn call')
-        // Also navigate immediately
-        setTimeout(() => navigate("/dashboard"), 100)
+        setTimeout(() => navigate(getHomeRoute(result.user)), 100)
       } else {
         console.log('❌ Auth failed:', result.error)
         setMessage(result.error || "Authentication failed");
@@ -84,12 +88,24 @@ function Login() {
   };
 
   const handleGoogleSignIn = () => {
-    signIn({ id: "google_1", name: "Google User", email: "google.user@example.com", role: "USER" });
-    navigate("/dashboard");
+    const googleUser = { id: "google_1", name: "Google User", email: "google.user@example.com", role: "USER" };
+    localStorage.setItem("current_user", JSON.stringify(googleUser));
+    signIn(googleUser);
+    navigate(getHomeRoute(googleUser));
   };
 
   return (
     <main className="page auth-page">
+      <style>{`
+        @keyframes fadeInField {
+          from { opacity: 0; transform: translateY(-4px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-field {
+          animation: fadeInField 0.25s ease-out forwards;
+        }
+      `}</style>
+
       <header className="login-topbar">
         <div className="login-brand">
           <strong>E-YUVA ERP</strong>
@@ -123,10 +139,24 @@ function Login() {
             <label className="form-input">
               <span>Role</span>
               <select name="role" value={form.role} onChange={handleChange}>
-                <option value="ADMIN">ADMIN</option>
-                <option value="USER">USER</option>
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
               </select>
             </label>
+          )}
+
+          {mode === "signup" && form.role === "ADMIN" && (
+            <div className="fade-in-field">
+              <FormInput
+                label="Admin Access Token *"
+                name="adminToken"
+                type="password"
+                value={form.adminToken}
+                onChange={handleChange}
+                placeholder="Enter admin access token"
+                showPasswordToggle
+              />
+            </div>
           )}
 
           {message && <div className="form-note">{message}</div>}

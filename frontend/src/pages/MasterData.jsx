@@ -1,4 +1,5 @@
 import { useState } from "react";
+import "../styles/masterdata.css";
 
 function MasterData() {
   const [accounts, setAccounts] = useState([]);

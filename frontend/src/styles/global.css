@@ -146,9 +146,12 @@ html[data-theme="dark"] a:hover {
 html,
 body,
 #root {
+  width: 100%;
+  max-width: 100%;
   min-height: 100%;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 
 body {
@@ -189,6 +192,14 @@ button:active {
 img {
   max-width: 100%;
   display: block;
+  height: auto;
+}
+
+svg,
+canvas,
+video,
+iframe {
+  max-width: 100%;
 }
 
 a {
@@ -265,6 +276,9 @@ p {
 .page {
   padding: 24px;
   background: var(--surface-muted);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .card {
@@ -280,6 +294,7 @@ p {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .grid2 {
@@ -310,6 +325,20 @@ p {
 
 .text-center {
   text-align: center;
+}
+
+.table-responsive,
+.table-wrapper,
+.overflow-x-auto {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  max-width: 100%;
 }
 
 /* RESPONSIVE UTILITIES FROM BOOTSTRAP */
@@ -419,7 +448,7 @@ button:hover {
 }
 
 .auth-header h1 {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
 }
 
 .auth-tabs {
@@ -427,7 +456,7 @@ button:hover {
   border-radius: 999px;
   overflow: hidden;
   background: #eef2ff;
-  margin: 20px 0;
+  margin: 12px 0;
 }
 
 .auth-tabs button {
@@ -435,7 +464,7 @@ button:hover {
   background: transparent;
   color: var(--text-muted);
   font-weight: 600;
-  padding: 14px 0;
+  padding: 10px 0;
   border: none;
 }
 
@@ -446,18 +475,18 @@ button:hover {
 
 .auth-form label {
   display: block;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .auth-actions {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .divider {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 22px 0;
+  margin: 14px 0;
   color: var(--text-muted);
 }
 
@@ -485,7 +514,7 @@ button:hover {
   color: #111827;
   border: 1px solid #d1d5db;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-  padding: 14px 18px;
+  padding: 11px 18px;
 }
 
 .google-button:hover {
@@ -498,4 +527,35 @@ button:hover {
   min-height: 180px;
   padding: 16px;
   background: #f8fafc;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.modal {
+  width: min(720px, 100%);
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.2);
+  overflow: hidden;
+}
+
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal__body {
+  padding: 20px;
 }

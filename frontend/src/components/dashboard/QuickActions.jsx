@@ -1,32 +1,38 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { ROUTES, isAdminRole } from "../../constants/routes";
 import "./quickActions.css";
 
 function QuickActions() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const adminMode = isAdminRole(user);
+
   const actions = [
-    { icon: "💳", label: "Create Transaction", action: "transaction" },
+    { icon: "💳", label: "Transactions", action: "transaction" },
     { icon: "📊", label: "Generate Report", action: "report" },
-    { icon: "👤", label: "Add User", action: "user" },
-    { icon: "📋", label: "Create Event", action: "event" },
+    { icon: "👤", label: "Open Profile", action: "profile" },
+    { icon: "📋", label: "Browse Events", action: "event" },
   ];
 
   const handleAction = (action) => {
-    console.log("Quick action:", action);
-    // Route to appropriate page
     const routes = {
-      transaction: "/transactions",
-      report: "/reports",
-      user: "/users",
-      event: "/reports",
+      transaction: adminMode ? ROUTES.ADMIN_TRANSACTIONS : ROUTES.USER_DASHBOARD,
+      report: adminMode ? ROUTES.ADMIN_REPORTS : ROUTES.USER_REPORTS,
+      profile: adminMode ? ROUTES.ADMIN_PROFILE : ROUTES.USER_PROFILE,
+      event: adminMode ? ROUTES.ADMIN_EVENTS : ROUTES.USER_EVENTS,
     };
-    // window.location.href = routes[action];
+
+    navigate(routes[action]);
   };
 
   return (
     <div className="quick-actions">
       <h3 className="quick-actions-title">Quick Actions</h3>
       <div className="quick-actions-grid">
-        {actions.map((action, index) => (
+        {actions.map((action) => (
           <button
-            key={index}
+            key={action.action}
             className="quick-action-button"
             onClick={() => handleAction(action.action)}
             title={action.label}

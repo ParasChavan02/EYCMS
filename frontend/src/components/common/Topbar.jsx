@@ -1,109 +1,74 @@
-import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { Menu, PanelLeft, Search } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { useNotification } from "../../hooks/useNotification";
 import NotificationBell from "./NotificationBell";
 import ProfileDropdown from "./ProfileDropdown";
 import "./topbar-enterprise.css";
 
-function Topbar({ onMenuClick, onToggleSidebar }) {
-  const { user, signOut } = useAuth();
-  const { addNotification } = useNotification();
-  const navigate = useNavigate();
-  const location = useLocation();
+function Topbar({ onMenuClick, onToggleSidebar, isAdmin = false }) {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Get user from context or localStorage fallback
-  const currentUser = user || (() => {
-    const saved = localStorage.getItem('current_user');
-    return saved ? JSON.parse(saved) : null;
-  })();
+  const currentUser =
+    user ||
+    (() => {
+      const saved = localStorage.getItem("current_user");
+      return saved ? JSON.parse(saved) : null;
+    })();
 
-  // Map routes to titles
-  const getPageTitle = (path) => {
-    const titles = {
-      '/dashboard': 'Dashboard',
-      '/users': 'Users',
-      '/master': 'Master Data',
-      '/transactions': 'Transactions',
-      '/reconciliation': 'Reconciliation',
-      '/reports': 'Reports',
-    };
-    return titles[path] || 'Dashboard';
-  };
-
-  // Generate breadcrumb
-  const getBreadcrumb = (path) => {
-    const titles = {
-      '/dashboard': [{ name: 'Home', path: '/dashboard' }],
-      '/users': [{ name: 'Home', path: '/dashboard' }, { name: 'Users', path: '/users' }],
-      '/master': [{ name: 'Home', path: '/dashboard' }, { name: 'Master Data', path: '/master' }],
-      '/transactions': [{ name: 'Home', path: '/dashboard' }, { name: 'Transactions', path: '/transactions' }],
-      '/reconciliation': [{ name: 'Home', path: '/dashboard' }, { name: 'Reconciliation', path: '/reconciliation' }],
-      '/reports': [{ name: 'Home', path: '/dashboard' }, { name: 'Reports', path: '/reports' }],
-    };
-    return titles[path] || [{ name: 'Home', path: '/dashboard' }];
-  };
-
-  const pageTitle = getPageTitle(location.pathname);
-  const breadcrumbs = getBreadcrumb(location.pathname);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
+  const handleSearch = (event) => {
+    event.preventDefault();
     if (searchQuery.trim()) {
-      console.log('Searching for:', searchQuery);
       setSearchQuery("");
     }
   };
 
   return (
     <header className="topbar topbar-enterprise">
-      <div className="topbar-left">
-        <button className="menu-button" type="button" onClick={onMenuClick} title="Menu">
-          ☰
-        </button>
+      <div className="topbar-primary-row">
+        <div className="topbar-left">
+          <button className="menu-button" type="button" onClick={onMenuClick} title="Open sidebar">
+            <Menu size={18} />
+          </button>
+          <button className="collapse-button" type="button" onClick={onToggleSidebar} title="Collapse sidebar">
+            <PanelLeft size={18} />
+          </button>
+          <div className="topbar-brand">
+            <span className="topbar-brand-mark">EY</span>
+            <span className="topbar-brand-text">{isAdmin ? "Admin ERP" : "E-YUVA"}</span>
+          </div>
+        </div>
 
-        <button className="collapse-button" type="button" onClick={onToggleSidebar} title="Toggle Sidebar">
-          ‖
-        </button>
+        <div className="topbar-center topbar-center-desktop">
+          <form className="search-form" onSubmit={handleSearch}>
+            <Search size={16} className="search-leading-icon" />
+            <input
+              type="text"
+              placeholder="Search workspace"
+              className="search-input"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </form>
+        </div>
 
-        <div className="page-header">
-          <h1 className="page-title">{pageTitle}</h1>
-          <nav className="breadcrumb">
-            {breadcrumbs.map((crumb, index) => (
-              <div key={index} className="breadcrumb-item">
-                {index > 0 && <span className="breadcrumb-separator">/</span>}
-                {index === breadcrumbs.length - 1 ? (
-                  <span className="breadcrumb-current">{crumb.name}</span>
-                ) : (
-                  <a href={crumb.path} onClick={(e) => { e.preventDefault(); navigate(crumb.path); }}>
-                    {crumb.name}
-                  </a>
-                )}
-              </div>
-            ))}
-          </nav>
+        <div className="topbar-right">
+          <NotificationBell />
+          <ProfileDropdown currentUser={currentUser} />
         </div>
       </div>
 
-      <div className="topbar-center">
+      <div className="topbar-search-row">
         <form className="search-form" onSubmit={handleSearch}>
+          <Search size={16} className="search-leading-icon" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search workspace"
             className="search-input"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(event) => setSearchQuery(event.target.value)}
           />
-          <button type="submit" className="search-button" title="Search">
-            🔍
-          </button>
         </form>
-      </div>
-
-      <div className="topbar-right">
-        <NotificationBell />
-        <ProfileDropdown currentUser={currentUser} />
       </div>
     </header>
   );

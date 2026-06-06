@@ -3,20 +3,29 @@
 .dashboard-enterprise {
   padding: 20px;
   background: #f9fafb;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 60px);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .dashboard-section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
 .card-enterprise {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .card-enterprise:hover {
@@ -24,7 +33,7 @@
 }
 
 .card-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   font-size: 1.1rem;
   font-weight: 600;
   color: #1f2937;
@@ -40,8 +49,9 @@
 .setup-card {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .checklist-container {
@@ -55,11 +65,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px;
+  padding: 12px;
   border-radius: 8px;
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .checklist-item.completed {
@@ -79,7 +90,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-weight: 700;
   flex-shrink: 0;
   font-size: 0.9rem;
 }
@@ -98,13 +109,17 @@
   flex: 1;
   font-weight: 500;
   color: #1f2937;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .checklist-status {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   color: #6b7280;
+  white-space: nowrap;
 }
 
 .checklist-actions {
@@ -123,6 +138,7 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .btn-action:hover {
@@ -136,7 +152,7 @@
 
 /* FINANCE SUMMARY */
 .summary-card {
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* TABLE VIEW - Desktop */
@@ -153,16 +169,23 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
+  width: 100%;
 }
 
 .table-responsive {
+  width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
 }
 
 .summary-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+  table-layout: auto;
 }
 
 .summary-table thead {
@@ -178,6 +201,7 @@
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .summary-table th.text-right {
@@ -196,6 +220,7 @@
 .summary-table td {
   padding: 14px 16px;
   color: #374151;
+  white-space: nowrap;
 }
 
 .summary-table td.text-right {
@@ -213,6 +238,7 @@
   align-items: center;
   gap: 8px;
   justify-content: flex-end;
+  min-width: 80px;
 }
 
 .progress-fill {
@@ -221,6 +247,7 @@
   border-radius: 3px;
   min-width: 20px;
   flex-shrink: 0;
+  max-width: 40px;
 }
 
 .progress-text {
@@ -228,6 +255,7 @@
   color: #1f2937;
   min-width: 35px;
   text-align: right;
+  font-size: 0.85rem;
 }
 
 /* RESPONSIVE DESIGN */
@@ -242,6 +270,11 @@
 
   .checklist-container {
     grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .dashboard-section {
+    margin-bottom: 16px;
   }
 }
 
@@ -251,19 +284,22 @@
   }
 
   .dashboard-section {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
 
   .card-enterprise {
     padding: 12px;
+    border-radius: 10px;
   }
 
   .card-title {
     font-size: 1rem;
+    margin-bottom: 10px;
   }
 
   .checklist-container {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .checklist-actions {
@@ -273,6 +309,8 @@
   .btn-action {
     width: 100%;
     text-align: center;
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
 
   /* SWITCH TO CARD VIEW ON TABLET */
@@ -296,15 +334,27 @@
   }
 
   .progress-bar-inline {
-    flex-direction: column;
-    align-items: flex-end;
+    flex-direction: row;
     gap: 4px;
+  }
+
+  .progress-fill {
+    max-width: 30px;
+  }
+
+  .progress-text {
+    font-size: 0.75rem;
+    min-width: 30px;
+  }
+
+  .table-responsive {
+    border-radius: 8px;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .dashboard-enterprise {
-    padding: 8px;
+    padding: 10px;
   }
 
   .card-enterprise {
@@ -312,29 +362,102 @@
     border-radius: 10px;
   }
 
-  .checklist-item {
-    padding: 8px;
+  .card-title {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+
+  .checklist-container {
+    grid-template-columns: 1fr;
     gap: 8px;
+  }
+
+  .checklist-item {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .checklist-label {
+    font-size: 0.9rem;
+  }
+
+  .checklist-status {
+    font-size: 0.7rem;
   }
 
   /* CARDS VIEW ON MOBILE */
   .finance-cards-grid {
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 8px;
   }
 
   .summary-table th,
   .summary-table td {
-    padding: 8px 4px;
+    padding: 8px 6px;
     font-size: 0.75rem;
   }
 
   .summary-table th.text-right,
   .summary-table td.text-right {
-    display: none;
+    text-align: left;
+    font-size: 0.7rem;
   }
 
-  .summary-table td:last-child {
-    display: none;
+  .table-responsive {
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+  }
+
+  .progress-bar-inline {
+    min-width: 60px;
+  }
+
+  .progress-fill {
+    max-width: 20px;
+    min-width: 10px;
+  }
+
+  .progress-text {
+    font-size: 0.65rem;
+    min-width: 25px;
+  }
+
+  .btn-action {
+    padding: 6px 10px;
+    font-size: 0.8rem;
   }
 }
+
+@media (max-width: 375px) {
+  .dashboard-enterprise {
+    padding: 8px;
+  }
+
+  .card-enterprise {
+    padding: 10px;
+  }
+
+  .card-title {
+    font-size: 0.9rem;
+  }
+
+  .summary-table th,
+  .summary-table td {
+    padding: 6px 4px;
+    font-size: 0.7rem;
+  }
+
+  .checklist-item {
+    padding: 8px;
+  }
+
+  .checklist-label {
+    font-size: 0.85rem;
+  }
+
+  .btn-action {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}
+

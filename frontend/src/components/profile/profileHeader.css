@@ -41,7 +41,7 @@
 
 .profile-info {
   flex: 1;
-  min-width: 200px;
+  min-width: 0;
 }
 
 .profile-name {
@@ -176,7 +176,7 @@ html[data-theme="dark"] .btn-profile-action.btn-secondary:hover {
 
   .btn-profile-action {
     flex: 1;
-    min-width: 140px;
+    min-width: 0;
   }
 }
 
