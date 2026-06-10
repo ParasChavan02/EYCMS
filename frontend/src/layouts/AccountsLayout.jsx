@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
-import AdminSidebar from "../modules/admin/components/AdminSidebar";
+import AccountsSidebar from "../modules/accounts/components/AccountsSidebar";
 import Navbar from "../modules/common/components/Navbar";
 
-const STORAGE_KEY = "admin_sidebar_collapsed";
+const STORAGE_KEY = "accounts_sidebar_collapsed";
 
-function AdminLayout() {
+function AccountsLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window === "undefined") {
@@ -32,7 +32,7 @@ function AdminLayout() {
 
   return (
     <div className={`layout ${sidebarCollapsed ? "layout-collapsed" : ""}`}>
-      <AdminSidebar
+      <AccountsSidebar
         isOpen={sidebarOpen}
         isCollapsed={sidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
@@ -46,7 +46,7 @@ function AdminLayout() {
 
       <div className="main-content">
         <Navbar
-          isAdmin={true}
+          isAdmin={false}
           onMenuClick={() => setSidebarOpen((current) => !current)}
           onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
         />
@@ -56,4 +56,4 @@ function AdminLayout() {
   );
 }
 
-export default AdminLayout;
+export default AccountsLayout;

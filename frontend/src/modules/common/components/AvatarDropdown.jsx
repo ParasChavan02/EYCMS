@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Bell, LogOut, Settings, User } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
-import { useNotification } from "../../hooks/useNotification";
+import { useAuth } from "../hooks/useAuth";
+import { useNotification } from "../hooks/useNotification";
 import { useNavigate } from "react-router-dom";
-import { ROUTES, getProfileRoute, getSettingsRoute } from "../../constants/routes";
-import "./profileDropdown.css";
+import { ROUTES, getProfileRoute, getSettingsRoute } from "../constants/routes";
+import "./avatarDropdown.css";
 
-function ProfileDropdown({ currentUser }) {
+function AvatarDropdown({ currentUser }) {
   const [isOpen, setIsOpen] = useState(false);
   const { signOut } = useAuth();
   const { addNotification } = useNotification();
@@ -35,9 +35,16 @@ function ProfileDropdown({ currentUser }) {
   };
 
   const handleLogout = () => {
+    console.log('👤 handleLogout called, currentUser:', currentUser);
     const userName = currentUser?.name || "User";
-    addNotification(`Welcome ${userName}. You have been signed out.`, "info", 3000, true);
+    try {
+      addNotification(`Welcome ${userName}. You have been signed out.`, "info", 3000, true);
+    } catch (e) {
+      console.error('👤 addNotification failed:', e);
+    }
+    console.log('👤 calling signOut...');
     signOut();
+    console.log('👤 signOut called, navigating to ROOT...');
     navigate(ROUTES.ROOT);
     setIsOpen(false);
   };
@@ -57,13 +64,17 @@ function ProfileDropdown({ currentUser }) {
 
   return (
     <div className="profile-dropdown" ref={dropdownRef}>
-      <button type="button" className="profile-button" ref={buttonRef} onClick={() => setIsOpen(!isOpen)} title={currentUser.name}>
+      <button type="button" className="profile-button" ref={buttonRef} onClick={() => {
+        console.log('👤 Profile button clicked, toggling isOpen from', isOpen, 'to', !isOpen);
+        setIsOpen(!isOpen);
+      }} title={currentUser.name}>
         <div className="profile-avatar-small">{getInitial(currentUser.name)}</div>
         <span className="profile-name-small">{currentUser.name}</span>
       </button>
 
       {isOpen && (
-        <div className="profile-dropdown-menu">
+        <div className="avatar-dropdown-menu">
+          {console.log('👤 Dropdown menu is rendering in DOM!')}
           <div className="dropdown-header">
             <div className="dropdown-avatar">{getInitial(currentUser.name)}</div>
             <div className="dropdown-info">
@@ -99,4 +110,4 @@ function ProfileDropdown({ currentUser }) {
   );
 }
 
-export default ProfileDropdown;
+export default AvatarDropdown;
