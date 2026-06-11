@@ -87,6 +87,7 @@ function App() {
                   </AdminProtectedRoute>
                 }
               >
+                <Route path={ROUTES.ADMIN_PROFILE} element={<Profile />} />
                 {adminRoutes}
                 {supportRoutes}
               </Route>
