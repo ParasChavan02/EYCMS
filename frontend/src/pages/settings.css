@@ -1,0 +1,352 @@
+/* SETTINGS PAGE STYLING */
+
+.settings-page {
+  padding: 24px;
+  background: #f9fafb;
+  min-height: calc(100vh - 60px);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+html[data-theme="dark"] .settings-page {
+  background: #111827;
+}
+
+.page-header {
+  margin-bottom: 28px;
+}
+
+.page-title {
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+html[data-theme="dark"] .page-title {
+  color: #f3f4f6;
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+html[data-theme="dark"] .page-subtitle {
+  color: #d1d5db;
+}
+
+.settings-container {
+  width: 100%;
+  max-width: 1200px;
+  box-sizing: border-box;
+}
+
+.settings-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+/* SETTINGS CARDS */
+.account-card,
+.appearance-card,
+.notification-card,
+.security-card,
+.preferences-card,
+.settings-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.account-card:hover,
+.appearance-card:hover,
+.notification-card:hover,
+.security-card:hover,
+.preferences-card:hover,
+.settings-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="dark"] .account-card,
+html[data-theme="dark"] .appearance-card,
+html[data-theme="dark"] .notification-card,
+html[data-theme="dark"] .security-card,
+html[data-theme="dark"] .preferences-card,
+html[data-theme="dark"] .settings-card {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+.card-header {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+html[data-theme="dark"] .card-header {
+  border-bottom-color: #374151;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+html[data-theme="dark"] .card-header h3 {
+  color: #f3f4f6;
+}
+
+/* FORM GROUPS */
+.form-group {
+  margin-bottom: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+html[data-theme="dark"] .form-label {
+  color: #e5e7eb;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* TOGGLE/SWITCH */
+.toggle-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* BUTTONS */
+.btn-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  width: 100%;
+}
+
+button {
+  white-space: nowrap;
+  flex: 1;
+  min-width: 100px;
+}
+
+.btn-primary,
+.btn-submit,
+.btn-save-settings {
+  flex: 1;
+}
+
+.btn-secondary,
+.btn-cancel {
+  flex: 1;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 1200px) {
+  .settings-page {
+    padding: 20px;
+  }
+
+  .page-header {
+    margin-bottom: 24px;
+  }
+
+  .page-title {
+    font-size: 1.6rem;
+  }
+
+  .settings-container {
+    max-width: 100%;
+  }
+
+  .settings-content {
+    gap: 16px;
+  }
+
+  .account-card,
+  .appearance-card,
+  .notification-card,
+  .security-card,
+  .preferences-card,
+  .settings-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .settings-page {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+  }
+
+  .page-header {
+    margin-bottom: 20px;
+  }
+
+  .settings-content {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-page {
+    padding: 12px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+  }
+
+  .page-title {
+    font-size: 1.2rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .account-card,
+  .appearance-card,
+  .notification-card,
+  .security-card,
+  .preferences-card,
+  .settings-card {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .card-header h3 {
+    font-size: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  .btn-group {
+    gap: 8px;
+    margin-top: 12px;
+    flex-direction: row;
+  }
+
+  button {
+    min-height: 40px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .settings-page {
+    padding: 10px;
+  }
+
+  .page-header {
+    margin-bottom: 12px;
+  }
+
+  .page-title {
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+  .page-subtitle {
+    font-size: 0.8rem;
+    text-align: center;
+  }
+
+  .account-card,
+  .appearance-card,
+  .notification-card,
+  .security-card,
+  .preferences-card,
+  .settings-card {
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .card-header h3 {
+    font-size: 0.95rem;
+  }
+
+  .btn-group {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 0.85rem;
+  }
+
+  .toggle-group {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .form-label {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .settings-page {
+    padding: 8px;
+  }
+
+  .page-title {
+    font-size: 1rem;
+  }
+
+  .account-card,
+  .appearance-card,
+  .notification-card,
+  .security-card,
+  .preferences-card,
+  .settings-card {
+    padding: 8px;
+  }
+
+  button {
+    min-height: 40px;
+    font-size: 0.8rem;
+    padding: 8px 10px;
+  }
+}
+

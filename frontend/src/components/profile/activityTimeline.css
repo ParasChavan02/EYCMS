@@ -1,0 +1,260 @@
+/* ACTIVITY TIMELINE STYLING */
+
+.activity-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.activity-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.activity-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  padding: 16px 0;
+  position: relative;
+}
+
+.timeline-marker {
+  display: flex;
+  justify-content: center;
+  padding-top: 2px;
+}
+
+.timeline-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.timeline-item.login .timeline-icon {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.timeline-item.update .timeline-icon {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.timeline-item.security .timeline-icon {
+  background: #fef08a;
+  border-color: #fcd34d;
+}
+
+.timeline-item.report .timeline-icon {
+  background: #f3e8ff;
+  border-color: #e9d5ff;
+}
+
+.timeline-item.transaction .timeline-icon {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.timeline-content {
+  padding-top: 2px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.timeline-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.timeline-time {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.timeline-description {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 19px;
+  top: 56px;
+  width: 2px;
+  height: calc(100% - 16px);
+  background: #f3f4f6;
+}
+
+.timeline-item:last-child .timeline-line {
+  display: none;
+}
+
+/* DARK MODE SUPPORT */
+html[data-theme="dark"] .activity-card {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html[data-theme="dark"] .activity-header {
+  border-bottom-color: #374151;
+}
+
+html[data-theme="dark"] .activity-title {
+  color: #f3f4f6;
+}
+
+html[data-theme="dark"] .timeline-icon {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+html[data-theme="dark"] .timeline-item.login .timeline-icon {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+}
+
+html[data-theme="dark"] .timeline-item.update .timeline-icon {
+  background: #064e3b;
+  border-color: #10b981;
+}
+
+html[data-theme="dark"] .timeline-item.security .timeline-icon {
+  background: #713f12;
+  border-color: #f59e0b;
+}
+
+html[data-theme="dark"] .timeline-item.report .timeline-icon {
+  background: #4c1d95;
+  border-color: #a78bfa;
+}
+
+html[data-theme="dark"] .timeline-item.transaction .timeline-icon {
+  background: #7f1d1d;
+  border-color: #ef4444;
+}
+
+html[data-theme="dark"] .timeline-title {
+  color: #f3f4f6;
+}
+
+html[data-theme="dark"] .timeline-time {
+  color: #9ca3af;
+}
+
+html[data-theme="dark"] .timeline-description {
+  color: #d1d5db;
+}
+
+html[data-theme="dark"] .timeline-line {
+  background: #374151;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 900px) {
+  .activity-card {
+    padding: 18px;
+  }
+
+  .timeline-item {
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .timeline-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+
+  .timeline-title {
+    font-size: 0.9rem;
+  }
+
+  .timeline-description {
+    font-size: 0.8rem;
+  }
+
+  .timeline-line {
+    left: 17px;
+  }
+}
+
+@media (max-width: 640px) {
+  .activity-card {
+    padding: 16px;
+  }
+
+  .activity-title {
+    font-size: 1rem;
+  }
+
+  .timeline-item {
+    gap: 10px;
+    padding: 10px 0;
+  }
+
+  .timeline-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .timeline-header {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .timeline-title {
+    font-size: 0.85rem;
+  }
+
+  .timeline-description {
+    font-size: 0.75rem;
+  }
+
+  .timeline-time {
+    font-size: 0.75rem;
+  }
+
+  .timeline-line {
+    left: 15px;
+    top: 52px;
+  }
+}

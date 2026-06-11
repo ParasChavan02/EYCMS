@@ -1,0 +1,315 @@
+/* RESPONSIVE SETUP CHECKLIST */
+
+.responsive-checklist {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 18px;
+}
+
+/* PROGRESS SECTION */
+.progress-section {
+  margin-bottom: 18px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.progress-percent {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f5aff;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0f5aff, #0d47d1);
+  transition: width 0.3s ease;
+}
+
+.progress-steps {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* ACCORDION STYLING */
+.checklist-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.accordion-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.accordion-item.completed {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.accordion-item.pending {
+  background: #fff;
+}
+
+.accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.accordion-item.pending .accordion-header:hover {
+  background: #f9fafb;
+}
+
+.accordion-item.completed .accordion-header:hover {
+  background: rgba(134, 239, 172, 0.3);
+}
+
+.accordion-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  background: transparent;
+  color: #6b7280;
+}
+
+.accordion-item.completed .accordion-icon {
+  background: #10b981;
+  color: white;
+}
+
+.accordion-title {
+  flex: 1;
+  text-align: left;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.accordion-item.completed .accordion-title {
+  color: #047857;
+}
+
+.accordion-toggle {
+  font-size: 1.2rem;
+  color: #d1d5db;
+  font-weight: bold;
+}
+
+/* ACCORDION CONTENT */
+.accordion-content {
+  padding: 12px 12px 12px 46px;
+  background: rgba(15, 90, 255, 0.02);
+  border-top: 1px solid #e5e7eb;
+  animation: expandContent 0.2s ease;
+}
+
+@keyframes expandContent {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-description {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.step-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.step-button {
+  flex: 1;
+  padding: 8px 12px;
+  background: #0f5aff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.step-button:hover {
+  background: #0d47d1;
+}
+
+.step-button-secondary {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  color: #0f5aff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.step-button-secondary:hover {
+  background: #f9fafb;
+  border-color: #0f5aff;
+}
+
+/* ACTION BUTTONS */
+.checklist-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.action-btn {
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn-primary {
+  background: #0f5aff;
+  color: white;
+  border-color: #0f5aff;
+}
+
+.action-btn-primary:hover {
+  background: #0d47d1;
+  border-color: #0d47d1;
+}
+
+.action-btn-secondary {
+  background: white;
+  color: #374151;
+}
+
+.action-btn-secondary:hover {
+  background: #f9fafb;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 900px) {
+  .responsive-checklist {
+    padding: 14px;
+  }
+
+  .accordion-header {
+    padding: 10px;
+  }
+
+  .accordion-content {
+    padding: 10px 10px 10px 40px;
+  }
+
+  .accordion-title {
+    font-size: 0.9rem;
+  }
+
+  .step-button,
+  .step-button-secondary {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .action-btn {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .responsive-checklist {
+    padding: 12px;
+  }
+
+  .checklist-accordion {
+    gap: 6px;
+  }
+
+  .accordion-header {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .accordion-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+  }
+
+  .accordion-title {
+    font-size: 0.85rem;
+  }
+
+  .accordion-content {
+    padding: 10px 10px 10px 36px;
+  }
+
+  .step-description {
+    font-size: 0.8rem;
+  }
+
+  .step-button,
+  .step-button-secondary {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .checklist-actions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .action-btn {
+    padding: 10px;
+    font-size: 0.8rem;
+  }
+}

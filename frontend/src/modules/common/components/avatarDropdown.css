@@ -1,0 +1,239 @@
+/* PROFILE DROPDOWN STYLING */
+
+.profile-dropdown {
+  position: relative;
+  z-index: 1041;
+  display: flex;
+  align-items: center;
+}
+
+.profile-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.profile-button:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.profile-avatar-small {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f5aff, #0d47d1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.profile-name-small {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+/* DROPDOWN MENU - Absolute positioning for containment compatibility */
+.avatar-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  z-index: 9999;
+  animation: slideDown 0.15s ease;
+  overflow: visible;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  width: 220px;
+  max-width: calc(100vw - 20px);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.dropdown-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f5aff, #0d47d1);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.dropdown-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-role {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #f3f4f6;
+  margin: 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  color: #374151;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dropdown-item:hover {
+  background: #f9fafb;
+  color: #0f5aff;
+}
+
+.dropdown-item svg {
+  flex-shrink: 0;
+}
+
+.dropdown-logout {
+  color: #dc2626;
+}
+
+.dropdown-logout:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* MOBILE RESPONSIVE */
+@media (max-width: 900px) {
+  .profile-name-small {
+    display: none;
+  }
+
+  .profile-button {
+    padding: 6px;
+  }
+
+  .profile-avatar-small {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .avatar-dropdown-menu {
+    width: 210px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 80px);
+  }
+}
+
+@media (max-width: 640px) {
+  .avatar-dropdown-menu {
+    width: min(220px, calc(100vw - 12px));
+    max-width: calc(100vw - 12px);
+    max-height: calc(100vh - 70px);
+    border-radius: 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dropdown-header {
+    padding: 16px;
+  }
+
+  .dropdown-item {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+
+  .dropdown-divider {
+    margin: 4px 0;
+  }
+}
+
+@media (max-width: 375px) {
+  .avatar-dropdown-menu {
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100vw - 12px);
+    max-width: 280px;
+  }
+}
+
+/* SCROLLBAR STYLING */
+.avatar-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}

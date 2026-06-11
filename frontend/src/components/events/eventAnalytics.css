@@ -1,0 +1,140 @@
+/* EVENT ANALYTICS STYLING */
+
+.event-analytics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.analytics-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+html[data-theme="dark"] .analytics-card {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.analytics-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #d1d5db;
+}
+
+html[data-theme="dark"] .analytics-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: #4b5563;
+}
+
+.analytics-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.analytics-icon {
+  font-size: 1.5rem;
+  display: inline-block;
+}
+
+.analytics-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+html[data-theme="dark"] .analytics-label {
+  color: #9ca3af;
+}
+
+.analytics-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0f5aff;
+  margin: 8px 0;
+}
+
+html[data-theme="dark"] .analytics-value {
+  color: #3b82f6;
+}
+
+.analytics-trend {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+html[data-theme="dark"] .analytics-trend {
+  color: #9ca3af;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 1200px) {
+  .event-analytics {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .analytics-card {
+    padding: 16px;
+  }
+
+  .analytics-value {
+    font-size: 1.75rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .event-analytics {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .analytics-card {
+    padding: 14px;
+  }
+
+  .analytics-label {
+    font-size: 0.75rem;
+  }
+
+  .analytics-value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .event-analytics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .analytics-card {
+    padding: 12px;
+  }
+
+  .analytics-icon {
+    font-size: 1.25rem;
+  }
+
+  .analytics-label {
+    font-size: 0.7rem;
+  }
+
+  .analytics-value {
+    font-size: 1.25rem;
+    margin: 6px 0;
+  }
+
+  .analytics-trend {
+    font-size: 0.7rem;
+  }
+}
