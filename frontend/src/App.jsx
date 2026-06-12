@@ -6,6 +6,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import AccountsLayout from "./layouts/AccountsLayout";
 import ProtectedRoute from "./modules/common/components/ProtectedRoute";
 import AdminProtectedRoute from "./modules/common/components/AdminProtectedRoute";
+import AccountsProtectedRoute from "./modules/common/components/AccountsProtectedRoute";
 import RootRedirect from "./modules/common/components/RootRedirect";
 import { AuthProvider } from "./context/authcontext";
 import { NotificationProvider } from "./context/notificationcontext";
@@ -27,7 +28,7 @@ const queryClient = new QueryClient({
   },
 });
 
-import Dashboard from "./modules/user/pages/Dashboard";
+import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 
 // Modular Route Configurations
@@ -87,21 +88,20 @@ function App() {
                   </AdminProtectedRoute>
                 }
               >
-                <Route path={ROUTES.ADMIN_PROFILE} element={<Profile />} />
                 {adminRoutes}
                 {supportRoutes}
               </Route>
 
               {/* Accounts Workspace Layout (AdminProtectedRoute + AccountsLayout) */}
               <Route
-                element={
-                  <AdminProtectedRoute>
-                    <AccountsLayout />
-                  </AdminProtectedRoute>
-                }
-              >
-                {accountsRoutes}
-              </Route>
+  element={
+    <AccountsProtectedRoute>
+      <AccountsLayout />
+    </AccountsProtectedRoute>
+  }
+>
+  {accountsRoutes}
+</Route>
 
               {/* Legacy/Redirect Routes */}
               <Route

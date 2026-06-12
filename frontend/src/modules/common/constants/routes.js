@@ -35,12 +35,15 @@ export function isAdminRole(account) {
 
 export function getHomeRoute(account) {
   const role = account?.role?.toUpperCase();
+
   if (role === "ADMIN") {
     return ROUTES.ADMIN_DASHBOARD;
   }
+
   if (role === "ACCOUNTS") {
-    return "/accounts/dashboard";
+    return "/finance/dashboard";
   }
+
   return ROUTES.USER_DASHBOARD;
 }
 
