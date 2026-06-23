@@ -12,6 +12,8 @@ import AdminReconciliation from "./pages/AdminReconciliation";
 import AdminReports from "./pages/AdminReports";
 import AdminEvents from "./pages/AdminEvents";
 import AdminSystemConfig from "./pages/AdminSystemConfig";
+import TransactionReviewCenter from "./pages/TransactionReviewCenter";
+import AdminUCManagement from "./pages/AdminUCManagement";
 
 export const adminRoutes = (
   <>
@@ -28,5 +30,7 @@ export const adminRoutes = (
     <Route path="/admin/reports" element={<AdminReports />} />
     <Route path="/admin/events" element={<AdminEvents />} />
     <Route path="/admin/settings" element={<AdminSystemConfig />} />
+    <Route path="/admin/transaction-review" element={<TransactionReviewCenter />} />
+    <Route path="/admin/uc-management" element={<AdminUCManagement />} />
   </>
 );

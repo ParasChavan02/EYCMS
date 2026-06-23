@@ -5,6 +5,7 @@ import ProfileInfoForm from "../components/profile/ProfileInfoForm";
 import ProfileAvatarUpload from "../components/profile/ProfileAvatarUpload";
 import SecuritySettings from "../components/profile/SecuritySettings";
 import ActivityTimeline from "../components/profile/ActivityTimeline";
+import TeamOnboardingDetails from "../components/profile/TeamOnboardingDetails";
 import { ROUTES, isAdminRole } from "../constants/routes";
 import "./profile.css";
 
@@ -32,6 +33,7 @@ function Profile() {
         <div className="profile-main">
           <ProfileHeader user={user} onEditClick={handleEditClick} />
           <ProfileInfoForm user={user} />
+          {!adminProfile && <TeamOnboardingDetails />}
           <ProfileAvatarUpload />
           <SecuritySettings />
         </div>

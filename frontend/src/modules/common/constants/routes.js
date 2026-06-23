@@ -20,6 +20,8 @@ export const ROUTES = {
   ADMIN_APPROVALS: "/admin/approvals",
   ADMIN_AUDIT_LOGS: "/admin/audit-logs",
   ADMIN_SETTINGS: "/admin/settings",
+  ADMIN_TRANSACTION_REVIEW: "/admin/transaction-review",
+  ADMIN_UC_MANAGEMENT: "/admin/uc-management",
   ADMIN_SUPPORT_ALL: "/admin/support/all",
   ADMIN_SUPPORT_OPEN: "/admin/support/open",
   ADMIN_SUPPORT_CRITICAL: "/admin/support/critical",
@@ -35,12 +37,15 @@ export function isAdminRole(account) {
 
 export function getHomeRoute(account) {
   const role = account?.role?.toUpperCase();
+
   if (role === "ADMIN") {
     return ROUTES.ADMIN_DASHBOARD;
   }
+
   if (role === "ACCOUNTS") {
-    return "/accounts/dashboard";
+    return "/finance/dashboard";
   }
+
   return ROUTES.USER_DASHBOARD;
 }
 

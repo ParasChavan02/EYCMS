@@ -1,9 +1,23 @@
-import { Clock3, FileCheck2, FolderOpen, Pin } from "lucide-react";
+import { Clock3, FileCheck2, FolderOpen, Pin, CalendarDays, Hourglass, Award, TrendingUp } from "lucide-react";
 import { useAuth } from "../../common/hooks/useAuth";
 import "./user-erp.css";
 
 function Dashboard() {
   const { user } = useAuth();
+  
+  const today = new Date();
+  const hasStartedThisYear = today.getMonth() > 5 || (today.getMonth() === 5 && today.getDate() >= 14);
+  const startYear = hasStartedThisYear ? today.getFullYear() : today.getFullYear() - 1;
+  const joinDate = new Date(startYear, 5, 14); // June 14th
+  const endDate = new Date(startYear + 1, 5, 14); // 12 months later
+  
+  const totalDurationDays = Math.ceil((endDate - joinDate) / (1000 * 60 * 60 * 24));
+  const daysRemaining = Math.max(0, Math.ceil((endDate - today) / (1000 * 60 * 60 * 24)));
+  const daysElapsed = totalDurationDays - daysRemaining;
+  const fellowshipProgress = Math.min(100, Math.max(0, Math.round((daysElapsed / totalDurationDays) * 100)));
+  
+  const monthsDiff = (today.getFullYear() - joinDate.getFullYear()) * 12 + today.getMonth() - joinDate.getMonth();
+  const currentMonth = Math.min(12, Math.max(1, monthsDiff + 1));
 
   const stats = [
     { icon: Pin, label: "Assigned Events", value: "6", note: "+2 this week", progress: 50 },
@@ -55,7 +69,75 @@ function Dashboard() {
           </div>
           <div className="user-erp-badges">
             <span className="user-erp-badge">USER</span>
-            <span className="user-erp-badge">Thursday, Jun 11</span>
+            <span className="user-erp-badge">
+              {today.toLocaleDateString("en-US", { weekday: 'long', month: 'short', day: 'numeric' })}
+            </span>
+          </div>
+        </section>
+
+        {/* Fellowship Program Tracker */}
+        <section className="user-erp-card-container" style={{ display: "grid", gap: "16px", marginBottom: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+            <h2 style={{ fontSize: "1.25rem", color: "#304761", margin: 0, fontWeight: "700" }}>Fellowship Program Tracker</h2>
+            <span style={{ fontSize: "0.85rem", color: "#536987", fontWeight: "600", background: "#f0fdf4", color: "#16a34a", padding: "4px 10px", borderRadius: "999px", border: "1px solid #bbf7d0" }}>12-Month Duration</span>
+          </div>
+          
+          <div className="user-stat-grid">
+            <article className="user-erp-card user-stat-card">
+              <div className="user-stat-icon" style={{ background: "#e0f2fe", color: "#0284c7" }}>
+                <CalendarDays size={28} />
+              </div>
+              <div>
+                <p style={{ margin: "0 0 16px" }}>Date of Joining</p>
+                <strong>{joinDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>
+                <span className="user-stat-note" style={{ fontSize: "0.8rem", color: "#64748b" }}>Fellowship start date</span>
+                <div className="user-progress">
+                  <span style={{ width: "100%", background: "#0284c7" }} />
+                </div>
+              </div>
+            </article>
+
+            <article className="user-erp-card user-stat-card">
+              <div className="user-stat-icon" style={{ background: "#fef3c7", color: "#d97706" }}>
+                <Hourglass size={28} />
+              </div>
+              <div>
+                <p style={{ margin: "0 0 16px" }}>Days Remaining</p>
+                <strong>{daysRemaining} Days</strong>
+                <span className="user-stat-note" style={{ fontSize: "0.8rem", color: "#64748b" }}>To complete fellowship</span>
+                <div className="user-progress">
+                  <span style={{ width: `${(daysRemaining / totalDurationDays) * 100}%`, background: "#d97706" }} />
+                </div>
+              </div>
+            </article>
+
+            <article className="user-erp-card user-stat-card">
+              <div className="user-stat-icon" style={{ background: "#f3e8ff", color: "#7c3aed" }}>
+                <Award size={28} />
+              </div>
+              <div>
+                <p style={{ margin: "0 0 16px" }}>Fellowship Month</p>
+                <strong>Month {currentMonth} of 12</strong>
+                <span className="user-stat-note" style={{ fontSize: "0.8rem", color: "#64748b" }}>Current phase</span>
+                <div className="user-progress">
+                  <span style={{ width: `${(currentMonth / 12) * 100}%`, background: "#7c3aed" }} />
+                </div>
+              </div>
+            </article>
+
+            <article className="user-erp-card user-stat-card">
+              <div className="user-stat-icon" style={{ background: "#dcfce7", color: "#16a34a" }}>
+                <TrendingUp size={28} />
+              </div>
+              <div>
+                <p style={{ margin: "0 0 16px" }}>Program Progress</p>
+                <strong>{fellowshipProgress}% Completed</strong>
+                <span className="user-stat-note" style={{ fontSize: "0.8rem", color: "#64748b" }}>Elapsed program time</span>
+                <div className="user-progress">
+                  <span style={{ width: `${fellowshipProgress}%`, background: "#16a34a" }} />
+                </div>
+              </div>
+            </article>
           </div>
         </section>
 

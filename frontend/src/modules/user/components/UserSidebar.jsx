@@ -8,6 +8,8 @@ import {
   MessageSquareWarning,
   Star,
   Ticket,
+  ArrowRightLeft,
+  Landmark,
 } from "lucide-react";
 import { ROUTES } from "../../common/constants/routes";
 import "../../common/components/sidebar-enterprise.css";
@@ -22,6 +24,8 @@ function UserSidebar({ isOpen, onClose, isCollapsed }) {
       section: "Reporting",
       items: [
         { icon: CalendarDays, label: "Events", path: ROUTES.USER_EVENTS },
+        { icon: ArrowRightLeft, label: "Transactions", path: "/transactions" },
+        { icon: Landmark, label: "Bank Reconciliation", path: "/bank-reconciliation" },
         { icon: FileText, label: "Reports", path: ROUTES.USER_REPORTS },
       ],
     },

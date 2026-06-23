@@ -1,7 +1,13 @@
 import { useMemo, useState } from "react";
+import { useAuth } from "../../common/hooks/useAuth";
+import { transactionService } from "../../../services/transactionService";
 import "../../../styles/admin-management.css";
 
 function AdminTransactions() {
+  const { user } = useAuth();
+  const currentAdmin = user?.email || "admin@example.com";
+  const currentAdminName = user?.name || "Admin";
+
   const [form, setForm] = useState({
     budgetHead: "",
     amount: "",
@@ -11,76 +17,64 @@ function AdminTransactions() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sourceFilter, setSourceFilter] = useState("ALL"); // ALL, MY, USER
   const [message, setMessage] = useState("");
+  const [transactions, setTransactions] = useState(() => transactionService.getTransactions());
 
-  const [transactions, setTransactions] = useState([
-    { id: "TXN001", head: "Travel", amount: 50000, description: "Domestic Travel", date: "2026-05-30", status: "Approved", approvedBy: "Manas Pandya" },
-    { id: "TXN002", head: "Equipment", amount: 75000, description: "Laptop Purchase", date: "2026-05-29", status: "Pending", approvedBy: "-" },
-    { id: "TXN003", head: "Supplies", amount: 30000, description: "Office Supplies", date: "2026-05-28", status: "Approved", approvedBy: "Manas Pandya" },
-    { id: "TXN004", head: "Training", amount: 120000, description: "Staff Training Program", date: "2026-05-27", status: "Rejected", approvedBy: "Manas Pandya" },
-    { id: "TXN005", head: "Maintenance", amount: 45000, description: "Building Maintenance", date: "2026-05-26", status: "Pending", approvedBy: "-" },
-  ]);
+  const refreshTransactions = () => {
+    setTransactions(transactionService.getTransactions());
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const createTransaction = () => {
+  const handleCreateTransaction = () => {
     setMessage("");
-    if (!form.budgetHead || !form.amount || !form.description || !form.date) {
+    if (!form.budgetHead || !form.amount || !form.description) {
       setMessage("❌ Please fill all required fields");
       return;
     }
 
-    const newTxn = {
-      id: `TXN${String(transactions.length + 1).padStart(3, "0")}`,
-      head: form.budgetHead,
-      amount: parseInt(form.amount),
+    const payload = {
+      amount: form.amount,
+      budgetHead: form.budgetHead,
       description: form.description,
-      date: form.date,
-      status: "Pending",
-      approvedBy: "-",
+      uploadedBills: ["admin_manual_invoice.pdf"]
     };
 
-    setTransactions([...transactions, newTxn]);
+    transactionService.createTransaction(payload, currentAdmin, "ADMIN");
+    refreshTransactions();
     setForm({ budgetHead: "", amount: "", description: "", date: "" });
     setMessage("✅ Transaction created successfully");
-  };
-
-  const approveTransaction = (id) => {
-    setTransactions(
-      transactions.map((t) =>
-        t.id === id ? { ...t, status: "Approved", approvedBy: "You" } : t
-      )
-    );
-    setMessage("✅ Transaction approved");
-  };
-
-  const rejectTransaction = (id) => {
-    setTransactions(
-      transactions.map((t) =>
-        t.id === id ? { ...t, status: "Rejected", approvedBy: "You" } : t
-      )
-    );
-    setMessage("✅ Transaction rejected");
   };
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((txn) => {
       const matchesSearch =
         txn.id.toLowerCase().includes(search.toLowerCase()) ||
-        txn.head.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "ALL" ? true : txn.status === statusFilter;
-      return matchesSearch && matchesStatus;
+        txn.budgetHead.toLowerCase().includes(search.toLowerCase()) ||
+        txn.description.toLowerCase().includes(search.toLowerCase());
+
+      const matchesStatus = statusFilter === "ALL" ? true : txn.status.toUpperCase() === statusFilter.toUpperCase();
+
+      let matchesSource = true;
+      if (sourceFilter === "MY") {
+        matchesSource = txn.creatorRole === "ADMIN" || txn.transactionType === "ADMIN_CREATED";
+      } else if (sourceFilter === "USER") {
+        matchesSource = txn.creatorRole === "USER" || txn.transactionType === "USER_REQUEST";
+      }
+
+      return matchesSearch && matchesStatus && matchesSource;
     });
-  }, [transactions, search, statusFilter]);
+  }, [transactions, search, statusFilter, sourceFilter]);
 
   return (
     <main className="admin-page">
       <section className="admin-header">
         <h1>💳 Transactions Management</h1>
-        <p>Create, approve, and manage financial transactions</p>
+        <p>Create and search financial transactions across the enterprise</p>
       </section>
 
       {/* CREATE TRANSACTION */}
@@ -89,11 +83,14 @@ function AdminTransactions() {
         <div className="form-grid">
           <select name="budgetHead" value={form.budgetHead} onChange={handleChange}>
             <option value="">Select Budget Head</option>
+            <option value="Venue">Venue</option>
+            <option value="Food & Refreshments">Food & Refreshments</option>
+            <option value="Marketing">Marketing</option>
             <option value="Travel">Travel</option>
             <option value="Equipment">Equipment</option>
-            <option value="Supplies">Supplies</option>
             <option value="Training">Training</option>
             <option value="Maintenance">Maintenance</option>
+            <option value="Miscellaneous">Miscellaneous</option>
           </select>
           <input
             name="amount"
@@ -108,15 +105,9 @@ function AdminTransactions() {
             onChange={handleChange}
             placeholder="Description"
           />
-          <input
-            name="date"
-            type="date"
-            value={form.date}
-            onChange={handleChange}
-          />
         </div>
         <div className="form-actions">
-          <button onClick={createTransaction} className="btn-primary">
+          <button onClick={handleCreateTransaction} className="btn-primary">
             + Create Transaction
           </button>
         </div>
@@ -125,6 +116,30 @@ function AdminTransactions() {
 
       {/* TRANSACTIONS TABLE */}
       <section className="admin-card">
+        <div className="tab-nav" style={{ marginBottom: "20px" }}>
+          <button
+            type="button"
+            className={`tab-chip ${sourceFilter === "ALL" ? "active" : ""}`}
+            onClick={() => setSourceFilter("ALL")}
+          >
+            All Transactions
+          </button>
+          <button
+            type="button"
+            className={`tab-chip ${sourceFilter === "MY" ? "active" : ""}`}
+            onClick={() => setSourceFilter("MY")}
+          >
+            My Transactions (Admin)
+          </button>
+          <button
+            type="button"
+            className={`tab-chip ${sourceFilter === "USER" ? "active" : ""}`}
+            onClick={() => setSourceFilter("USER")}
+          >
+            User Transactions
+          </button>
+        </div>
+
         <div className="table-header">
           <input
             type="text"
@@ -135,9 +150,12 @@ function AdminTransactions() {
           />
           <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select">
             <option value="ALL">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value="DRAFT">Draft</option>
+            <option value="SUBMITTED">Submitted</option>
+            <option value="FINANCE_VERIFIED">Finance Verified</option>
+            <option value="ADMIN_APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="REVISION_REQUESTED">Revision Requested</option>
           </select>
         </div>
 
@@ -149,42 +167,47 @@ function AdminTransactions() {
                 <th>Budget Head</th>
                 <th>Amount</th>
                 <th>Description</th>
-                <th>Date</th>
+                <th>Created By</th>
+                <th>Source</th>
                 <th>Status</th>
-                <th>Approved By</th>
-                <th>Actions</th>
+                <th>Date</th>
               </tr>
             </thead>
             <tbody>
               {filteredTransactions.length > 0 ? (
                 filteredTransactions.map((txn) => (
                   <tr key={txn.id}>
-                    <td>{txn.id}</td>
-                    <td>{txn.head}</td>
-                    <td>₹{txn.amount.toLocaleString()}</td>
+                    <td style={{ fontWeight: "600" }}>{txn.id}</td>
+                    <td>{txn.budgetHead}</td>
+                    <td>₹{txn.amount.toLocaleString("en-IN")}</td>
                     <td>{txn.description}</td>
-                    <td>{txn.date}</td>
                     <td>
-                      <span className={`status-badge ${txn.status.toLowerCase()}`}>
-                        {txn.status}
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span style={{ fontWeight: "500" }}>{txn.createdBy}</span>
+                        <span style={{ fontSize: "11px", color: "#64748b" }}>{txn.creatorRole}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          backgroundColor: txn.transactionType === "ADMIN_CREATED" ? "#f3e8ff" : "#e0f2fe",
+                          color: txn.transactionType === "ADMIN_CREATED" ? "#6b21a8" : "#0369a1",
+                        }}
+                      >
+                        {txn.transactionType || (txn.creatorRole === "ADMIN" ? "ADMIN_CREATED" : "USER_REQUEST")}
                       </span>
                     </td>
-                    <td>{txn.approvedBy}</td>
                     <td>
-                      {txn.status === "Pending" && (
-                        <div className="action-buttons">
-                          <button className="btn-sm" onClick={() => approveTransaction(txn.id)}>
-                            ✓ Approve
-                          </button>
-                          <button className="btn-sm danger" onClick={() => rejectTransaction(txn.id)}>
-                            ✗ Reject
-                          </button>
-                        </div>
-                      )}
-                      {txn.status !== "Pending" && (
-                        <span style={{ color: "#94a3b8", fontSize: "13px" }}>-</span>
-                      )}
+                      <span className={`status-badge ${txn.status.toLowerCase().replace("_", "")}`}>
+                        {txn.status.replace("_", " ")}
+                      </span>
                     </td>
+                    <td>{txn.createdAt ? new Date(txn.createdAt).toLocaleDateString() : "-"}</td>
                   </tr>
                 ))
               ) : (
@@ -203,4 +226,3 @@ function AdminTransactions() {
 }
 
 export default AdminTransactions;
-

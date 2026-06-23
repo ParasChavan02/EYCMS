@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import UserSidebar from "../modules/user/components/UserSidebar";
 import Navbar from "../modules/common/components/Navbar";
+import { useAuth } from "../hooks/useAuth";
+import TeamOnboardingModal from "../modules/user/components/TeamOnboardingModal";
 
 const STORAGE_KEY = "user_sidebar_collapsed";
 
@@ -30,8 +32,12 @@ function UserLayout() {
     };
   }, [sidebarOpen]);
 
+  const { user } = useAuth();
+  const showOnboarding = user?.role === "USER" && !user?.teamConfigured;
+
   return (
     <div className={`layout ${sidebarCollapsed ? "layout-collapsed" : ""}`}>
+      <TeamOnboardingModal visible={showOnboarding} />
       <UserSidebar
         isOpen={sidebarOpen}
         isCollapsed={sidebarCollapsed}

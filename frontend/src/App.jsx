@@ -6,6 +6,7 @@ import AdminLayout from "./layouts/AdminLayout";
 import AccountsLayout from "./layouts/AccountsLayout";
 import ProtectedRoute from "./modules/common/components/ProtectedRoute";
 import AdminProtectedRoute from "./modules/common/components/AdminProtectedRoute";
+import AccountsProtectedRoute from "./modules/common/components/AccountsProtectedRoute";
 import RootRedirect from "./modules/common/components/RootRedirect";
 import { AuthProvider } from "./context/authcontext";
 import { NotificationProvider } from "./context/notificationcontext";
@@ -95,9 +96,9 @@ function App() {
               {/* Accounts Workspace Layout (AdminProtectedRoute + AccountsLayout) */}
               <Route
                 element={
-                  <AdminProtectedRoute>
+                  <AccountsProtectedRoute>
                     <AccountsLayout />
-                  </AdminProtectedRoute>
+                  </AccountsProtectedRoute>
                 }
               >
                 {accountsRoutes}
@@ -109,14 +110,6 @@ function App() {
                 element={
                   <AdminProtectedRoute>
                     <Navigate to={ROUTES.ADMIN_USERS} replace />
-                  </AdminProtectedRoute>
-                }
-              />
-              <Route
-                path="/transactions"
-                element={
-                  <AdminProtectedRoute>
-                    <Navigate to={ROUTES.ADMIN_TRANSACTIONS} replace />
                   </AdminProtectedRoute>
                 }
               />

@@ -6,7 +6,6 @@ import { signup } from "../services/authService";
 import Button from "../../common/components/Button";
 import Input from "../../common/components/Input";
 import AdminTokenField from "../components/AdminTokenField";
-import AuthHelpModal from "../components/AuthHelpModal";
 import { getHomeRoute } from "../../common/constants/routes";
 
 function Signup() {
@@ -14,7 +13,6 @@ function Signup() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [redirectPending, setRedirectPending] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const { user, signIn } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
@@ -96,10 +94,9 @@ function Signup() {
         </div>
         <nav className="login-nav">
           <a href="#features">Features</a>
-          <button type="button" className="need-help-button" onClick={() => setHelpOpen(true)}>Need Help</button>
+          <a href="#support">Support</a>
         </nav>
       </header>
-      <AuthHelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
 
       <section className="card auth-card">
         <div className="auth-header">
@@ -143,6 +140,7 @@ function Signup() {
             <select name="role" value={form.role} onChange={handleChange}>
               <option value="USER">User</option>
               <option value="ADMIN">Admin</option>
+              <option value="ACCOUNTS">Accounts</option>
             </select>
           </label>
 
