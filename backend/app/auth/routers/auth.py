@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.core.dependencies import get_db
 from app.auth.schemas import LoginCredentials, RegisterUser, TokenResponse
@@ -8,8 +9,16 @@ from app.shared.responses import ResponseEnvelope, make_success_response
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post("/login", response_model=ResponseEnvelope[TokenResponse])
-def login(credentials: LoginCredentials, db: Session = Depends(get_db)):
+def login(
+    db: Session = Depends(get_db),
+    form_data: OAuth2PasswordRequestForm = Depends()  # ✅ accepts form data
+):
     try:
+        # OAuth2PasswordRequestForm uses 'username' field, map it to email
+        credentials = LoginCredentials(
+            email=form_data.username,  # ✅ Swagger sends email as 'username'
+            password=form_data.password
+        )
         tokens = AuthService.authenticate_user(db, credentials)
         return make_success_response(tokens)
     except Exception as e:
