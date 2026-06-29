@@ -10,16 +10,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Initial checks OK",
     adminRemarks: "Approved for campaign execution",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-12T10:00:00.000Z",
     updatedAt: "2026-06-12T14:00:00.000Z",
     uploadedBills: ["facebook_ads_invoice_June.pdf", "ads_design_receipt.png"],
     auditTrail: [
       { timestamp: "2026-06-12T10:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Submitted digital ads request" },
-      { timestamp: "2026-06-12T12:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Initial checks OK" },
       { timestamp: "2026-06-12T14:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved for campaign execution" }
     ]
   },
@@ -32,16 +29,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Catering quote is verified",
     adminRemarks: "Approved as per catering standard rates",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-11T11:00:00.000Z",
     updatedAt: "2026-06-11T15:30:00.000Z",
     uploadedBills: ["catering_quote_workshop.pdf"],
     auditTrail: [
       { timestamp: "2026-06-11T11:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Submitted catering budget" },
-      { timestamp: "2026-06-11T13:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Catering quote is verified" },
       { timestamp: "2026-06-11T15:30:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved as per catering standard rates" }
     ]
   },
@@ -54,16 +48,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Venue availability confirmed",
     adminRemarks: "Required booking deposit approved",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-10T09:00:00.000Z",
     updatedAt: "2026-06-10T12:00:00.000Z",
     uploadedBills: ["auditorium_booking_deposit.pdf"],
     auditTrail: [
       { timestamp: "2026-06-10T09:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Submitted booking deposit request" },
-      { timestamp: "2026-06-10T11:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Venue availability confirmed" },
       { timestamp: "2026-06-10T12:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Required booking deposit approved" }
     ]
   },
@@ -76,16 +67,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Flight ticket invoice attached",
     adminRemarks: "Approved guest speaker travel",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-08T14:30:00.000Z",
     updatedAt: "2026-06-08T17:00:00.000Z",
     uploadedBills: ["indigo_flight_guest_speaker.pdf"],
     auditTrail: [
       { timestamp: "2026-06-08T14:30:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Submitted travel request" },
-      { timestamp: "2026-06-08T16:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Flight ticket invoice attached" },
       { timestamp: "2026-06-08T17:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved guest speaker travel" }
     ]
   },
@@ -98,16 +86,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Snack bill verification passed",
     adminRemarks: "Approved standard panel snacks budget",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-07T10:00:00.000Z",
     updatedAt: "2026-06-07T13:00:00.000Z",
     uploadedBills: ["starbucks_snacks_receipt.pdf"],
     auditTrail: [
       { timestamp: "2026-06-07T10:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Submitted refreshment request" },
-      { timestamp: "2026-06-07T12:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Snack bill verification passed" },
       { timestamp: "2026-06-07T13:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved standard panel snacks budget" }
     ]
   },
@@ -120,16 +105,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Stationery bill matches allocation",
     adminRemarks: "Approved workshop prints",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-06T11:15:00.000Z",
     updatedAt: "2026-06-06T14:00:00.000Z",
     uploadedBills: ["print_hub_stationery_invoice.pdf"],
     auditTrail: [
       { timestamp: "2026-06-06T11:15:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Submitted printing cost request" },
-      { timestamp: "2026-06-06T13:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Stationery bill matches allocation" },
       { timestamp: "2026-06-06T14:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved workshop prints" }
     ]
   },
@@ -142,16 +124,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "AV vendor quote verified",
     adminRemarks: "Approved speaker system setup",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-05T12:00:00.000Z",
     updatedAt: "2026-06-05T15:00:00.000Z",
     uploadedBills: ["av_rental_invoice.pdf"],
     auditTrail: [
       { timestamp: "2026-06-05T12:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Submitted AV rental request" },
-      { timestamp: "2026-06-05T14:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "AV vendor quote verified" },
       { timestamp: "2026-06-05T15:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved speaker system setup" }
     ]
   },
@@ -164,16 +143,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Printing quote verified",
     adminRemarks: "Approved event marketing brochures",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-04T09:30:00.000Z",
     updatedAt: "2026-06-04T12:00:00.000Z",
     uploadedBills: ["digital_print_house_receipt.pdf"],
     auditTrail: [
       { timestamp: "2026-06-04T09:30:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Submitted brochure prints request" },
-      { timestamp: "2026-06-04T11:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Printing quote verified" },
       { timestamp: "2026-06-04T12:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved event marketing brochures" }
     ]
   },
@@ -201,15 +177,12 @@ const defaultTransactions = [
     createdBy: "user@example.com",
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
-    status: "FINANCE_VERIFIED",
-    verifiedBy: "finance@example.com",
-    financeRemarks: "Verified dinner bills and attendance sheet",
+    status: "SUBMITTED",
     createdAt: "2026-06-02T18:00:00.000Z",
     updatedAt: "2026-06-03T10:00:00.000Z",
     uploadedBills: ["committee_dinner_receipt.pdf"],
     auditTrail: [
-      { timestamp: "2026-06-02T18:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Request reimbursement for committee organizing dinner" },
-      { timestamp: "2026-06-03T10:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Verified dinner bills and attendance sheet" }
+      { timestamp: "2026-06-02T18:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Request reimbursement for committee organizing dinner" }
     ]
   },
   {
@@ -221,16 +194,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Promotions rates checked",
     adminRemarks: "Approved budget for Facebook/LinkedIn reach campaign",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-06-01T10:00:00.000Z",
     updatedAt: "2026-06-01T14:30:00.000Z",
     uploadedBills: ["ad_campaign_facebook_invoice.pdf"],
     auditTrail: [
       { timestamp: "2026-06-01T10:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Promotions budget request" },
-      { timestamp: "2026-06-01T12:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Promotions rates checked" },
       { timestamp: "2026-06-01T14:30:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved budget for Facebook/LinkedIn reach campaign" }
     ]
   },
@@ -243,16 +213,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Stage designer quotation checked",
     adminRemarks: "Approved stage fabrication request",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-05-30T14:00:00.000Z",
     updatedAt: "2026-05-30T17:30:00.000Z",
     uploadedBills: ["stage_fabricators_invoice.pdf"],
     auditTrail: [
       { timestamp: "2026-05-30T14:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Stage setup budget request" },
-      { timestamp: "2026-05-30T16:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Stage designer quotation checked" },
       { timestamp: "2026-05-30T17:30:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved stage fabrication request" }
     ]
   },
@@ -265,16 +232,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Daily wages verified",
     adminRemarks: "Approved clean up budget",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-05-29T11:00:00.000Z",
     updatedAt: "2026-05-29T14:00:00.000Z",
     uploadedBills: ["clean_up_crew_wages.pdf"],
     auditTrail: [
       { timestamp: "2026-05-29T11:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Clean up crew budget" },
-      { timestamp: "2026-05-29T13:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Daily wages verified" },
       { timestamp: "2026-05-29T14:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved clean up budget" }
     ]
   },
@@ -305,16 +269,13 @@ const defaultTransactions = [
     creatorRole: "USER",
     transactionType: "USER_REQUEST",
     status: "ADMIN_APPROVED",
-    financeRemarks: "Hotel booking receipt verified",
     adminRemarks: "Approved lodging expense",
-    verifiedBy: "finance@example.com",
     approvedBy: "admin@example.com",
     createdAt: "2026-05-27T10:00:00.000Z",
     updatedAt: "2026-05-27T14:00:00.000Z",
     uploadedBills: ["guest_house_booking_invoice.pdf"],
     auditTrail: [
       { timestamp: "2026-05-27T10:00:00.000Z", action: "Created", user: "user@example.com", role: "USER", remarks: "Speaker hotel accommodation request" },
-      { timestamp: "2026-05-27T12:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "Hotel booking receipt verified" },
       { timestamp: "2026-05-27T14:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved lodging expense" }
     ]
   },

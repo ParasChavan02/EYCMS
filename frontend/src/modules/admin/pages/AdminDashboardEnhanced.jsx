@@ -43,7 +43,7 @@ function AdminDashboardEnhanced() {
     const nearDeadline = progressList.filter(u => u.status === "Active" && u.daysRemaining <= 30 && u.daysRemaining >= 0).length;
     const pendingReviews = progressList.reduce((acc, u) => acc + u.pendingReviews, 0);
     const completedReports = progressList.reduce((acc, u) => acc + u.submittedReports, 0);
-    const pendingUcs = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED" || r.status === "FINANCE_VERIFIED").length;
+    const pendingUcs = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED").length;
 
     return [
       { label: "Total Active Users", value: String(active), color: "#10b981", icon: "👤" },
@@ -79,7 +79,7 @@ function AdminDashboardEnhanced() {
     const totalTxnsCount = txns.length;
     const userTxnsCount = txns.filter(t => t.creatorRole === "USER" || t.transactionType === "USER_REQUEST").length;
     const adminTxnsCount = txns.filter(t => t.creatorRole === "ADMIN" || t.transactionType === "ADMIN_CREATED").length;
-    const pendingTxnsCount = txns.filter(t => t.status === "SUBMITTED" || t.status === "FINANCE_VERIFIED" || t.status === "Under Review" || t.status === "UNDER_REVIEW").length;
+    const pendingTxnsCount = txns.filter(t => t.status === "SUBMITTED" || t.status === "Under Review" || t.status === "UNDER_REVIEW").length;
 
     const totalUcCount = ucs.length;
     const pendingUcCount = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED").length;
@@ -94,7 +94,6 @@ function AdminDashboardEnhanced() {
       { icon: "PT", label: "Pending Transaction Approvals", value: String(pendingTxnsCount), color: "#ef4444", to: ROUTES.ADMIN_TRANSACTION_REVIEW },
       { icon: "UC", label: "Total UC Requests", value: String(totalUcCount), color: "#06b6d4", to: ROUTES.ADMIN_UC_MANAGEMENT },
       { icon: "PU", label: "Pending UC Reviews", value: String(pendingUcCount), color: "#3b82f6", to: ROUTES.ADMIN_UC_MANAGEMENT },
-      { icon: "VU", label: "Finance Verified UCs", value: String(financeVerifiedUcCount), color: "#10b981", to: ROUTES.ADMIN_UC_MANAGEMENT },
       { icon: "AU", label: "Approved UCs", value: String(approvedUcCount), color: "#10b981", to: ROUTES.ADMIN_UC_MANAGEMENT },
       { icon: "RU", label: "Rejected UCs", value: String(rejectedUcCount), color: "#ef4444", to: ROUTES.ADMIN_UC_MANAGEMENT },
     ];
@@ -128,7 +127,7 @@ function AdminDashboardEnhanced() {
   ];
 
   const systemOverview = useMemo(() => {
-    const pendingTxns = txns.filter(t => t.status === "SUBMITTED" || t.status === "FINANCE_VERIFIED").length;
+    const pendingTxns = txns.filter(t => t.status === "SUBMITTED").length;
     const pendingUcs = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED").length;
 
     return [
@@ -147,7 +146,7 @@ function AdminDashboardEnhanced() {
   }, [txns]);
 
   const recentApprovals = useMemo(() => {
-    const pendingTxns = txns.filter(t => t.status === "SUBMITTED" || t.status === "FINANCE_VERIFIED");
+    const pendingTxns = txns.filter(t => t.status === "SUBMITTED");
     const pendingUcs = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED");
 
     const items = [];

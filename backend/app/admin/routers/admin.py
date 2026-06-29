@@ -11,6 +11,7 @@ from app.admin.schemas import (
     AdminTransactionReview
 )
 from app.admin.services import AdminService
+from app.admin.services.dashboard_service import AdminDashboardService
 from app.shared.responses import ResponseEnvelope, make_success_response
 
 router = APIRouter(prefix="/admin", tags=["Admin Operations"], dependencies=[Depends(verify_admin)])
@@ -18,7 +19,7 @@ router = APIRouter(prefix="/admin", tags=["Admin Operations"], dependencies=[Dep
 @router.get("/dashboard", response_model=ResponseEnvelope[AdminDashboardKPIs])
 def get_dashboard_kpis(db: Session = Depends(get_db)):
     try:
-        kpis = AdminService.get_dashboard_kpis(db)
+        kpis = AdminDashboardService.get_dashboard_kpis(db)
         return make_success_response(kpis)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

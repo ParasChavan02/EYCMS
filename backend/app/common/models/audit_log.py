@@ -15,9 +15,9 @@ class AuditLog(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
-    module: Mapped[str] = mapped_column(String(100), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), nullable=False)
-    details: Mapped[str] = mapped_column(Text, nullable=True)
+    entity: Mapped[str] = mapped_column(String(100), nullable=False)  # Target entity (e.g. Transaction, Project)
+    remarks: Mapped[str] = mapped_column(Text, nullable=True)
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=True)  # Supports IPv4/IPv6 length
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

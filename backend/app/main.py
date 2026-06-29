@@ -38,9 +38,5 @@ app.include_router(accounts_router, prefix=settings.API_V1_STR)
 app.include_router(user_router, prefix=settings.API_V1_STR)
 app.include_router(support_router, prefix=settings.API_V1_STR)
 
-@app.get("/")
-def read_root():
-    """
-    Health check and greeting endpoint.
-    """
-    return {"message": "Welcome to E-YUVA ERP Backend API Service"}
+# No root-level endpoints are exposed to enforce API versioning.
+

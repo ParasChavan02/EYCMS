@@ -10,7 +10,7 @@ function AdminUCManagement() {
 
   const [requests, setRequests] = useState(() => ucService.getUCRequests());
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("PENDING"); // ALL, PENDING, FINANCE_VERIFIED, APPROVED, REJECTED
+  const [activeTab, setActiveTab] = useState("PENDING"); // ALL, PENDING, APPROVED, REJECTED
   const [selectedReqId, setSelectedReqId] = useState("");
   const [modalMode, setModalMode] = useState(""); // "", "GRANT", "APPROVE", "REJECT", "REVISION", "AUDIT"
   
@@ -43,8 +43,6 @@ function AdminUCManagement() {
         matchesTab = true;
       } else if (activeTab === "PENDING") {
         matchesTab = status === "REQUESTED" || status === "UC_SUBMITTED";
-      } else if (activeTab === "FINANCE_VERIFIED") {
-        matchesTab = status === "FINANCE_VERIFIED";
       } else if (activeTab === "APPROVED") {
         matchesTab = status === "ADMIN_APPROVED";
       } else if (activeTab === "REJECTED") {
@@ -114,13 +112,6 @@ function AdminUCManagement() {
             onClick={() => { setActiveTab("PENDING"); setSelectedReqId(""); }}
           >
             Pending Requests ({requests.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED").length})
-          </button>
-          <button
-            type="button"
-            className={`tab-chip ${activeTab === "FINANCE_VERIFIED" ? "active" : ""}`}
-            onClick={() => { setActiveTab("FINANCE_VERIFIED"); setSelectedReqId(""); }}
-          >
-            Finance Verified ({requests.filter(r => r.status === "FINANCE_VERIFIED").length})
           </button>
           <button
             type="button"
@@ -206,7 +197,7 @@ function AdminUCManagement() {
                             Grant Template
                           </button>
                         )}
-                        {(req.status === "UC_SUBMITTED" || req.status === "FINANCE_VERIFIED") && (
+                        {(req.status === "UC_SUBMITTED" || req.status === "PENDING") && (
                           <>
                             <button
                               className="btn-sm"
@@ -277,13 +268,7 @@ function AdminUCManagement() {
                 </div>
               </>
             )}
-            {selectedReq.financeRemarks && (
-              <div className="detail-item detail-item-wide" style={{ borderLeft: "4px solid #10b981", background: "#f0fdf4" }}>
-                <span style={{ color: "#166534" }}>Finance Review Comments (Accounts)</span>
-                <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>{selectedReq.financeRemarks}</p>
-                {selectedReq.verifiedBy && <small style={{ color: "#64748b" }}>Verified by: {selectedReq.verifiedBy}</small>}
-              </div>
-            )}
+
             {selectedReq.adminRemarks && (
               <div className="detail-item detail-item-wide" style={{ borderLeft: "4px solid #0f5aff", background: "#eff6ff" }}>
                 <span style={{ color: "#1d4ed8" }}>Admin Remarks</span>

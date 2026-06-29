@@ -9,16 +9,17 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.common.models.user import User
+    from app.common.models.expense import Expense
 
 class Transaction(Base):
     __tablename__ = "transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    expense_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("expenses.id", ondelete="CASCADE"), nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
-    budget_head: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     created_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="Draft", index=True)
+    status: Mapped[str] = mapped_column(String(50), default="DRAFT", index=True)
     verified_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=True)
     approved_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=True)
     finance_remarks: Mapped[str] = mapped_column(Text, nullable=True)
@@ -31,6 +32,8 @@ class Transaction(Base):
     )
 
     # Relationships
+    expense: Mapped["Expense"] = relationship(back_populates="transactions")
+    
     creator: Mapped["User"] = relationship(
         foreign_keys=[created_by_id], back_populates="created_transactions"
     )

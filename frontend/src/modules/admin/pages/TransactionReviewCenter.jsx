@@ -10,7 +10,7 @@ function TransactionReviewCenter() {
 
   const [transactions, setTransactions] = useState(() => transactionService.getTransactions());
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("PENDING"); // PENDING, FINANCE_VERIFIED, APPROVED, REJECTED, REVISION_REQUESTED, ALL
+  const [activeTab, setActiveTab] = useState("PENDING"); // PENDING, APPROVED, REJECTED, REVISION_REQUESTED, ALL
   const [selectedTxnId, setSelectedTxnId] = useState("");
   const [remarks, setRemarks] = useState("");
   const [modalMode, setModalMode] = useState(""); // "", "APPROVE", "REJECT", "REVISION", "AUDIT", "BILL"
@@ -40,9 +40,7 @@ function TransactionReviewCenter() {
         matchesTab = true;
       } else if (activeTab === "PENDING") {
         // Transactions waiting for Admin signoff (Submitted or verified)
-        matchesTab = status === "SUBMITTED" || status === "FINANCE_VERIFIED" || status === "UNDER_REVIEW";
-      } else if (activeTab === "FINANCE_VERIFIED") {
-        matchesTab = status === "FINANCE_VERIFIED";
+        matchesTab = status === "SUBMITTED" || status === "UNDER_REVIEW" || status === "PENDING";
       } else if (activeTab === "APPROVED") {
         matchesTab = status === "ADMIN_APPROVED";
       } else if (activeTab === "REJECTED") {
@@ -99,13 +97,7 @@ function TransactionReviewCenter() {
           >
             Pending Review
           </button>
-          <button
-            type="button"
-            className={`tab-chip ${activeTab === "FINANCE_VERIFIED" ? "active" : ""}`}
-            onClick={() => { setActiveTab("FINANCE_VERIFIED"); setSelectedTxnId(""); }}
-          >
-            Finance Verified
-          </button>
+
           <button
             type="button"
             className={`tab-chip ${activeTab === "APPROVED" ? "active" : ""}`}
@@ -188,7 +180,7 @@ function TransactionReviewCenter() {
                         >
                           <Eye size={14} style={{ marginRight: "4px", verticalAlign: "middle" }} /> Details
                         </button>
-                        {(txn.status === "SUBMITTED" || txn.status === "FINANCE_VERIFIED" || txn.status === "UNDER_REVIEW") && (
+                        {(txn.status === "SUBMITTED" || txn.status === "PENDING" || txn.status === "UNDER_REVIEW") && (
                           <>
                             <button
                               className="btn-sm"
@@ -255,13 +247,7 @@ function TransactionReviewCenter() {
               <span>Description</span>
               <strong>{selectedTxn.description}</strong>
             </div>
-            {selectedTxn.financeRemarks && (
-              <div className="detail-item detail-item-wide" style={{ borderLeft: "4px solid #10b981", background: "#f0fdf4" }}>
-                <span style={{ color: "#166534" }}>Finance Remarks (by Accounts)</span>
-                <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>{selectedTxn.financeRemarks}</p>
-                {selectedTxn.verifiedBy && <small style={{ color: "#64748b" }}>Verified by: {selectedTxn.verifiedBy}</small>}
-              </div>
-            )}
+
             {selectedTxn.adminRemarks && (
               <div className="detail-item detail-item-wide" style={{ borderLeft: "4px solid #0f5aff", background: "#eff6ff" }}>
                 <span style={{ color: "#1d4ed8" }}>Admin Remarks</span>

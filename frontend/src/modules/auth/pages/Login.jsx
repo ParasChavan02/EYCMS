@@ -121,12 +121,12 @@ function Login() {
         </form>
 
         <div className="divider">
-          <span>or</span>
+          <span></span>
         </div>
 
-        <button type="button" className="google-button" onClick={handleGoogleSignIn}>
+        {/* <button type="button" className="google-button" onClick={handleGoogleSignIn}>
           Continue with Google
-        </button>
+        </button> */}
       </section>
     </main>
   );

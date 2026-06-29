@@ -15,8 +15,8 @@ class SupportTicket(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     issue: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[str] = mapped_column(String(100), nullable=False)
-    priority: Mapped[str] = mapped_column(String(50), default="Medium")
-    status: Mapped[str] = mapped_column(String(50), default="Open")
+    priority: Mapped[str] = mapped_column(String(50), default="MEDIUM")
+    status: Mapped[str] = mapped_column(String(50), default="OPEN")
     created_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
     screenshot_path: Mapped[str] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

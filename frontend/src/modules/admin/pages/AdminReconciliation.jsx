@@ -64,6 +64,12 @@ function AdminReconciliation() {
     setMessage("✅ Reconciliation cycle created successfully");
   };
 
+  const handleUpdateStatus = (id, newStatus) => {
+    setReconciliations((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: newStatus, completedDate: new Date().toISOString().slice(0, 10) } : r))
+    );
+  };
+
   // Filtered List
   const filteredReconciliations = useMemo(() => {
     return reconciliations.filter((r) => {
@@ -288,7 +294,15 @@ function AdminReconciliation() {
                       </span>
                     </td>
                     <td>
-                      <span className={`status-badge ${r.status === "Completed" ? "approved" : "pending"}`}>
+                      <span
+                        className={`status-badge ${
+                          r.status === "Completed" || r.status === "Approved"
+                            ? "approved"
+                            : r.status === "Rejected"
+                            ? "rejected"
+                            : "pending"
+                        }`}
+                      >
                         {r.status}
                       </span>
                     </td>
@@ -300,6 +314,30 @@ function AdminReconciliation() {
                       <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
                         <button className="btn-sm" onClick={() => alert(`Report download started for cycle ${r.period}`)}>Report</button>
                         <button className="btn-sm" onClick={() => openDetails(r)}>Details</button>
+                        {r.source === "USER" && r.status === "In Review" && (
+                          <>
+                            <button
+                              className="btn-sm"
+                              style={{ borderColor: "#16a34a", color: "#16a34a" }}
+                              onClick={() => handleUpdateStatus(r.id, "Completed")}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              className="btn-sm danger"
+                              onClick={() => handleUpdateStatus(r.id, "Rejected")}
+                            >
+                              Reject
+                            </button>
+                            <button
+                              className="btn-sm"
+                              style={{ borderColor: "#d97706", color: "#d97706" }}
+                              onClick={() => handleUpdateStatus(r.id, "Revision Requested")}
+                            >
+                              Revision
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -342,6 +380,40 @@ function AdminReconciliation() {
                 <span>Completion Date</span>
                 <strong>{selectedRec.completedDate}</strong>
               </div>
+              <div className="detail-item">
+                <span>Submitted By</span>
+                <strong>{selectedRec.source === "USER" ? "rahul@example.com (Fellow)" : "admin@example.com (Admin)"}</strong>
+              </div>
+              <div className="detail-item detail-item-wide">
+                <span>Uploaded Documents</span>
+                <strong>{selectedRec.source === "USER" ? "bank_statement_May2026.pdf, reconciliation_receipts.zip" : "reconciliation_run_admin.xlsx"}</strong>
+              </div>
+            </div>
+
+            <h4 style={{ margin: "15px 0 10px 0", color: "#475569", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Audit Trail</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "20px" }}>
+              <div style={{ fontSize: "12px", background: "#f8fafc", padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
+                <div><strong>Created & Submitted</strong></div>
+                <div style={{ color: "#64748b" }}>{selectedRec.completedDate || "2026-05-30"} • By {selectedRec.source === "USER" ? "rahul@example.com" : "admin@example.com"}</div>
+              </div>
+              {selectedRec.status === "Completed" && (
+                <div style={{ fontSize: "12px", background: "#f0fdf4", padding: "8px", borderRadius: "6px", border: "1px solid #bbf7d0" }}>
+                  <div><strong>Approved & Finalized</strong></div>
+                  <div style={{ color: "#166534" }}>{selectedRec.completedDate || "2026-05-30"} • By admin@example.com (ADMIN)</div>
+                </div>
+              )}
+              {selectedRec.status === "Rejected" && (
+                <div style={{ fontSize: "12px", background: "#fef2f2", padding: "8px", borderRadius: "6px", border: "1px solid #fecaca" }}>
+                  <div><strong>Rejected</strong></div>
+                  <div style={{ color: "#991b1b" }}>{selectedRec.completedDate || "2026-05-30"} • By admin@example.com (ADMIN)</div>
+                </div>
+              )}
+              {selectedRec.status === "Revision Requested" && (
+                <div style={{ fontSize: "12px", background: "#fffbeb", padding: "8px", borderRadius: "6px", border: "1px solid #fde68a" }}>
+                  <div><strong>Revision Requested</strong></div>
+                  <div style={{ color: "#92400e" }}>{selectedRec.completedDate || "2026-05-30"} • By admin@example.com (ADMIN)</div>
+                </div>
+              )}
             </div>
 
             <h4 style={{ margin: "0 0 10px 0", color: "#475569", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Sample Mapped Entries</h4>

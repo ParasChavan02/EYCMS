@@ -9,6 +9,7 @@ from app.user.schemas import (
     UCRequestPayload
 )
 from app.user.services import UserService
+from app.user.services.dashboard_service import UserDashboardService
 from app.shared.responses import ResponseEnvelope, make_success_response
 
 router = APIRouter(prefix="/user", tags=["Fellow Operations"], dependencies=[Depends(verify_user)])
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/user", tags=["Fellow Operations"], dependencies=[Dep
 @router.get("/dashboard", response_model=ResponseEnvelope[FellowDashboardKPIs])
 def get_dashboard_kpis(db: Session = Depends(get_db), current_user: User = Depends(verify_user)):
     try:
-        kpis = UserService.get_dashboard_kpis(db, str(current_user.id))
+        kpis = UserDashboardService.get_dashboard_kpis(db, str(current_user.id))
         return make_success_response(kpis)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

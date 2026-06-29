@@ -1,4 +1,4 @@
-from typing import Generator, List
+from typing import Generator
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.security import decode_token
+from app.core.permissions import RoleChecker
 from app.common.models.user import User
-from app.common.constants.roles import RoleEnum
+from app.common.constants.enums import RoleEnum
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login",
@@ -17,8 +18,7 @@ reusable_oauth2 = OAuth2PasswordBearer(
 
 def get_db() -> Generator[Session, None, None]:
     """
-    Dependency to get a SQLAlchemy database session.
-    Yields the session and closes it after the request lifecycle.
+    Retrieves database connection session and cleans up after request lifecycle.
     """
     db = SessionLocal()
     try:
@@ -31,8 +31,7 @@ def get_current_user(
     token: str = Depends(reusable_oauth2)
 ) -> User:
     """
-    Dependency to validate the JWT from the Authorization header
-    and retrieve the corresponding User object.
+    Resolves JWT token to fetch the current authenticated User model.
     """
     if not token:
         raise HTTPException(
@@ -47,7 +46,7 @@ def get_current_user(
     if token_type != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token type, access token expected",
+            detail="Invalid token, access token expected",
         )
         
     user_id = payload.get("sub")
@@ -58,10 +57,9 @@ def get_current_user(
         )
     
     try:
-        # Retrieve user from database
+        # Retrieve user from database with eager-loaded role mapping
         user = db.query(User).filter(User.id == UUID(user_id)).first()
     except Exception:
-        # Fallback to prevent crash if database is not migrated yet
         user = None
         
     if not user:
@@ -78,23 +76,25 @@ def get_current_user(
         
     return user
 
-class RoleChecker:
-    """
-    Dependency class that enforces Role-Based Access Control (RBAC).
-    """
-    def __init__(self, allowed_roles: List[str]):
-        self.allowed_roles = allowed_roles
+# Helper Dependency Injection functions wrapping permission guards
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    checker = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.ADMIN])
+    return checker(current_user)
 
-    def __call__(self, current_user: User = Depends(get_current_user)) -> User:
-        if not current_user.role or current_user.role.name not in self.allowed_roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="The user does not have permissions to access this resource",
-            )
-        return current_user
+def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
+    checker = RoleChecker([RoleEnum.SUPER_ADMIN])
+    return checker(current_user)
 
-# Preconfigured role guards for route dependency injections
-verify_admin = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.ADMIN])
-verify_accounts = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.ACCOUNTS])
-verify_user = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.USER])
+def require_user(current_user: User = Depends(get_current_user)) -> User:
+    checker = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.USER])
+    return checker(current_user)
+
+def require_accounts(current_user: User = Depends(get_current_user)) -> User:
+    checker = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.ACCOUNTS])
+    return checker(current_user)
+
+# Keep legacy variables to preserve compatibility across modules
+verify_admin = require_admin
+verify_accounts = require_accounts
+verify_user = require_user
 verify_admin_or_accounts = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.ADMIN, RoleEnum.ACCOUNTS])

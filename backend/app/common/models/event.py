@@ -7,20 +7,23 @@ from sqlalchemy.sql import func
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.common.models.project import Project
     from app.common.models.user import User
 
 class Event(Base):
     __tablename__ = "events"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     title: Mapped[str] = mapped_column(String(150), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     coordinator_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), default="Active")
+    status: Mapped[str] = mapped_column(String(50), default="ACTIVE")
     event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
 
     # Relationships
+    project: Mapped["Project"] = relationship(back_populates="events")
     coordinator: Mapped["User"] = relationship(back_populates="coordinated_events")
