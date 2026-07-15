@@ -7,6 +7,8 @@ import AccountsLayout from "./layouts/AccountsLayout";
 import ProtectedRoute from "./modules/common/components/ProtectedRoute";
 import AdminProtectedRoute from "./modules/common/components/AdminProtectedRoute";
 import AccountsProtectedRoute from "./modules/common/components/AccountsProtectedRoute";
+import SuperAdminLayout from "./layouts/SuperAdminLayout";
+import SuperAdminProtectedRoute from "./modules/common/components/SuperAdminProtectedRoute";
 import RootRedirect from "./modules/common/components/RootRedirect";
 import { AuthProvider } from "./context/authcontext";
 import { NotificationProvider } from "./context/notificationcontext";
@@ -30,6 +32,11 @@ const queryClient = new QueryClient({
 
 import Dashboard from "./modules/user/pages/Dashboard";
 import Profile from "./pages/Profile";
+
+import SuperAdminDashboard from "./modules/super-admin/pages/SuperAdminDashboard";
+import GenerateToken from "./modules/super-admin/pages/GenerateToken";
+import GeneratedTokens from "./modules/super-admin/pages/GeneratedTokens";
+import TokenDetails from "./modules/super-admin/pages/TokenDetails";
 
 // Modular Route Configurations
 import { authRoutes } from "./modules/auth/routes";
@@ -102,6 +109,22 @@ function App() {
                 }
               >
                 {accountsRoutes}
+              </Route>
+
+              {/* Super Admin Workspace Layout (SuperAdminProtectedRoute + SuperAdminLayout) */}
+              <Route
+                element={
+                  <SuperAdminProtectedRoute>
+                    <SuperAdminLayout />
+                  </SuperAdminProtectedRoute>
+                }
+              >
+                <Route path={ROUTES.SUPER_ADMIN_DASHBOARD} element={<SuperAdminDashboard />} />
+                <Route path={ROUTES.SUPER_ADMIN_GENERATE_TOKEN} element={<GenerateToken />} />
+                <Route path={ROUTES.SUPER_ADMIN_TOKENS} element={<GeneratedTokens />} />
+                <Route path={ROUTES.SUPER_ADMIN_TOKEN_DETAILS} element={<TokenDetails />} />
+                <Route path={ROUTES.SUPER_ADMIN_PROFILE} element={<Profile />} />
+                <Route path={ROUTES.SUPER_ADMIN_SETTINGS} element={<Navigate to={ROUTES.SUPER_ADMIN_PROFILE} replace />} />
               </Route>
 
               {/* Legacy/Redirect Routes */}

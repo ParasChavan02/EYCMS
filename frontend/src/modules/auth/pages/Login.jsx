@@ -21,7 +21,8 @@ function Login() {
   // Redirect to dashboard after successful login
   useEffect(() => {
     if (redirectPending && user) {
-      navigate(getHomeRoute(user));
+      const destination = user.role === "SUPER_ADMIN" ? "/super-admin/dashboard" : getHomeRoute(user);
+      navigate(destination);
       setRedirectPending(false);
     }
   }, [user, redirectPending, navigate]);
@@ -49,7 +50,8 @@ function Login() {
         localStorage.setItem('current_user', JSON.stringify(result.user));
         setRedirectPending(true);
         signIn(result.user);
-        setTimeout(() => navigate(getHomeRoute(result.user)), 100);
+        const destination = result.user.role === "SUPER_ADMIN" ? "/super-admin/dashboard" : getHomeRoute(result.user);
+        setTimeout(() => navigate(destination), 100);
       } else {
         setMessage(result.error || "Authentication failed");
       }

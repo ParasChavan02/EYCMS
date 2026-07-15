@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Bell, X } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useNotification } from "../../hooks/useNotification";
-import { ROUTES, getHomeRoute, getSettingsRoute, isAdminRole } from "../../constants/routes";
+import { ROUTES, getHomeRoute, getProfileRoute, getSettingsRoute, isAdminRole } from "../../constants/routes";
 import "./notificationBell.css";
 
 function NotificationBell() {
@@ -16,8 +16,15 @@ function NotificationBell() {
   const buttonRef = useRef(null);
   const currentUser = user || JSON.parse(localStorage.getItem("current_user") || "null");
   const adminMode = isAdminRole(currentUser);
+  const isSuperAdmin = currentUser?.role?.toUpperCase() === "SUPER_ADMIN";
 
-  const quickActions = adminMode
+  const quickActions = isSuperAdmin
+    ? [
+        { label: "Dashboard", helper: "Return to your workspace", path: ROUTES.SUPER_ADMIN_DASHBOARD },
+        { label: "Profile", helper: "Review your account details", path: ROUTES.SUPER_ADMIN_PROFILE },
+        { label: "Settings", helper: "Update personal preferences", path: ROUTES.SUPER_ADMIN_SETTINGS },
+      ]
+    : adminMode
     ? [
         { label: "Approval Center", helper: "Review pending requests", path: ROUTES.ADMIN_APPROVALS },
         { label: "Audit Logs", helper: "Open latest activity", path: ROUTES.ADMIN_AUDIT_LOGS },
@@ -25,14 +32,21 @@ function NotificationBell() {
       ]
     : [
         { label: "Dashboard", helper: "Return to your workspace", path: getHomeRoute(currentUser) },
-        { label: "Profile", helper: "Review your account details", path: ROUTES.USER_PROFILE },
+        { label: "Profile", helper: "Review your account details", path: getProfileRoute(currentUser) },
         { label: "Settings", helper: "Update personal preferences", path: getSettingsRoute(currentUser) },
       ];
 
-  const latestAlerts = useMemo(
-    () => notifications.filter((notification) => notification.showInBell !== false).slice().reverse(),
-    [notifications]
-  );
+  const latestAlerts = useMemo(() => {
+    const role = currentUser?.role?.toUpperCase() || "USER";
+    return notifications
+      .filter((n) => {
+        if (n.showInBell === false) return false;
+        if (n.roles && !n.roles.map(r => r.toUpperCase()).includes(role)) return false;
+        return true;
+      })
+      .slice()
+      .reverse();
+  }, [notifications, currentUser]);
 
   const unreadCount = latestAlerts.length;
 

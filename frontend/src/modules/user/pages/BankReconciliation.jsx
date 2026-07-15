@@ -1,618 +1,590 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Landmark,
-  UploadCloud,
   FileSpreadsheet,
   FileText,
   CheckCircle2,
   AlertTriangle,
-  RefreshCw,
+  TrendingUp,
+  Clock,
   Search,
-  Filter,
   ArrowRightLeft,
   XCircle,
-  HelpCircle,
-  TrendingUp,
-  Download,
-  Link,
-  Plus,
-  Info
+  Info,
+  IndianRupee
 } from "lucide-react";
 import { useNotification } from "../../common/hooks/useNotification";
 import "./user-erp.css";
+import Chart from "chart.js/auto";
 
-// Reusable Progress Bar Component
-function ReconciliationProgressBar({ percentage }) {
-  return (
-    <div style={{ width: "100%", marginTop: "8px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", fontWeight: "600", color: "#536987", marginBottom: "4px" }}>
-        <span>Match Progress</span>
-        <span>{percentage}%</span>
-      </div>
-      <div className="user-progress" style={{ margin: 0, height: "8px" }}>
-        <span style={{ width: `${percentage}%`, background: "linear-gradient(90deg, #10b981, #1d5cff)" }} />
-      </div>
-    </div>
-  );
+// Reusable Chart Component matching existing ERP architecture
+function ReconciliationChart({ type, data, options }) {
+  const canvasRef = useRef(null);
+  
+  useEffect(() => {
+    if (!canvasRef.current) {
+      return undefined;
+    }
+    const chart = new Chart(canvasRef.current, { type, data, options });
+    return () => chart.destroy();
+  }, [type, data, options]);
+
+  return <canvas ref={canvasRef} />;
 }
 
 export default function BankReconciliation() {
   const { addNotification } = useNotification();
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  
-  // Format Selector & Upload States
-  const [selectedFormat, setSelectedFormat] = useState("CSV");
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState([
-    { name: "bank_statement_may_2026.csv", size: "18.4 KB", date: "2026-05-30", status: "Reconciled" }
-  ]);
 
-  // Initial Bank Statement Entries (Mocked)
-  const [statementEntries, setStatementEntries] = useState([
-    { id: "ST-001", date: "2026-06-12", description: "GOOGLE ADS / MKTG SERVICE", amount: -15000, reconciled: true, matchedTxnId: "TXN-001", matchType: "Auto" },
-    { id: "ST-002", date: "2026-06-11", description: "CATERING EXPS / WORKSHOP LUNCH", amount: -25000, reconciled: true, matchedTxnId: "TXN-002", matchType: "Auto" },
-    { id: "ST-003", date: "2026-06-10", description: "CITY HALL AUDITORIUM DEP", amount: -50000, reconciled: true, matchedTxnId: "TXN-003", matchType: "Auto" },
-    { id: "ST-004", date: "2026-06-08", description: "INDIGO AIRLINES FLT TICKETS", amount: -20000, reconciled: true, matchedTxnId: "TXN-004", matchType: "Auto" },
-    { id: "ST-005", date: "2026-06-07", description: "STARBUCKS CAFE SNACKS", amount: -8000, reconciled: true, matchedTxnId: "TXN-005", matchType: "Auto" },
-    { id: "ST-006", date: "2026-06-06", description: "STATIONERY ZONE CORP", amount: -5000, reconciled: true, matchedTxnId: "TXN-006", matchType: "Auto" },
-    { id: "ST-007", date: "2026-06-05", description: "AV SOUND & LIGHT SYSTEMS", amount: -40000, reconciled: true, matchedTxnId: "TXN-007", matchType: "Auto" },
-    { id: "ST-008", date: "2026-06-04", description: "PRINT FAST BROCHURES", amount: -10000, reconciled: false, matchedTxnId: null, matchType: null },
-    { id: "ST-009", date: "2026-06-01", description: "META ADS / MKTG PROMO", amount: -10000, reconciled: false, matchedTxnId: null, matchType: null },
-    { id: "ST-010", date: "2026-06-03", description: "MONTHLY BANK CHARGES", amount: -3000, reconciled: false, matchedTxnId: null, matchType: null }
-  ]);
-
-  // Initial ERP Book Transactions
-  const [erpTransactions, setErpTransactions] = useState([
-    { id: "TXN-001", date: "2026-06-12", category: "Marketing", description: "Digital ads campaign", amount: 15000, status: "Approved", reconciled: true },
-    { id: "TXN-002", date: "2026-06-11", category: "Food & Refreshments", description: "Lunch catering for workshop", amount: 25000, status: "Approved", reconciled: true },
-    { id: "TXN-003", date: "2026-06-10", category: "Venue", description: "Auditorium booking deposit", amount: 50000, status: "Approved", reconciled: true },
-    { id: "TXN-004", date: "2026-06-08", category: "Travel", description: "Flight tickets for guest speaker", amount: 20000, status: "Approved", reconciled: true },
-    { id: "TXN-005", date: "2026-06-07", category: "Food & Refreshments", description: "Coffee and snacks for panel", amount: 8000, status: "Approved", reconciled: true },
-    { id: "TXN-006", date: "2026-06-06", category: "Miscellaneous", description: "Stationery and printing", amount: 5000, status: "Approved", reconciled: true },
-    { id: "TXN-007", date: "2026-06-05", category: "Venue", description: "Audio-visual equipment rental", amount: 40000, status: "Approved", reconciled: true },
-    { id: "TXN-008", date: "2026-06-04", category: "Marketing", description: "Brochure printing", amount: 10000, status: "Approved", reconciled: false },
-    { id: "TXN-011", date: "2026-06-01", category: "Marketing", description: "Social media promotions", amount: 10000, status: "Approved", reconciled: false },
-    { id: "TXN-009", date: "2026-06-03", category: "Travel", description: "Local taxi reimbursements", amount: 5000, status: "Pending", reconciled: false },
-    { id: "TXN-010", date: "2026-06-02", category: "Food & Refreshments", description: "Dinner for organizing committee", amount: 10000, status: "Pending", reconciled: false }
-  ]);
-
-  // Interactive Match Modals State
-  const [selectedStatementRow, setSelectedStatementRow] = useState(null);
-  const [showManualMatchModal, setShowManualMatchModal] = useState(false);
-  const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
-  const [manualMatchId, setManualMatchId] = useState("");
-
-  // Adjustment form states
-  const [adjDescription, setAdjDescription] = useState("");
-  const [adjCategory, setAdjCategory] = useState("Miscellaneous");
-
-  // Summary Metrics calculations
-  const totalReconciledAmount = useMemo(() => {
-    return statementEntries
-      .filter((s) => s.reconciled)
-      .reduce((sum, s) => sum + Math.abs(s.amount), 0);
-  }, [statementEntries]);
-
-  const bankStatementTotal = useMemo(() => {
-    return statementEntries.reduce((sum, s) => sum + Math.abs(s.amount), 0);
-  }, [statementEntries]);
-
-  const unreconciledDifference = useMemo(() => {
-    const statementUnrec = statementEntries
-      .filter((s) => !s.reconciled)
-      .reduce((sum, s) => sum + Math.abs(s.amount), 0);
-    return statementUnrec;
-  }, [statementEntries]);
-
-  const progressPercentage = useMemo(() => {
-    const total = statementEntries.length;
-    if (total === 0) return 0;
-    const reconciledCount = statementEntries.filter((s) => s.reconciled).length;
-    return Math.round((reconciledCount / total) * 100);
-  }, [statementEntries]);
-
-  // Handle Mock Statement Upload
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    simulateUpload("bank_statement_june_2026.csv");
-  };
-
-  const handleFileBrowseChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      simulateUpload(e.target.files[0].name);
+  // Mock data representing the 8 transactions in the screenshots
+  const transactions = useMemo(() => [
+    {
+      id: "TXN-REC-001",
+      date: "2026-06-18",
+      category: "Travel",
+      description: "Train ticket to meet research mentor in Delhi",
+      amount: 25000,
+      status: "Approved by Admin"
+    },
+    {
+      id: "TXN-REC-002",
+      date: "2026-06-17",
+      category: "Food",
+      description: "Working lunch with industry experts for research guidance",
+      amount: 15000,
+      status: "Bill Uploaded, Awaiting Admin Approval"
+    },
+    {
+      id: "TXN-REC-003",
+      date: "2026-06-15",
+      category: "Marketing",
+      description: "Printing survey questionnaires and feedback forms",
+      amount: 40000,
+      status: "Approved by Admin"
+    },
+    {
+      id: "TXN-REC-004",
+      date: "2026-06-14",
+      category: "Travel",
+      description: "Local cab fare for field research and data collection visits",
+      amount: 20000,
+      status: "Approved by Admin"
+    },
+    {
+      id: "TXN-REC-005",
+      date: "2026-06-12",
+      category: "Equipment & Misc",
+      description: "Purchase of laboratory test tubes and research chemical consumables",
+      amount: 120000,
+      status: "Approved by Admin"
+    },
+    {
+      id: "TXN-REC-006",
+      date: "2026-06-10",
+      category: "Venue",
+      description: "Meeting room rental for co-researchers discussion group",
+      amount: 50000,
+      status: "Approved by Admin"
+    },
+    {
+      id: "TXN-REC-007",
+      date: "2026-06-08",
+      category: "Equipment & Misc",
+      description: "Reference books bill purchase for project literature review",
+      amount: 20000,
+      status: "Bill Uploaded, Awaiting Admin Approval"
+    },
+    {
+      id: "TXN-REC-008",
+      date: "2026-06-05",
+      category: "Marketing",
+      description: "Poster design and printing for academic research presentation",
+      amount: 10000,
+      status: "Rejected by Admin"
     }
-  };
+  ], []);
 
-  const simulateUpload = (fileName) => {
-    setIsUploading(true);
-    addNotification(`Uploading bank statement file: ${fileName}...`, "info", 1500, false);
-    
+  // Filtered transactions for verification panel
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const matchesSearch =
+        t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.id.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesCategory =
+        categoryFilter === "All" || t.category === categoryFilter;
+
+      const matchesStatus =
+        statusFilter === "All" || t.status === statusFilter;
+
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [transactions, searchQuery, categoryFilter, statusFilter]);
+
+  // Export handlers
+  const handleExportExcel = () => {
+    addNotification("Exporting transaction report (Excel)...", "info", 1500, false);
     setTimeout(() => {
-      setIsUploading(false);
-      const newFile = {
-        name: fileName,
-        size: "24.5 KB",
-        date: new Date().toISOString().slice(0, 10),
-        status: "In Progress"
-      };
-      setUploadedFiles((prev) => [newFile, ...prev]);
-      addNotification(`File "${fileName}" parsed and statement records populated successfully.`, "success", 3000, false);
+      addNotification("Excel report downloaded successfully.", "success", 3000, false);
     }, 1500);
   };
 
-  // Perform Auto-Match operation
-  const handleAutoMatch = () => {
-    addNotification("Running smart matching algorithm...", "info", 1000, false);
-
+  const handleDownloadPDF = () => {
+    addNotification("Preparing PDF summary...", "info", 1500, false);
     setTimeout(() => {
-      let matchedCount = 0;
-      const updatedEntries = statementEntries.map((entry) => {
-        if (entry.reconciled) return entry;
-        
-        // Find perfect matches by Date and Amount similarity
-        const absoluteAmount = Math.abs(entry.amount);
-        const match = erpTransactions.find(
-          (txn) => !txn.reconciled && txn.amount === absoluteAmount && txn.date === entry.date
-        );
+      addNotification("PDF report downloaded successfully.", "success", 3000, false);
+    }, 1500);
+  };
 
-        if (match) {
-          matchedCount++;
-          // Mark ERP transaction reconciled
-          setErpTransactions((prevTxns) =>
-            prevTxns.map((t) => (t.id === match.id ? { ...t, reconciled: true } : t))
-          );
-          return {
-            ...entry,
-            reconciled: true,
-            matchedTxnId: match.id,
-            matchType: "Auto"
-          };
+  // Chart Data Configurations
+  const barData = {
+    labels: ["Venue", "Food", "Marketing", "Travel", "Equipment & Misc"],
+    datasets: [
+      {
+        label: "Budget Allocated (Rs)",
+        data: [140000, 70000, 50000, 40000, 30000],
+        backgroundColor: "#1d5cff",
+        borderRadius: 4,
+        barPercentage: 0.6
+      },
+      {
+        label: "Actual Spendings (Rs)",
+        data: [50000, 0, 40000, 45000, 120000],
+        backgroundColor: "#10b981",
+        borderRadius: 4,
+        barPercentage: 0.6
+      }
+    ]
+  };
+
+  const barOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: "top",
+        labels: {
+          boxWidth: 12,
+          usePointStyle: true,
+          font: { size: 10 }
         }
-        return entry;
-      });
-
-      setStatementEntries(updatedEntries);
-      if (matchedCount > 0) {
-        addNotification(`Auto-matched ${matchedCount} transaction(s) successfully.`, "success", 3000, false);
-      } else {
-        addNotification("No additional auto-matches found. Use manual match for remaining entries.", "info", 3000, false);
       }
-    }, 1000);
-  };
-
-  // Prepare manual matching modal
-  const openManualMatch = (row) => {
-    setSelectedStatementRow(row);
-    // Find ERP transactions that are not reconciled and match in amount sign or value
-    const matchVal = Math.abs(row.amount);
-    const options = erpTransactions.filter((t) => !t.reconciled && t.amount === matchVal);
-    
-    if (options.length > 0) {
-      setManualMatchId(options[0].id);
-    } else {
-      const allUnreconciled = erpTransactions.filter((t) => !t.reconciled);
-      if (allUnreconciled.length > 0) {
-        setManualMatchId(allUnreconciled[0].id);
-      } else {
-        setManualMatchId("");
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        grid: { color: "#f1f5f9" },
+        ticks: {
+          font: { size: 9 },
+          callback: (val) => `Rs ${val >= 1000 ? (val / 1000) + "k" : val}`
+        }
       }
     }
-    setShowManualMatchModal(true);
   };
 
-  // Execute manual match
-  const confirmManualMatch = () => {
-    if (!manualMatchId || !selectedStatementRow) return;
-
-    setStatementEntries((prevEntries) =>
-      prevEntries.map((entry) =>
-        entry.id === selectedStatementRow.id
-          ? { ...entry, reconciled: true, matchedTxnId: manualMatchId, matchType: "Manual" }
-          : entry
-      )
-    );
-
-    setErpTransactions((prevTxns) =>
-      prevTxns.map((txn) => (txn.id === manualMatchId ? { ...txn, reconciled: true } : txn))
-    );
-
-    addNotification(
-      `Statement entry reconciled with ERP record ${manualMatchId} successfully.`,
-      "success",
-      3000,
-      false
-    );
-    setShowManualMatchModal(false);
-    setSelectedStatementRow(null);
+  const donutData = {
+    labels: ["Venue", "Food", "Marketing", "Travel", "Equipment & Misc"],
+    datasets: [
+      {
+        data: [50000, 0, 40000, 45000, 120000],
+        backgroundColor: ["#1d5cff", "#10b981", "#8b5cf6", "#f97316", "#06b6d4"]
+      }
+    ]
   };
 
-  // Prepare adjustments (record expense discrepancy)
-  const openAdjustment = (row) => {
-    setSelectedStatementRow(row);
-    setAdjDescription(row.description);
-    setAdjCategory("Miscellaneous");
-    setShowAdjustmentModal(true);
+  const donutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: "bottom",
+        labels: {
+          boxWidth: 8,
+          padding: 8,
+          font: { size: 9 }
+        }
+      }
+    },
+    cutout: "60%"
   };
 
-  // Record and reconcile discrepancy
-  const recordAndReconcile = (e) => {
-    e.preventDefault();
-    if (!selectedStatementRow) return;
-
-    const newTxnId = `TXN-${Math.floor(100 + Math.random() * 900)}`;
-    const newTxn = {
-      id: newTxnId,
-      date: selectedStatementRow.date,
-      category: adjCategory,
-      description: adjDescription,
-      amount: Math.abs(selectedStatementRow.amount),
-      status: "Approved",
-      reconciled: true
-    };
-
-    // Add to ERP transactions
-    setErpTransactions((prev) => [newTxn, ...prev]);
-
-    // Reconcile statement row
-    setStatementEntries((prevEntries) =>
-      prevEntries.map((entry) =>
-        entry.id === selectedStatementRow.id
-          ? { ...entry, reconciled: true, matchedTxnId: newTxnId, matchType: "Adjustment" }
-          : entry
-      )
-    );
-
-    addNotification(`Discrepancy recorded as new ERP expense (${newTxnId}) and reconciled.`, "success", 3000, false);
-    setShowAdjustmentModal(false);
-    setSelectedStatementRow(null);
+  const lineData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+      {
+        label: "Spend Trend",
+        data: [15000, 45000, 35000, 60000, 40000, 255000],
+        borderColor: "#8b5cf6",
+        backgroundColor: "rgba(139, 92, 246, 0.1)",
+        fill: true,
+        tension: 0.35,
+        pointRadius: 4,
+        pointBackgroundColor: "#8b5cf6"
+      }
+    ]
   };
 
-  // Export report
-  const handleExport = (type) => {
-    addNotification(`Preparing ${type} report for download...`, "info", 1500, false);
-    setTimeout(() => {
-      addNotification(`Reconciliation ${type} report downloaded successfully.`, "success", 3000, false);
-    }, 1600);
-  };
-
-  // Unlink / Unreconcile transaction helper
-  const handleUnlink = (entry) => {
-    const txnId = entry.matchedTxnId;
-    
-    setStatementEntries((prev) =>
-      prev.map((e) => (e.id === entry.id ? { ...e, reconciled: false, matchedTxnId: null, matchType: null } : e))
-    );
-
-    if (txnId) {
-      setErpTransactions((prev) =>
-        prev.map((t) => (t.id === txnId ? { ...t, reconciled: false } : t))
-      );
+  const lineOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        grid: { color: "#f1f5f9" },
+        ticks: {
+          font: { size: 9 },
+          callback: (val) => `Rs ${val >= 1000 ? (val / 1000) + "k" : val}`
+        }
+      }
     }
-
-    addNotification("Linked match removed successfully. Item marked as unreconciled.", "info", 3000, false);
   };
-
-  // Filtering criteria
-  const filteredEntries = useMemo(() => {
-    return statementEntries.filter((entry) => {
-      const matchesSearch =
-        entry.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        entry.id.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus =
-        statusFilter === "All" ||
-        (statusFilter === "Reconciled" && entry.reconciled) ||
-        (statusFilter === "Unreconciled" && !entry.reconciled);
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [statementEntries, searchQuery, statusFilter]);
-
-  // Unreconciled ERP transactions for manual selection
-  const unmatchedErpTransactions = useMemo(() => {
-    return erpTransactions.filter((t) => !t.reconciled);
-  }, [erpTransactions]);
 
   return (
     <main className="user-erp-page">
-      <div className="user-erp-shell">
+      <div className="user-erp-shell" style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         
-        {/* Header section */}
-        <header className="user-erp-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+        {/* PAGE HEADER */}
+        <header className="user-erp-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "8px" }}>
           <div>
-            <h1 style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontWeight: "700" }}>
               <Landmark style={{ color: "#1d5cff" }} />
-              Bank Reconciliation
+              Project Bank Reconciliation
             </h1>
-            <p>Compare bank statements against ERP postings, track variances, and resolve differences.</p>
+            <p>Monitor research project transactions, verification statuses, and budgets cleared by E-YUVA Admin.</p>
           </div>
           <div style={{ display: "flex", gap: "12px" }}>
-            <button className="user-secondary-button" type="button" onClick={() => handleExport("Excel")} style={{ display: "flex", alignItems: "center", gap: "8px", minHeight: "44px" }}>
+            <button 
+              className="user-secondary-button" 
+              type="button" 
+              onClick={handleExportExcel} 
+              style={{ display: "flex", alignItems: "center", gap: "8px", minHeight: "42px", padding: "0 16px", color: "#16a34a", borderColor: "#bbf7d0", background: "#f0fdf4" }}
+            >
               <FileSpreadsheet size={16} />
-              Export Excel
+              Export Transaction Report (Excel)
             </button>
-            <button className="user-primary-button" type="button" onClick={() => handleExport("PDF")} style={{ display: "flex", alignItems: "center", gap: "8px", minHeight: "44px", background: "linear-gradient(135deg, #1d5cff, #0f46d8)" }}>
+            <button 
+              className="user-primary-button" 
+              type="button" 
+              onClick={handleDownloadPDF} 
+              style={{ display: "flex", alignItems: "center", gap: "8px", minHeight: "42px", padding: "0 16px", background: "#1d5cff", border: "none", color: "#ffffff" }}
+            >
               <FileText size={16} />
-              Export PDF
+              Download Summary (PDF)
             </button>
           </div>
         </header>
 
-        {/* View-Only & Action Indicator Alert Banner */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "#f0fdf4", border: "1px solid #22c55e", borderRadius: "12px", padding: "16px 20px", color: "#15803d", fontSize: "0.95rem" }}>
-          <Info size={20} strokeWidth={2} style={{ flexShrink: 0, color: "#16a34a" }} />
-          <span>
-            <strong>Interactive Workspace:</strong> Match uploaded bank statement records to ERP transaction logs. Unmatched fees can be recorded as new expenses to bring discrepancy to zero.
-          </span>
-        </div>
-
-        {/* KPI Cards Grid */}
-        <section className="user-stat-grid">
-          
-          <article className="user-erp-card user-stat-card">
-            <div className="user-stat-icon" style={{ color: "#1d5cff", background: "#1d5cff15" }}>
-              <Landmark size={26} />
+        {/* TOP KPI CARDS */}
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+          <article className="user-erp-card user-stat-card" style={{ minHeight: "120px", padding: "20px" }}>
+            <div className="user-stat-icon" style={{ color: "#1d5cff", background: "#f0f4ff" }}>
+              <IndianRupee size={24} />
             </div>
             <div>
-              <p>Statement Total Spent</p>
-              <strong>Rs {bankStatementTotal.toLocaleString("en-IN")}</strong>
-              <span className="user-stat-note" style={{ color: "#536987" }}>Sum of statement debits</span>
+              <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Total Budget</p>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 3,30,000</strong>
+              <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Overall limit assigned</span>
             </div>
           </article>
 
-          <article className="user-erp-card user-stat-card">
-            <div className="user-stat-icon" style={{ color: "#10b981", background: "#10b98115" }}>
-              <CheckCircle2 size={26} />
+          <article className="user-erp-card user-stat-card" style={{ minHeight: "120px", padding: "20px" }}>
+            <div className="user-stat-icon" style={{ color: "#10b981", background: "#eafaf1" }}>
+              <Landmark size={24} />
             </div>
             <div>
-              <p>Reconciled in ERP</p>
-              <strong>Rs {totalReconciledAmount.toLocaleString("en-IN")}</strong>
-              <span className="user-stat-note" style={{ color: "#10b981", fontWeight: "600" }}>Matched to Book Ledgers</span>
+              <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Amount Received</p>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 3,00,000</strong>
+              <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Disbursed by Admin</span>
             </div>
           </article>
 
-          <article className="user-erp-card user-stat-card">
-            <div className="user-stat-icon" style={{ color: unreconciledDifference > 0 ? "#ef4444" : "#10b981", background: unreconciledDifference > 0 ? "#ef444415" : "#10b98115" }}>
-              {unreconciledDifference > 0 ? <AlertTriangle size={26} /> : <CheckCircle2 size={26} />}
+          <article className="user-erp-card user-stat-card" style={{ minHeight: "120px", padding: "20px" }}>
+            <div className="user-stat-icon" style={{ color: "#8b5cf6", background: "#f5f3ff" }}>
+              <FileText size={24} />
             </div>
             <div>
-              <p>Unreconciled Difference</p>
-              <strong style={{ color: unreconciledDifference > 0 ? "#b91c1c" : "#087132" }}>
-                Rs {unreconciledDifference.toLocaleString("en-IN")}
-              </strong>
-              <span className="user-stat-note" style={{ color: "#536987" }}>
-                {unreconciledDifference > 0 ? "Variance to be matched" : "Fully Reconciled!"}
-              </span>
+              <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Amount Utilized</p>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 2,55,000</strong>
+              <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Total verified expenses</span>
             </div>
           </article>
 
-          <article className="user-erp-card user-stat-card">
-            <div className="user-stat-icon" style={{ color: "#7c3aed", background: "#7c3aed15" }}>
-              <TrendingUp size={26} />
+          <article className="user-erp-card user-stat-card" style={{ minHeight: "120px", padding: "20px" }}>
+            <div className="user-stat-icon" style={{ color: "#06b6d4", background: "#ecfeff" }}>
+              <TrendingUp size={24} />
             </div>
             <div>
-              <p>Reconciliation Rate</p>
-              <strong>{progressPercentage}%</strong>
-              <ReconciliationProgressBar percentage={progressPercentage} />
+              <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Remaining Balance</p>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 45,000</strong>
+              <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Funds unspent</span>
             </div>
           </article>
 
+          <article className="user-erp-card user-stat-card" style={{ minHeight: "120px", padding: "20px" }}>
+            <div className="user-stat-icon" style={{ color: "#f97316", background: "#fff7ed" }}>
+              <Clock size={24} />
+            </div>
+            <div>
+              <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Pending Verification</p>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 35,000</strong>
+              <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Awaiting review</span>
+            </div>
+          </article>
         </section>
 
-        {/* Upload & Files Section */}
-        <section className="user-dashboard-grid" style={{ gridTemplateColumns: "1.2fr 0.8fr" }}>
+        {/* ACCOUNT INFO & RECONCILIATION TRACKER */}
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
           
-          {/* File Upload Box */}
-          <article className="user-erp-card">
-            <h2>Import Bank Statement</h2>
-            <p style={{ margin: "4px 0 20px", color: "#536987", fontSize: "0.85rem" }}>
-              Upload your bank statement files in structured formats to compare with ERP records.
-            </p>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "16px", alignItems: "center" }}>
-              <div className="user-form-field">
-                <span>Select File Format</span>
-                <select
-                  value={selectedFormat}
-                  onChange={(e) => setSelectedFormat(e.target.value)}
-                  style={{ padding: "10px 14px", height: "46px", cursor: "pointer" }}
-                >
-                  <option value="CSV">CSV format</option>
-                  <option value="XLSX">Excel Spreadsheet</option>
-                  <option value="MT940">MT940 Swift format</option>
-                  <option value="OFX">OFX / QFX format</option>
-                </select>
-              </div>
-
+          {/* Project Account Information */}
+          <article className="user-erp-card" style={{ padding: "24px" }}>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", marginBottom: "16px" }}>Project Account Information</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
-                <span>Drag & Drop File</span>
-                <div
-                  className="user-upload-box"
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  style={{ minHeight: "100px", marginTop: "10px", borderColor: isUploading ? "#1d5cff" : "#d4d4d8" }}
-                >
-                  <input type="file" accept=".csv,.xlsx,.xls,.txt" onChange={handleFileBrowseChange} disabled={isUploading} />
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
-                    <UploadCloud size={28} style={{ color: isUploading ? "#1d5cff" : "#9ca3af" }} />
-                    <span style={{ fontSize: "0.8rem", fontWeight: "600", color: "#304761" }}>
-                      {isUploading ? "Uploading & Parsing..." : "Click or drag statement file here"}
-                    </span>
-                    <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>Max size 15MB. Formats: CSV, Excel, TXT</span>
-                  </div>
-                </div>
+                <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Project ID</span>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>PRJ-2026-089</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Bank Name</span>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>State Bank of India</strong>
+              </div>
+              <div style={{ gridColumn: "span 2" }}>
+                <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Project Name</span>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>EcoDrive Clean Energy Campaign</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Assigned Account</span>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>xxxx-xxxx-4993</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>IFSC Code</span>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>SBIN0000301</strong>
               </div>
             </div>
           </article>
 
-          {/* Upload History List */}
-          <article className="user-erp-card">
-            <h2>Statement Upload History</h2>
-            <p style={{ margin: "4px 0 16px", color: "#536987", fontSize: "0.85rem" }}>Previous uploads for reconciliation cycles.</p>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "140px", overflowY: "auto" }}>
-              {uploadedFiles.map((file, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <h4 style={{ margin: 0, fontSize: "0.85rem", fontWeight: "600", color: "#1f3450", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                      {file.name}
-                    </h4>
-                    <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{file.size} • Uploaded on {file.date}</span>
-                  </div>
-                  <span className={`user-status ${file.status === "Reconciled" ? "approved" : "pending"}`} style={{ fontSize: "0.7rem", padding: "2px 8px" }}>
-                    {file.status}
-                  </span>
+          {/* Reconciliation Progress Tracker */}
+          <article className="user-erp-card" style={{ padding: "24px" }}>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", marginBottom: "6px" }}>Reconciliation Progress Tracker</h2>
+            <p style={{ fontSize: "0.82rem", color: "#64748b", marginBottom: "18px" }}>
+              Status tracking of active research bill uploads and administrative audit clearance.
+            </p>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ background: "#dcfce7", color: "#15803d", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <CheckCircle2 size={16} />
                 </div>
-              ))}
+                <div>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#1e293b" }}>Bank Statement Uploaded</strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Completed on May 30, 2026</span>
+                </div>
+              </div>
+              
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ background: "#dcfce7", color: "#15803d", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <CheckCircle2 size={16} />
+                </div>
+                <div>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#1e293b" }}>Transactions Reconciled (5 of 8)</strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Rs 2,55,000 matched and locked to book ledgers</span>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ background: "#fffbeb", color: "#d97706", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Clock size={16} />
+                </div>
+                <div>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#1e293b" }}>Admin Audit Clearance</strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>2 bills awaiting Admin clearance (Rs 35,000)</span>
+                </div>
+              </div>
             </div>
           </article>
-
         </section>
 
-        {/* Reconciliation Center: Double Panel Workspace */}
-        <section className="user-erp-card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
+        {/* STATUS SUMMARY ROW */}
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px", borderLeft: "5px solid #10b981", boxShadow: "0 4px 10px rgba(0,0,0,0.02)" }}>
             <div>
-              <h2>Interactive Reconciliation Center</h2>
-              <p style={{ margin: "4px 0 0", color: "#536987", fontSize: "0.85rem" }}>
-                Match statement line items directly to ledger records. Reconciled entries lock in the matching ledger ID.
-              </p>
-            </div>
-            
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button
-                className="user-primary-button"
-                type="button"
-                onClick={handleAutoMatch}
-                style={{ display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "40px", background: "linear-gradient(135deg, #1d5cff, #0f46d8)", padding: "0 16px", fontSize: "0.88rem" }}
-              >
-                <RefreshCw size={14} />
-                Run Auto-Match
-              </button>
+              <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Approved</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>5</div>
             </div>
           </div>
 
-          {/* Interactive Filters Grid */}
-          <div className="user-ticket-filters" style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px", marginBottom: "20px" }}>
-            <div className="user-form-field">
-              <span>Search Entries</span>
-              <input
-                type="text"
-                placeholder="Search statement ID or description..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="user-search-input"
-                style={{ padding: "8px 12px", height: "40px", fontSize: "0.9rem" }}
-              />
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px", borderLeft: "5px solid #f59e0b", boxShadow: "0 4px 10px rgba(0,0,0,0.02)" }}>
+            <div>
+              <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Awaiting Approval</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>2</div>
             </div>
+          </div>
+
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px", borderLeft: "5px solid #ef4444", boxShadow: "0 4px 10px rgba(0,0,0,0.02)" }}>
+            <div>
+              <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Rejected</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>1</div>
+            </div>
+          </div>
+
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px", borderLeft: "5px solid #3b82f6", boxShadow: "0 4px 10px rgba(0,0,0,0.02)" }}>
+            <div>
+              <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Transactions</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>8</div>
+            </div>
+          </div>
+        </section>
+
+        {/* ANALYTICS CHARTS CARD */}
+        <section className="user-erp-card" style={{ padding: "28px" }}>
+          <h2 style={{ fontSize: "1.2rem", fontWeight: "700", color: "#1e293b" }}>Budget Utilization Analytics</h2>
+          <p style={{ fontSize: "0.85rem", color: "#64748b", marginTop: "4px" }}>
+            Visual financial tracking charts for project expenditures and allocation analysis.
+          </p>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px", marginTop: "20px" }}>
+            {/* Chart 1: Bar */}
+            <div style={{ background: "#ffffff", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column" }}>
+              <h4 style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569", marginBottom: "14px", alignSelf: "center" }}>Budget Allocation vs Actual Spendings</h4>
+              <div style={{ width: "100%", height: "220px", position: "relative" }}>
+                <ReconciliationChart type="bar" data={barData} options={barOptions} />
+              </div>
+            </div>
+            
+            {/* Chart 2: Donut */}
+            <div style={{ background: "#ffffff", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column" }}>
+              <h4 style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569", marginBottom: "14px", alignSelf: "center" }}>Category-wise Expense Breakdown</h4>
+              <div style={{ width: "100%", height: "220px", position: "relative" }}>
+                <ReconciliationChart type="doughnut" data={donutData} options={donutOptions} />
+              </div>
+            </div>
+
+            {/* Chart 3: Line */}
+            <div style={{ background: "#ffffff", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column" }}>
+              <h4 style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569", marginBottom: "14px", alignSelf: "center" }}>Monthly Expense Trend Chart</h4>
+              <div style={{ width: "100%", height: "220px", position: "relative" }}>
+                <ReconciliationChart type="line" data={lineData} options={lineOptions} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* TRANSACTION VERIFICATION PANEL */}
+        <section className="user-erp-card" style={{ padding: "28px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "10px", marginBottom: "16px" }}>
+            <div>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: "700", color: "#1e293b" }}>Transaction Verification Panel</h2>
+              <p style={{ fontSize: "0.85rem", color: "#64748b", marginTop: "4px" }}>
+                Verify incoming statements, uploaded bill logs, and administrative clearance records.
+              </p>
+            </div>
+            <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#475569" }}>
+              Showing {filteredTransactions.length} of {transactions.length} entries
+            </div>
+          </div>
+
+          {/* Filters Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "16px", marginBottom: "20px" }}>
             <div className="user-form-field">
-              <span>Status Filter</span>
+              <span style={{ fontSize: "0.78rem", color: "#475569", marginBottom: "6px" }}>Search Descriptions / IDs</span>
+              <div style={{ position: "relative" }}>
+                <input
+                  type="text"
+                  placeholder="Search transaction description, category or ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ paddingLeft: "40px", fontSize: "0.9rem", height: "40px" }}
+                />
+                <Search size={16} style={{ position: "absolute", left: "14px", top: "12px", color: "#94a3b8" }} />
+              </div>
+            </div>
+
+            <div className="user-form-field">
+              <span style={{ fontSize: "0.78rem", color: "#475569", marginBottom: "6px" }}>Category</span>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                style={{ fontSize: "0.9rem", height: "40px", cursor: "pointer", padding: "0 12px" }}
+              >
+                <option value="All">All Categories</option>
+                <option value="Venue">Venue</option>
+                <option value="Food">Food</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Travel">Travel</option>
+                <option value="Equipment & Misc">Equipment & Misc</option>
+              </select>
+            </div>
+
+            <div className="user-form-field">
+              <span style={{ fontSize: "0.78rem", color: "#475569", marginBottom: "6px" }}>Status</span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ padding: "8px 12px", height: "40px", cursor: "pointer", fontSize: "0.9rem" }}
+                style={{ fontSize: "0.9rem", height: "40px", cursor: "pointer", padding: "0 12px" }}
               >
-                <option value="All">All Statements</option>
-                <option value="Reconciled">Reconciled only</option>
-                <option value="Unreconciled">Unreconciled only</option>
+                <option value="All">All Statuses</option>
+                <option value="Approved by Admin">Approved by Admin</option>
+                <option value="Bill Uploaded, Awaiting Admin Approval">Bill Uploaded, Awaiting Admin Approval</option>
+                <option value="Rejected by Admin">Rejected by Admin</option>
               </select>
             </div>
           </div>
 
-          {/* Reconciliation Table */}
-          <div style={{ overflowX: "auto" }}>
+          {/* Table */}
+          <div className="user-table-card">
             <table className="user-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Statement Date</th>
-                  <th>Description</th>
-                  <th>Statement Amount</th>
-                  <th style={{ textAlign: "center" }}>Status</th>
-                  <th>Linked ERP Match</th>
-                  <th style={{ textAlign: "right" }}>Reconcile Actions</th>
+                  <th style={{ background: "#f8fafc", color: "#475569", fontWeight: "700" }}>Transaction ID</th>
+                  <th style={{ background: "#f8fafc", color: "#475569", fontWeight: "700" }}>Date</th>
+                  <th style={{ background: "#f8fafc", color: "#475569", fontWeight: "700" }}>Category</th>
+                  <th style={{ background: "#f8fafc", color: "#475569", fontWeight: "700" }}>Description</th>
+                  <th style={{ background: "#f8fafc", color: "#475569", fontWeight: "700" }}>Amount</th>
+                  <th style={{ background: "#f8fafc", color: "#475569", fontWeight: "700" }}>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredEntries.length > 0 ? (
-                  filteredEntries.map((entry) => {
-                    const absVal = Math.abs(entry.amount);
-                    return (
-                      <tr key={entry.id} style={{ background: entry.reconciled ? "#f0fdf450" : "transparent" }}>
-                        <td style={{ fontFamily: "monospace", fontSize: "0.8rem", color: "#64748b" }}>{entry.id}</td>
-                        <td style={{ fontSize: "0.9rem" }}>{entry.date}</td>
-                        <td style={{ fontWeight: "600", color: "#1f3450", fontSize: "0.9rem" }}>
-                          {entry.description}
-                        </td>
-                        <td style={{ fontWeight: "700", color: entry.amount < 0 ? "#b91c1c" : "#087132", fontSize: "0.9rem" }}>
-                          {entry.amount < 0 ? "-" : "+"} Rs {absVal.toLocaleString("en-IN")}
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <span className={`user-status ${entry.reconciled ? "approved" : "pending"}`} style={{ fontSize: "0.75rem", padding: "3px 10px" }}>
-                            {entry.reconciled ? "Reconciled" : "Unmatched"}
-                          </span>
-                        </td>
-                        <td>
-                          {entry.reconciled ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#1e293b", background: "#f1f5f9", padding: "4px 8px", borderRadius: "6px", width: "fit-content" }}>
-                              <Link size={12} style={{ color: "#10b981" }} />
-                              <span style={{ fontFamily: "monospace", fontWeight: "600" }}>{entry.matchedTxnId}</span>
-                              <span style={{ fontSize: "0.7rem", color: "#64748b" }}>({entry.matchType})</span>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: "0.85rem", color: "#9ca3af", fontStyle: "italic" }}>No link</span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          {entry.reconciled ? (
-                            <button
-                              className="user-secondary-button"
-                              type="button"
-                              onClick={() => handleUnlink(entry)}
-                              style={{ padding: "4px 10px", minHeight: "30px", fontSize: "0.75rem", color: "#ef4444", border: "1px solid #fecaca" }}
-                            >
-                              Unlink
-                            </button>
-                          ) : (
-                            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                              <button
-                                className="user-secondary-button"
-                                type="button"
-                                onClick={() => openManualMatch(entry)}
-                                style={{ padding: "4px 10px", minHeight: "30px", fontSize: "0.75rem", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                              >
-                                <ArrowRightLeft size={12} />
-                                Match
-                              </button>
-                              
-                              {/* If monthly bank charges or unmatched discrepancy, allow adjustment creation */}
-                              {entry.id === "ST-010" && (
-                                <button
-                                  className="user-primary-button"
-                                  type="button"
-                                  onClick={() => openAdjustment(entry)}
-                                  style={{ padding: "4px 10px", minHeight: "30px", fontSize: "0.75rem", background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "#10b981", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                >
-                                  <Plus size={12} />
-                                  Adjust
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
+                {filteredTransactions.length > 0 ? (
+                  filteredTransactions.map((row) => (
+                    <tr key={row.id}>
+                      <td style={{ fontFamily: "monospace", fontWeight: "600", fontSize: "0.85rem" }}>{row.id}</td>
+                      <td style={{ fontSize: "0.88rem" }}>{row.date}</td>
+                      <td>
+                        <span style={{ background: "#f1f5f9", color: "#475569", padding: "4px 8px", borderRadius: "6px", fontSize: "0.78rem", fontWeight: "600" }}>
+                          {row.category}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: "0.88rem", fontWeight: "600", color: "#334155" }}>{row.description}</td>
+                      <td style={{ fontWeight: "700", color: "#1e293b", fontSize: "0.88rem" }}>
+                        Rs {row.amount.toLocaleString("en-IN")}
+                      </td>
+                      <td>
+                        <span 
+                          className={`user-status ${
+                            row.status.includes("Approved") 
+                              ? "approved" 
+                              : row.status.includes("Awaiting") 
+                                ? "pending" 
+                                : "rejected"
+                          }`}
+                          style={{ fontSize: "0.78rem", fontWeight: "700", padding: "4px 10px" }}
+                        >
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   <tr>
-                    <td colSpan="7" className="user-empty-cell" style={{ padding: "48px 0", color: "#64748b" }}>
-                      <AlertTriangle size={32} style={{ opacity: 0.3, marginBottom: "8px" }} />
-                      <p style={{ margin: 0, fontWeight: "600" }}>No statement entries matching filters.</p>
+                    <td colSpan="6" className="user-empty-cell" style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+                      <AlertTriangle size={28} style={{ opacity: 0.3, marginBottom: "8px", display: "block", margin: "0 auto" }} />
+                      <span>No transactions matching filters</span>
                     </td>
                   </tr>
                 )}
@@ -621,119 +593,212 @@ export default function BankReconciliation() {
           </div>
         </section>
 
-      </div>
-
-      {/* Manual Matching Selection Modal */}
-      {showManualMatchModal && selectedStatementRow && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
-          <div className="user-erp-card" style={{ width: "90%", maxWidth: "500px", padding: "24px", transform: "none", border: "1px solid #cbd5e1" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0 }}>Link Statement Row to ERP</h3>
-              <button onClick={() => setShowManualMatchModal(false)} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.2rem", color: "#94a3b8" }}>&times;</button>
-            </div>
+        {/* BOTTOM SECTION: HEALTH CARD / ALERTS & TIMELINE */}
+        <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
+          
+          {/* Health & Alerts */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             
-            <div style={{ padding: "12px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "16px" }}>
-              <div style={{ fontSize: "0.8rem", color: "#64748b" }}>STATEMENT ENTRY DETAILS:</div>
-              <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", margin: "4px 0" }}>{selectedStatementRow.description}</strong>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "#475569" }}>
-                <span>Date: {selectedStatementRow.date}</span>
-                <span>Amount: <strong>Rs {Math.abs(selectedStatementRow.amount).toLocaleString("en-IN")}</strong></span>
+            {/* Project Financial Health Card */}
+            <article className="user-erp-card" style={{ padding: "24px" }}>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", marginBottom: "16px" }}>Project Financial Health Card</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+                
+                {/* Circular Gauge */}
+                <div style={{ position: "relative", width: "80px", height: "80px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="80" height="80" viewBox="0 0 36 36">
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="#f1f5f9"
+                      strokeWidth="3.5"
+                    />
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="url(#healthGradient)"
+                      strokeWidth="3.5"
+                      strokeDasharray="77, 100"
+                    />
+                    <defs>
+                      <linearGradient id="healthGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#7c3aed" />
+                        <stop offset="100%" stopColor="#10b981" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div style={{ position: "absolute", fontSize: "1.15rem", fontWeight: "800", color: "#1e293b" }}>
+                    77%
+                  </div>
+                </div>
+
+                {/* Health details */}
+                <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Risk Profile:</span>
+                    <span style={{ background: "#fff0d8", color: "#b45309", fontSize: "0.75rem", fontWeight: "700", padding: "2px 8px", borderRadius: "12px" }}>
+                      Medium Risk
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Financial Status:</span>
+                    <strong style={{ fontSize: "0.85rem", color: "#334155" }}>On Track (Review Advised)</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>Last Audit Clearance:</span>
+                    <strong style={{ fontSize: "0.85rem", color: "#334155" }}>Jun 18, 2026</strong>
+                  </div>
+                </div>
+
               </div>
-            </div>
 
-            <div className="user-form-field" style={{ marginBottom: "20px" }}>
-              <span>Select ERP Book Transaction</span>
-              {unmatchedErpTransactions.length > 0 ? (
-                <select
-                  value={manualMatchId}
-                  onChange={(e) => setManualMatchId(e.target.value)}
-                  style={{ padding: "10px 14px", height: "46px", cursor: "pointer" }}
-                >
-                  {unmatchedErpTransactions.map((txn) => (
-                    <option key={txn.id} value={txn.id}>
-                      [{txn.id}] {txn.date} - {txn.description} (Rs {txn.amount.toLocaleString("en-IN")})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p style={{ margin: 0, fontSize: "0.85rem", color: "#ef4444", fontStyle: "italic" }}>
-                  No unmatched ERP transactions found to link. Create an adjustment or import new records.
-                </p>
-              )}
-            </div>
+              {/* Progress bar info */}
+              <div style={{ marginTop: "18px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", color: "#64748b", marginBottom: "6px" }}>
+                  <span>Total Budget Utilization</span>
+                  <strong>Rs 2,55,000 / Rs 3,30,000</strong>
+                </div>
+                <div style={{ height: "6px", width: "100%", background: "#f1f5f9", borderRadius: "999px", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: "77.2%", background: "linear-gradient(90deg, #7c3aed, #10b981)", borderRadius: "inherit" }}></div>
+                </div>
+              </div>
+            </article>
 
-            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-              <button className="user-secondary-button" type="button" onClick={() => setShowManualMatchModal(false)} style={{ minHeight: "38px" }}>
-                Cancel
-              </button>
-              <button
-                className="user-primary-button"
-                type="button"
-                disabled={!manualMatchId}
-                onClick={confirmManualMatch}
-                style={{ minHeight: "38px", background: "linear-gradient(135deg, #1d5cff, #0f46d8)" }}
-              >
-                Confirm Link Match
-              </button>
-            </div>
+            {/* Alerts & Notifications */}
+            <article className="user-erp-card" style={{ padding: "24px" }}>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", marginBottom: "16px" }}>Alerts & Notifications</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                
+                {/* Alert 1 */}
+                <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "10px", padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                  <AlertTriangle size={18} style={{ color: "#ea580c", flexShrink: 0, marginTop: "2px" }} />
+                  <div>
+                    <strong style={{ display: "block", fontSize: "0.85rem", color: "#c2410c" }}>Budget Alert: Approaching Limit</strong>
+                    <span style={{ fontSize: "0.78rem", color: "#ea580c", display: "block", marginTop: "2px" }}>
+                      Budget utilization stands at 77%. Monitor pending settlements.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Alert 2 */}
+                <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "10px", padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                  <Info size={18} style={{ color: "#2563eb", flexShrink: 0, marginTop: "2px" }} />
+                  <div>
+                    <strong style={{ display: "block", fontSize: "0.85rem", color: "#1d4ed8" }}>Reconciliation Verification Needed</strong>
+                    <span style={{ fontSize: "0.78rem", color: "#2563eb", display: "block", marginTop: "2px" }}>
+                      You have 2 bills uploaded that are currently awaiting E-YUVA Admin clearance.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Alert 3 */}
+                <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px", padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                  <CheckCircle2 size={18} style={{ color: "#16a34a", flexShrink: 0, marginTop: "2px" }} />
+                  <div>
+                    <strong style={{ display: "block", fontSize: "0.85rem", color: "#15803d" }}>Admin Clearance Received</strong>
+                    <span style={{ fontSize: "0.78rem", color: "#16a34a", display: "block", marginTop: "2px" }}>
+                      Recent finance approval received for May 2026 expense filings.
+                    </span>
+                  </div>
+                </div>
+
+              </div>
+            </article>
+
           </div>
-        </div>
-      )}
 
-      {/* Discrepancy Adjustments Modal */}
-      {showAdjustmentModal && selectedStatementRow && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
-          <div className="user-erp-card" style={{ width: "90%", maxWidth: "500px", padding: "24px", transform: "none", border: "1px solid #cbd5e1" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0 }}>Record Discrepancy as Expense</h3>
-              <button onClick={() => setShowAdjustmentModal(false)} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.2rem", color: "#94a3b8" }}>&times;</button>
+          {/* Timeline Audit Log */}
+          <article className="user-erp-card" style={{ padding: "24px" }}>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#1e293b", marginBottom: "6px" }}>Financial Activity Timeline</h2>
+            <p style={{ fontSize: "0.82rem", color: "#64748b", marginBottom: "20px" }}>
+              Audit log detailing reconciliation checkpoints, approvals, updates, and reviews.
+            </p>
+            
+            <div style={{ display: "flex", flexDirection: "column", position: "relative", paddingLeft: "24px" }}>
+              {/* Timeline Connector Line */}
+              <div style={{ position: "absolute", left: "9px", top: "12px", bottom: "12px", width: "2px", background: "#e2e8f0" }} />
+
+              {/* Step 1 */}
+              <div style={{ position: "relative", marginBottom: "22px" }}>
+                <div style={{ position: "absolute", left: "-24px", top: "2px", background: "#ffffff", borderRadius: "50%", padding: "2px" }}>
+                  <div style={{ background: "#dcfce7", color: "#15803d", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "9px", fontWeight: "bold" }}>✓</span>
+                  </div>
+                </div>
+                <div>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#334155" }}>
+                    Laboratory consumables purchase approved by Admin
+                  </strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Today, 10:15 AM</span>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div style={{ position: "relative", marginBottom: "22px" }}>
+                <div style={{ position: "absolute", left: "-24px", top: "2px", background: "#ffffff", borderRadius: "50%", padding: "2px" }}>
+                  <div style={{ background: "#fffbeb", color: "#d97706", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "9px", fontWeight: "bold" }}>◔</span>
+                  </div>
+                </div>
+                <div>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#334155" }}>
+                    Working lunch bill submitted by Fellow (Awaiting Admin approval)
+                  </strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Yesterday, 04:30 PM</span>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div style={{ position: "relative", marginBottom: "22px" }}>
+                <div style={{ position: "absolute", left: "-24px", top: "2px", background: "#ffffff", borderRadius: "50%", padding: "2px" }}>
+                  <div style={{ background: "#fffbeb", color: "#d97706", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "9px", fontWeight: "bold" }}>◔</span>
+                  </div>
+                </div>
+                <div>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#334155" }}>
+                    Reference books bill submitted by Fellow (Awaiting Admin approval)
+                  </strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Yesterday, 11:20 AM</span>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div style={{ position: "relative", marginBottom: "22px" }}>
+                <div style={{ position: "absolute", left: "-24px", top: "2px", background: "#ffffff", borderRadius: "50%", padding: "2px" }}>
+                  <div style={{ background: "#dcfce7", color: "#15803d", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "9px", fontWeight: "bold" }}>✓</span>
+                  </div>
+                </div>
+                <div>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#334155" }}>
+                    Meeting room rental bill approved by Admin
+                  </strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Jun 18, 2026</span>
+                </div>
+              </div>
+
+              {/* Step 5 */}
+              <div style={{ position: "relative" }}>
+                <div style={{ position: "absolute", left: "-24px", top: "2px", background: "#ffffff", borderRadius: "50%", padding: "2px" }}>
+                  <div style={{ background: "#fee2e2", color: "#ef4444", borderRadius: "50%", width: "16px", height: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "9px", fontWeight: "bold" }}>✕</span>
+                  </div>
+                </div>
+                <div>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#334155" }}>
+                    Academic poster print bill rejected by Admin
+                  </strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Jun 15, 2026</span>
+                </div>
+              </div>
+
             </div>
+          </article>
 
-            <div style={{ padding: "12px", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fecaca", marginBottom: "16px", color: "#991b1b" }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: "600" }}>UNMATCHED DISCREPANCY:</div>
-              <strong style={{ display: "block", fontSize: "0.95rem", margin: "4px 0" }}>{selectedStatementRow.description}</strong>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}>
-                <span>Date: {selectedStatementRow.date}</span>
-                <span>Amount: <strong>Rs {Math.abs(selectedStatementRow.amount).toLocaleString("en-IN")}</strong></span>
-              </div>
-            </div>
+        </section>
 
-            <form onSubmit={recordAndReconcile} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div className="user-form-field">
-                <span>Expense Description</span>
-                <input
-                  type="text"
-                  required
-                  value={adjDescription}
-                  onChange={(e) => setAdjDescription(e.target.value)}
-                  placeholder="e.g., Bank transaction fee June 2026"
-                />
-              </div>
-
-              <div className="user-form-field">
-                <span>Budget Category</span>
-                <select value={adjCategory} onChange={(e) => setAdjCategory(e.target.value)} style={{ padding: "10px 14px", height: "46px" }}>
-                  <option value="Miscellaneous">Miscellaneous</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Venue">Venue</option>
-                  <option value="Food & Refreshments">Food & Refreshments</option>
-                  <option value="Travel">Travel</option>
-                </select>
-              </div>
-
-              <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "10px" }}>
-                <button className="user-secondary-button" type="button" onClick={() => setShowAdjustmentModal(false)} style={{ minHeight: "38px" }}>
-                  Cancel
-                </button>
-                <button className="user-primary-button" type="submit" style={{ minHeight: "38px", background: "linear-gradient(135deg, #10b981, #059669)", borderColor: "#10b981" }}>
-                  Record & Reconcile
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
+      </div>
     </main>
   );
 }

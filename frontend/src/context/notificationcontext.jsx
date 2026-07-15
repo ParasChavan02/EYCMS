@@ -18,6 +18,7 @@ export function NotificationProvider({ children }) {
       time: "5 mins ago",
       actionLabel: "Review budgets",
       actionPath: ROUTES.ADMIN_BUDGET_HEADS,
+      roles: ["ADMIN", "ACCOUNTS"],
     },
     {
       id: 102,
@@ -28,6 +29,7 @@ export function NotificationProvider({ children }) {
       time: "12 mins ago",
       actionLabel: "Open queue",
       actionPath: ROUTES.ADMIN_APPROVALS,
+      roles: ["ADMIN", "ACCOUNTS"],
     },
     {
       id: 103,
@@ -38,6 +40,7 @@ export function NotificationProvider({ children }) {
       time: "28 mins ago",
       actionLabel: "Investigate",
       actionPath: ROUTES.ADMIN_RECONCILIATION,
+      roles: ["ADMIN", "ACCOUNTS"],
     },
   ]);
 

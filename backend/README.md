@@ -60,3 +60,20 @@ Migrations are configured via Alembic. To initialize/run database schema updates
    ```bash
    alembic upgrade head
    ```
+
+### 6. Seeding the Database (Authentication & Mock Data)
+To populate the database with default roles and users (e.g., `user@example.com` / `password123`):
+```bash
+python -m app.core.seed
+```
+
+---
+
+## Troubleshooting
+
+### Python 3.14+ `ModuleNotFoundError: No module named 'pydantic_core._pydantic_core'`
+If you run the server on Python 3.14+ and encounter an import failure for `_pydantic_core`, force a reinstall of the `pydantic` packages to download the correct binary wheels matching Python 3.14:
+```bash
+pip install --force-reinstall pydantic pydantic-core
+```
+

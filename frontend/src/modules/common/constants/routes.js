@@ -29,10 +29,17 @@ export const ROUTES = {
   ADMIN_SUPPORT_ANALYTICS: "/admin/support/analytics",
   ADMIN_SUPPORT_STATUS: "/admin/support/status",
   ADMIN_SUPPORT_TICKET_DETAILS: "/admin/support/ticket/:ticketId",
+  SUPER_ADMIN_DASHBOARD: "/super-admin/dashboard",
+  SUPER_ADMIN_GENERATE_TOKEN: "/super-admin/generate-token",
+  SUPER_ADMIN_TOKENS: "/super-admin/tokens",
+  SUPER_ADMIN_TOKEN_DETAILS: "/super-admin/token/:id",
+  SUPER_ADMIN_PROFILE: "/super-admin/profile",
+  SUPER_ADMIN_SETTINGS: "/super-admin/settings",
 };
 
 export function isAdminRole(account) {
-  return account?.role?.toUpperCase() === "ADMIN";
+  const role = account?.role?.toUpperCase();
+  return role === "ADMIN" || role === "SUPER_ADMIN";
 }
 
 export function getHomeRoute(account) {
@@ -40,6 +47,10 @@ export function getHomeRoute(account) {
 
   if (role === "ADMIN") {
     return ROUTES.ADMIN_DASHBOARD;
+  }
+
+  if (role === "SUPER_ADMIN") {
+    return ROUTES.SUPER_ADMIN_DASHBOARD;
   }
 
   if (role === "ACCOUNTS") {
@@ -50,9 +61,17 @@ export function getHomeRoute(account) {
 }
 
 export function getProfileRoute(account) {
+  const role = account?.role?.toUpperCase();
+  if (role === "SUPER_ADMIN") {
+    return ROUTES.SUPER_ADMIN_PROFILE;
+  }
   return isAdminRole(account) ? ROUTES.ADMIN_PROFILE : ROUTES.USER_PROFILE;
 }
 
 export function getSettingsRoute(account) {
+  const role = account?.role?.toUpperCase();
+  if (role === "SUPER_ADMIN") {
+    return ROUTES.SUPER_ADMIN_SETTINGS;
+  }
   return isAdminRole(account) ? ROUTES.ADMIN_SETTINGS : ROUTES.USER_SETTINGS;
 }
