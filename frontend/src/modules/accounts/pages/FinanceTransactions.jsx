@@ -1,51 +1,64 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import DashboardCards from "../components/transactions/DashboardCards";
 import TransactionFilters from "../components/transactions/TransactionFilters";
 import TransactionTable from "../components/transactions/TransactionTable";
 import LedgerView from "../components/transactions/LedgerView";
 import BillSection from "../components/transactions/BillSection";
+import { accountsService } from "../services/accountsService";
 import "../styles/finance.css";
+
+// Maps a real backend AccountsTransactionItem (see app/accounts/schemas)
+// onto the shape the existing table/ledger components already expect.
+function toRowShape(t) {
+  return {
+    id: t.id,
+    date: new Date(t.date).toLocaleDateString("en-IN"),
+    voucher: `TXN-${t.id.slice(0, 8).toUpperCase()}`,
+    type: "Expense",
+    budgetHead: t.budget_head,
+    debit: t.budget_head,
+    credit: "Bank Account",
+    amount: t.amount,
+    status: t.status,
+    remarks: t.description,
+  };
+}
 
 function FinanceTransactions() {
   const [search, setSearch] = useState("");
-  const [transactions, setTransactions] = useState([
-    {
-      id: 1,
-      date: "2026-06-01",
-      voucher: "VCH1780125233230",
-      type: "Grant Release",
-      budgetHead: "Fellowship Grant",
-      debit: "Bank Account",
-      credit: "Government Grant",
-      amount: 50000,
-      status: "Completed",
-      remarks: "Grant credited",
-    },
-    {
-      id: 2,
-      date: "2026-06-03",
-      voucher: "VCH1780125233309",
-      type: "Expense",
-      budgetHead: "Training Expense",
-      debit: "Expense Account",
-      credit: "Bank Account",
-      amount: 12000,
-      status: "Pending",
-      remarks: "Training workshop",
-    },
-    {
-      id: 3,
-      date: "2026-06-05",
-      voucher: "VCH1780125233305",
-      type: "Bill Payment",
-      budgetHead: "Operations",
-      debit: "Vendor Account",
-      credit: "Cash Account",
-      amount: 8000,
-      status: "Completed",
-      remarks: "Vendor settlement",
-    },
-  ]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [kpis, setKpis] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [txns, dashboardKpis] = await Promise.all([
+          accountsService.getTransactions(),
+          accountsService.getDashboardKPIs(),
+        ]);
+        if (!isMounted) return;
+        setTransactions((txns || []).map(toRowShape));
+        setKpis(dashboardKpis);
+      } catch (err) {
+        if (isMounted) {
+          setError(err?.response?.data?.error || "Unable to load transactions.");
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredTransactions = transactions.filter(
     (item) =>
@@ -54,14 +67,10 @@ function FinanceTransactions() {
       item.budgetHead.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalBudget = 1000000;
-  const totalGrants = transactions
-    .filter((t) => t.type === "Grant Release")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions
-    .filter((t) => t.type === "Expense")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const remainingBalance = totalBudget - totalGrants - totalExpenses;
+  const totalBudget = kpis?.total_allocated_funds ?? 0;
+  const totalGrants = 0; // No "grant release" ledger entries exist in the current data model
+  const totalExpenses = kpis?.total_spent_funds ?? 0;
+  const remainingBalance = kpis?.remaining_funds ?? 0;
 
   return (
     <div className="fin-page">
@@ -78,31 +87,38 @@ function FinanceTransactions() {
         </div>
       </div>
 
-      {/* Dashboard KPI Cards */}
-      <DashboardCards
-        totalBudget={totalBudget}
-        totalGrants={totalGrants}
-        totalExpenses={totalExpenses}
-        remainingBalance={remainingBalance}
-      />
+      {error && <div className="fin-empty">{error}</div>}
+      {loading && !error && <div className="fin-empty">Loading transactions…</div>}
 
-      {/* Filters */}
-      <TransactionFilters
-        search={search}
-        setSearch={setSearch}
-        transactions={filteredTransactions}
-        setTransactions={setTransactions}
-        viewOnly={true}
-      />
+      {!loading && !error && (
+        <>
+          {/* Dashboard KPI Cards */}
+          <DashboardCards
+            totalBudget={totalBudget}
+            totalGrants={totalGrants}
+            totalExpenses={totalExpenses}
+            remainingBalance={remainingBalance}
+          />
 
-      {/* Table */}
-      <TransactionTable transactions={filteredTransactions} viewOnly={true} />
+          {/* Filters */}
+          <TransactionFilters
+            search={search}
+            setSearch={setSearch}
+            transactions={filteredTransactions}
+            setTransactions={setTransactions}
+            viewOnly={true}
+          />
 
-      {/* Ledger */}
-      <LedgerView transactions={filteredTransactions} />
+          {/* Table */}
+          <TransactionTable transactions={filteredTransactions} viewOnly={true} />
 
-      {/* Bills */}
-      <BillSection viewOnly={true} />
+          {/* Ledger */}
+          <LedgerView transactions={filteredTransactions} />
+
+          {/* Bills (not yet wired to live data — see Reports page for real bill documents) */}
+          <BillSection viewOnly={true} />
+        </>
+      )}
     </div>
   );
 }

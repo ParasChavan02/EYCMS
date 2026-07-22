@@ -10,6 +10,15 @@ class Settings(BaseSettings):
     
     DATABASE_URL: str = "postgresql+pg8000://postgres:postgres@localhost:5432/eycms"
     
+    # SMTP Configuration (Gmail SMTP)
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_SENDER: str = ""
+    
+    FRONTEND_URL: str = "http://localhost:5173"
+    
     # Security
     JWT_SECRET_KEY: str = "supersecretjwtkeyforlocaldevelopmentonly12345!"
     JWT_ALGORITHM: str = "HS256"

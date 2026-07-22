@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from app.common.models.event import Event
     from app.common.models.report import QuarterlyReport
     from app.common.models.utilization_certificate import UCRequest
+    from app.common.models.team import Team
 
 class Project(Base):
     __tablename__ = "projects"
@@ -38,3 +39,4 @@ class Project(Base):
     events: Mapped[List["Event"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     reports: Mapped[List["QuarterlyReport"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     uc_requests: Mapped[List["UCRequest"]] = relationship(back_populates="project", cascade="all, delete-orphan")
+    teams: Mapped[List["Team"]] = relationship(back_populates="project", cascade="all, delete-orphan")

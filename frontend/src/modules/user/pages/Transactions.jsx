@@ -20,9 +20,9 @@ function Transactions() {
   const [searchFilter, setSearchFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  
+
   const [ucStatus, setUcStatus] = useState(() => localStorage.getItem("uc_status") || "NOT_REQUESTED");
-  
+
   useEffect(() => {
     const handleStorageChange = () => {
       setUcStatus(localStorage.getItem("uc_status") || "NOT_REQUESTED");
@@ -206,7 +206,7 @@ function Transactions() {
   return (
     <main className="user-erp-page">
       <div className="user-erp-shell">
-        
+
         {/* Header Bar */}
         <header className="user-erp-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
           <div>
@@ -259,7 +259,7 @@ function Transactions() {
         </section>
         {/* Double Table Grid Layout */}
         <section className="user-dashboard-grid">
-          
+
           {/* Utilization Certificate (UC) Section */}
           <article className="user-erp-card">
             <div style={{ marginBottom: "20px" }}>
@@ -268,7 +268,7 @@ function Transactions() {
                 Request, download, and track the status of your project's Utilization Certificate.
               </p>
             </div>
-            
+
             <div style={{ background: "#f8fafc", border: "1px dashed #cfd9e8", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
                 <span style={{ fontSize: "0.9rem", fontWeight: "600", color: "#304761" }}>UC Request Status:</span>

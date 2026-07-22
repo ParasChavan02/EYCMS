@@ -60,7 +60,9 @@ class AuthService:
                 id=str(user.id),
                 name=user.name,
                 email=user.email,
-                role=user.role.name if user.role else "USER"
+                role=user.role.name if user.role else "USER",
+                projectId=user.project.project_id if user.project else None,
+                teamConfigured=user.team_configured
             )
         )
 

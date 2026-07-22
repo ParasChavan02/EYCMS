@@ -1,3 +1,12 @@
+import axios from "axios";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const USERS_STORAGE_KEY = 'app_users';
 const CURRENT_USER_KEY = 'current_user';
 const RESET_REQUESTS_KEY = 'team_reset_requests';
@@ -13,59 +22,54 @@ function saveUsers(users) {
 
 export const teamService = {
   setupTeam: async (user, { projectId, teamMembers }) => {
-    const users = getAllUsers();
-    const userIndex = users.findIndex(u => u.email === user.email);
-
-    const updatedUser = {
-      ...user,
-      projectId,
-      teamMembers: teamMembers || [],
-      teamConfigured: true,
-      onboardedAt: new Date().toISOString()
-    };
-
-    if (userIndex !== -1) {
-      users[userIndex] = {
-        ...users[userIndex],
+    try {
+      const response = await axios.post(`${API_BASE_URL}/user/setup-team`, {
         projectId,
-        teamMembers: teamMembers || [],
-        teamConfigured: true,
-        onboardedAt: new Date().toISOString()
-      };
-      saveUsers(users);
-    }
+        teamMembers
+      }, {
+        headers: getAuthHeaders()
+      });
 
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
-    return updatedUser;
+      if (response.data && response.data.success) {
+        const updatedUser = response.data.data;
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+        return updatedUser;
+      }
+      throw new Error(response.data.message || "Failed to configure team workspace.");
+    } catch (error) {
+      if (error.response && error.response.data) {
+        throw new Error(error.response.data.error || error.response.data.detail || "Failed to configure team workspace.");
+      }
+      throw error;
+    }
   },
 
   addTeammate: async (user, { name, email }) => {
-    const users = getAllUsers();
-    const userIndex = users.findIndex(u => u.email === user.email);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/user/invite-teammate`, {
+        name,
+        email
+      }, {
+        headers: getAuthHeaders()
+      });
 
-    const newMember = { name, email, status: 'Pending' };
-    const currentMembers = user.teamMembers || [];
-
-    if (currentMembers.some(m => m.email.toLowerCase() === email.toLowerCase())) {
-      throw new Error('A teammate with this email address already exists.');
+      if (response.data && response.data.success) {
+        const currentMembers = user.teamMembers || [];
+        const updatedMembers = [...currentMembers, { name, email, status: 'Pending' }];
+        const updatedUser = {
+          ...user,
+          teamMembers: updatedMembers
+        };
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+        return updatedUser;
+      }
+      throw new Error(response.data.message || "Failed to invite teammate.");
+    } catch (error) {
+      if (error.response && error.response.data) {
+        throw new Error(error.response.data.error || error.response.data.detail || "Failed to invite teammate.");
+      }
+      throw error;
     }
-
-    const updatedMembers = [...currentMembers, newMember];
-    const updatedUser = {
-      ...user,
-      teamMembers: updatedMembers
-    };
-
-    if (userIndex !== -1) {
-      users[userIndex] = {
-        ...users[userIndex],
-        teamMembers: updatedMembers
-      };
-      saveUsers(users);
-    }
-
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
-    return updatedUser;
   },
 
   requestTeamReset: async (user) => {

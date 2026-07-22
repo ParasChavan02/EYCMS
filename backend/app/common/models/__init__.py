@@ -16,8 +16,14 @@ from app.common.models.utilization_certificate import UCRequest
 from app.common.models.uc_template import UCTemplate
 from app.common.models.uc_submission import UCSubmission
 from app.common.models.support_ticket import SupportTicket
+from app.common.models.support_ticket_message import SupportTicketMessage
+from app.common.models.feature_request import FeatureRequestModel
+from app.common.models.project_file import ProjectFile
+from app.common.models.email_log import EmailLog
 from app.common.models.notification import Notification
 from app.common.models.audit_log import AuditLog
+from app.common.models.team import Team
+from app.common.models.invitation import Invitation
 
 __all__ = [
     "Base",
@@ -39,6 +45,12 @@ __all__ = [
     "UCTemplate",
     "UCSubmission",
     "SupportTicket",
+    "SupportTicketMessage",
+    "FeatureRequestModel",
+    "ProjectFile",
+    "EmailLog",
     "Notification",
-    "AuditLog"
+    "AuditLog",
+    "Team",
+    "Invitation"
 ]

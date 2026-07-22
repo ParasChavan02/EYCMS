@@ -24,6 +24,8 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     role: str
+    projectId: Optional[str] = None
+    teamConfigured: bool = False
 
 class TokenResponse(BaseModel):
     access_token: str

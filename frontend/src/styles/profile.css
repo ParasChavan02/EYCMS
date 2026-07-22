@@ -1,0 +1,280 @@
+/* PROFILE PAGE STYLING */
+
+.profile-page {
+  padding: 24px;
+  background: #f9fafb;
+  min-height: calc(100vh - 60px);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+html[data-theme="dark"] .profile-page {
+  background: #111827;
+}
+
+.page-header {
+  margin-bottom: 28px;
+}
+
+.page-title {
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+html[data-theme="dark"] .page-title {
+  color: #f3f4f6;
+}
+
+.page-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+html[data-theme="dark"] .page-subtitle {
+  color: #d1d5db;
+}
+
+.profile-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+}
+
+.profile-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  width: 100%;
+}
+
+.profile-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  width: 100%;
+}
+
+/* PROFILE CARDS */
+.profile-header,
+.profile-form-card,
+.account-card,
+.activity-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.profile-header:hover,
+.profile-form-card:hover,
+.account-card:hover,
+.activity-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="dark"] .profile-header,
+html[data-theme="dark"] .profile-form-card,
+html[data-theme="dark"] .account-card,
+html[data-theme="dark"] .activity-card {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 1200px) {
+  .profile-page {
+    padding: 20px;
+  }
+
+  .page-header {
+    margin-bottom: 24px;
+  }
+
+  .page-title {
+    font-size: 1.6rem;
+  }
+
+  .profile-container {
+    grid-template-columns: 7fr 3fr;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .profile-page {
+    padding: 18px;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .profile-container {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .profile-header,
+  .profile-form-card,
+  .account-card,
+  .activity-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 12px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+  }
+
+  .profile-container {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .profile-main {
+    gap: 12px;
+  }
+
+  .profile-sidebar {
+    gap: 12px;
+  }
+
+  .profile-header,
+  .profile-form-card,
+  .account-card,
+  .activity-card {
+    padding: 12px;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-page {
+    padding: 10px;
+  }
+
+  .page-header {
+    margin-bottom: 12px;
+  }
+
+  .page-title {
+    font-size: 1.2rem;
+    text-align: center;
+  }
+
+  .page-subtitle {
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  .profile-container {
+    gap: 10px;
+  }
+
+  .profile-main {
+    gap: 10px;
+  }
+
+  .profile-sidebar {
+    gap: 10px;
+  }
+
+  .profile-header,
+  .profile-form-card,
+  .account-card,
+  .activity-card {
+    padding: 10px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 375px) {
+  .profile-page {
+    padding: 8px;
+  }
+
+  .page-title {
+    font-size: 1.1rem;
+  }
+
+  .profile-header,
+  .profile-form-card,
+  .account-card,
+  .activity-card {
+    padding: 8px;
+  }
+}
+
+/* FORM ELEMENTS RESPONSIVE */
+.form-group,
+.form-row {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-control,
+input,
+select,
+textarea {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-row > * {
+    width: 100%;
+    flex: 1;
+  }
+}
+
+/* BUTTONS RESPONSIVE */
+.btn-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .btn-group {
+    flex-direction: column;
+  }
+
+  .btn-group > * {
+    width: 100%;
+  }
+
+  button {
+    min-height: 44px;
+  }
+}

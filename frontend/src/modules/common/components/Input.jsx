@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 
 function FormInput({ label, value, onChange, type = 'text', name, placeholder, showPasswordToggle = false }) {
   const [visible, setVisible] = useState(false)
@@ -31,7 +32,7 @@ function FormInput({ label, value, onChange, type = 'text', name, placeholder, s
             onClick={() => setVisible((current) => !current)}
             aria-label={visible ? 'Hide password' : 'Show password'}
           >
-            {visible ? '🙈' : '👁️'}
+            {visible ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
       </div>

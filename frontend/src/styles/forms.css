@@ -35,35 +35,66 @@ textarea::placeholder {
 }
 
 .password-field {
-  display: grid;
+  display: block;
   position: relative;
   width: 100%;
 }
 
 .password-field input {
   padding-right: 48px;
+  width: 100%;
 }
 
+/* 3. The Eye Button - Locked in place */
 .password-toggle {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
+  /* Keeps it perfectly vertically centered */
+
+  /* Lock dimensions so hover changes can't physically warp it */
+  width: 32px;
+  height: 32px;
+  box-sizing: border-box;
+
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-muted, #666);
   font-size: 1rem;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 0;
+  /* Set to 0 since width/height are explicitly set */
+
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: color 0.2s ease;
+  z-index: 5;
+
+  /* Disable any browser-default active/hover scaling shifts */
+  margin: 0;
+  outline: none;
 }
 
+/* 4. Safe Hover State (Will not move the button) */
 .password-toggle:hover {
-  color: var(--primary);
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  transform: translateY(-50%) !important;
+  /* Forces it to stay vertically locked */
+  opacity: 0.8;
+}
+
+.password-toggle:hover,
+.password-toggle:focus,
+.password-toggle:active {
+  color: #475569 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
 }
 
 input:focus,
@@ -108,7 +139,7 @@ button:disabled {
   width: 100%;
 }
 
-.form-row > * {
+.form-row>* {
   flex: 1;
   min-width: 200px;
 }
@@ -137,7 +168,7 @@ button:disabled {
     flex-direction: column;
   }
 
-  .form-row > * {
+  .form-row>* {
     width: 100%;
     min-width: auto;
   }
@@ -168,6 +199,7 @@ button:disabled {
 }
 
 @media (max-width: 375px) {
+
   input,
   select,
   textarea {

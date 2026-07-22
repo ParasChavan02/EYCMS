@@ -6,6 +6,7 @@ import { login } from "../services/authService";
 import Button from "../../common/components/Button";
 import Input from "../../common/components/Input";
 import AuthHelpModal from "../components/AuthHelpModal";
+import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import { getHomeRoute } from "../../common/constants/routes";
 
 function Login() {
@@ -14,6 +15,7 @@ function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [redirectPending, setRedirectPending] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const { user, signIn } = useAuth();
   const { addNotification } = useNotification();
   const navigate = useNavigate();
@@ -62,12 +64,27 @@ function Login() {
     }
   };
 
-  const handleGoogleSignIn = () => {
-    const googleUser = { id: "google_1", name: "Google User", email: "google.user@example.com", role: "USER" };
-    localStorage.setItem("current_user", JSON.stringify(googleUser));
-    signIn(googleUser);
-    navigate(getHomeRoute(googleUser));
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const result = await login({ email: "user@example.com", password: "password123" });
+      if (result.success) {
+        addNotification(`✅ Welcome! Authenticated successfully via Google.`, 'success', 3000);
+        localStorage.setItem('current_user', JSON.stringify(result.user));
+        setRedirectPending(true);
+        signIn(result.user);
+        const destination = result.user.role === "SUPER_ADMIN" ? "/super-admin/dashboard" : getHomeRoute(result.user);
+        setTimeout(() => navigate(destination), 100);
+      } else {
+        setMessage("Google Sign-In simulation failed: " + result.error);
+      }
+    } catch (e) {
+      setMessage("Google Sign-In simulation failed.");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
 
   return (
     <main className="page auth-page">
@@ -83,53 +100,66 @@ function Login() {
       </header>
       <AuthHelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
 
-      <section className="card auth-card">
-        <div className="auth-header">
-          <h1>Welcome back</h1>
-          <p>Sign in to access your workspace or create a new account.</p>
+      <div className="auth-wrapper">
+        <div className="auth-logo-side">
+          <img src="/eyuva_logo.jpg" alt="E-YUVA Center Rajkot" />
         </div>
-
-        <div className="auth-tabs">
-          <button type="button" className="active">Login</button>
-          <button type="button" onClick={() => navigate("/signup")}>Sign up</button>
-        </div>
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            placeholder="you@example.com"
-          />
-          <Input
-            label="Password"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            placeholder="Enter password"
-            showPasswordToggle
-          />
-
-          {message && <div className="form-note">{message}</div>}
-
-          <div className="auth-actions">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Processing..." : "Login"}
-            </Button>
+        <section className="card auth-card">
+          <div className="auth-header">
+            <h1>Welcome back</h1>
+            <p>Sign in to access your workspace or create a new account.</p>
           </div>
-        </form>
 
-        <div className="divider">
-          <span></span>
-        </div>
+          <div className="auth-tabs">
+            <button type="button" className="active">Login</button>
+            <button type="button" onClick={() => navigate("/signup")}>Sign up</button>
+          </div>
 
-        {/* <button type="button" className="google-button" onClick={handleGoogleSignIn}>
-          Continue with Google
-        </button> */}
-      </section>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="you@example.com"
+            />
+            <Input
+              label="Password"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Enter password"
+              showPasswordToggle
+            />
+
+            {message && <div className="form-note">{message}</div>}
+
+            <div className="auth-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Processing..." : "Login"}
+              </Button>
+              <button 
+                type="button" 
+                className="forgot-password-link-btn" 
+                onClick={() => setForgotOpen(true)}
+              >
+                Forgot Password?
+              </button>
+            </div>
+          </form>
+
+          <div className="divider">
+            <span></span>
+          </div>
+
+          {/* <button type="button" className="google-button" onClick={handleGoogleSignIn}>
+            Continue with Google
+          </button> */}
+        </section>
+      </div>
+      <ForgotPasswordModal isOpen={forgotOpen} onClose={() => setForgotOpen(false)} />
     </main>
   );
 }

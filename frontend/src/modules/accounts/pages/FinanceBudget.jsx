@@ -1,52 +1,13 @@
+import { useEffect, useState } from "react";
+import { accountsService } from "../services/accountsService";
 import "../styles/finance.css";
 
-const summaryCards = [
-  {
-    label: "Total Budget",
-    value: "₹12,50,000",
-    icon: "💼",
-    accent: "#2563eb",
-    iconBg: "#eff6ff",
-  },
-  {
-    label: "Allocated",
-    value: "₹11,80,000",
-    icon: "📋",
-    accent: "#9333ea",
-    iconBg: "#fdf4ff",
-  },
-  {
-    label: "Utilized",
-    value: "₹8,45,000",
-    icon: "📈",
-    accent: "#d97706",
-    iconBg: "#fffbeb",
-  },
-  {
-    label: "Remaining",
-    value: "₹4,05,000",
-    icon: "🏦",
-    accent: "#16a34a",
-    iconBg: "#f0fdf4",
-  },
-];
-
-const budgetRows = [
-  { head: "Travel", allocated: 200000, utilized: 110000 },
-  { head: "Equipment", allocated: 350000, utilized: 287000 },
-  { head: "Training", allocated: 150000, utilized: 72000 },
-  { head: "Events", allocated: 180000, utilized: 113400 },
-  { head: "Operations", allocated: 300000, utilized: 225000 },
-  { head: "IT Infrastructure", allocated: 200000, utilized: 148000 },
-  { head: "Marketing", allocated: 100000, utilized: 89600 },
-  { head: "Miscellaneous", allocated: 70000, utilized: 21000 },
-];
-
 function fmtINR(n) {
-  return "₹" + n.toLocaleString("en-IN");
+  return "₹" + Math.round(n || 0).toLocaleString("en-IN");
 }
 
 function pct(util, alloc) {
+  if (!alloc) return 0;
   return Math.round((util / alloc) * 100);
 }
 
@@ -55,20 +16,61 @@ function barColor(p) {
 }
 
 export default function FinanceBudget() {
+  const [budgets, setBudgets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await accountsService.getBudgetOverview();
+        if (isMounted) setBudgets(data || []);
+      } catch (err) {
+        if (isMounted) setError(err?.response?.data?.error || "Unable to load budget data.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Flatten budget heads across all projects into a single table, each
+  // labeled with its parent project so heads with the same name (e.g.
+  // "Travel" on two different projects) aren't confused with one another.
+  const budgetRows = budgets.flatMap((b) =>
+    (b.budget_heads || []).map((h) => ({
+      head: h.name,
+      project: b.project_title || b.project_id || "Unassigned",
+      allocated: h.allocated,
+      utilized: h.utilized,
+      remaining: h.remaining,
+    }))
+  );
+
+  const totalAllocated = budgets.reduce((s, b) => s + (b.total_allocated || 0), 0);
+  const totalUtilized = budgets.reduce((s, b) => s + (b.total_utilized || 0), 0);
+  const overallHealth = pct(totalUtilized, totalAllocated);
+
   const sorted = [...budgetRows].sort(
     (a, b) => pct(b.utilized, b.allocated) - pct(a.utilized, a.allocated)
   );
-
   const highest = sorted[0];
   const lowest = sorted[sorted.length - 1];
 
-  const totalAllocated = budgetRows.reduce((s, r) => s + r.allocated, 0);
-  const totalUtilized = budgetRows.reduce((s, r) => s + r.utilized, 0);
-  const overallHealth = pct(totalUtilized, totalAllocated);
-
-  const grantReleased = 750000;
-  const spent = 420000;
-  const remainingGrant = grantReleased - spent;
+  const summaryCards = [
+    { label: "Total Budget", value: fmtINR(totalAllocated), icon: "💼", accent: "#2563eb", iconBg: "#eff6ff" },
+    { label: "Allocated", value: fmtINR(totalAllocated), icon: "📋", accent: "#9333ea", iconBg: "#fdf4ff" },
+    { label: "Utilized", value: fmtINR(totalUtilized), icon: "📈", accent: "#d97706", iconBg: "#fffbeb" },
+    { label: "Remaining", value: fmtINR(totalAllocated - totalUtilized), icon: "🏦", accent: "#16a34a", iconBg: "#f0fdf4" },
+  ];
 
   return (
     <div className="fin-page">
@@ -77,13 +79,18 @@ export default function FinanceBudget() {
           <div>
             <h1>Budget Overview</h1>
             <p className="subtitle">
-              Annual budget allocation and utilization — FY 2026
+              Budget allocation and utilization across all projects
             </p>
           </div>
           <span className="fin-badge-role">Read Only Access</span>
         </div>
       </div>
 
+      {error && <div className="fin-empty">{error}</div>}
+      {loading && !error && <div className="fin-empty">Loading budget data…</div>}
+
+      {!loading && !error && (
+        <>
       {/* KPI Cards */}
       <div className="fin-kpi-grid">
         {summaryCards.map((k, i) => (
@@ -115,11 +122,15 @@ export default function FinanceBudget() {
           </div>
 
           <div className="fin-card-body">
+            {budgetRows.length === 0 ? (
+              <div className="fin-empty">No budget heads recorded yet.</div>
+            ) : (
             <div className="fin-table-wrap">
               <table className="fin-table">
                 <thead>
                   <tr>
                     <th>Budget Head</th>
+                    <th>Project</th>
                     <th>Allocated</th>
                     <th>Utilized</th>
                     <th>Remaining</th>
@@ -130,11 +141,12 @@ export default function FinanceBudget() {
                 <tbody>
                   {budgetRows.map((row, i) => {
                     const p = pct(row.utilized, row.allocated);
-                    const remaining = row.allocated - row.utilized;
+                    const remaining = row.remaining;
 
                     return (
                       <tr key={i}>
                         <td className="bold">{row.head}</td>
+                        <td>{row.project}</td>
                         <td className="mono">{fmtINR(row.allocated)}</td>
                         <td className="mono">{fmtINR(row.utilized)}</td>
                         <td className="mono">{fmtINR(remaining)}</td>
@@ -153,7 +165,7 @@ export default function FinanceBudget() {
                             >
                               <div
                                 className={`fin-progress-fill ${barColor(p)}`}
-                                style={{ width: `${p}%` }}
+                                style={{ width: `${Math.min(100, p)}%` }}
                               />
                             </div>
                             <span
@@ -172,6 +184,7 @@ export default function FinanceBudget() {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
 
@@ -186,12 +199,12 @@ export default function FinanceBudget() {
             <div className="fin-card-body">
               <div className="fin-insight-row">
                 <span>🔴 Highest Spending Head</span>
-                <span>{highest.head}</span>
+                <span>{highest ? highest.head : "N/A"}</span>
               </div>
 
               <div className="fin-insight-row">
                 <span>🟢 Lowest Spending Head</span>
-                <span>{lowest.head}</span>
+                <span>{lowest ? lowest.head : "N/A"}</span>
               </div>
 
               <div className="fin-insight-row">
@@ -224,7 +237,7 @@ export default function FinanceBudget() {
             </div>
           </div>
 
-          {/* Grant Status */}
+          {/* Grant Status - reuses the same allocated/utilized totals as the KPI cards above */}
           <div className="fin-card">
             <div className="fin-card-header">
               <div className="fin-card-title">Grant Status</div>
@@ -232,27 +245,27 @@ export default function FinanceBudget() {
 
             <div className="fin-card-body">
               <div className="fin-stat-row">
-                <span>Grant Released</span>
-                <strong>{fmtINR(grantReleased)}</strong>
+                <span>Total Allocated</span>
+                <strong>{fmtINR(totalAllocated)}</strong>
               </div>
 
               <div className="fin-stat-row">
                 <span>Spent</span>
                 <strong style={{ color: "var(--warning)" }}>
-                  {fmtINR(spent)}
+                  {fmtINR(totalUtilized)}
                 </strong>
               </div>
 
               <div className="fin-stat-row">
                 <span>Remaining</span>
                 <strong style={{ color: "var(--success)" }}>
-                  {fmtINR(remainingGrant)}
+                  {fmtINR(totalAllocated - totalUtilized)}
                 </strong>
               </div>
             </div>
           </div>
 
-          {/* UC Compliance */}
+          {/* UC Compliance - no backing data model yet, left as a static placeholder */}
           <div className="fin-card">
             <div className="fin-card-header">
               <div className="fin-card-title">UC Compliance Status</div>
@@ -318,6 +331,8 @@ export default function FinanceBudget() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

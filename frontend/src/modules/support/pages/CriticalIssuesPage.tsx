@@ -50,7 +50,7 @@ export const CriticalIssuesPage: React.FC = () => {
   const unassignedCount = criticalTickets.filter((t) => !t.assignedTo).length;
 
   const handleRowClick = (ticket: Ticket) => {
-    navigate(`/admin/support/ticket/${ticket.ticketId}`);
+    navigate(`/admin/support/ticket/${ticket.id}`);
   };
 
   return (

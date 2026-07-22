@@ -31,7 +31,7 @@ const queryClient = new QueryClient({
 });
 
 import Dashboard from "./modules/user/pages/Dashboard";
-import Profile from "./pages/Profile";
+import Profile from "./modules/user/pages/Profile";
 
 import SuperAdminDashboard from "./modules/super-admin/pages/SuperAdminDashboard";
 import GenerateToken from "./modules/super-admin/pages/GenerateToken";
@@ -137,8 +137,6 @@ function App() {
                 }
               />
               <Route path="/reconciliation" element={<Navigate to={ROUTES.ADMIN_RECONCILIATION} replace />} />
-              <Route path="/events" element={<Navigate to={ROUTES.USER_DASHBOARD} replace />} />
-              <Route path="/reports" element={<Navigate to={ROUTES.USER_DASHBOARD} replace />} />
               <Route path="/settings" element={<Navigate to={ROUTES.USER_PROFILE} replace />} />
               <Route path="/approval-center" element={<Navigate to={ROUTES.ADMIN_APPROVALS} replace />} />
               <Route path="/admin/system-config" element={<Navigate to={ROUTES.ADMIN_SETTINGS} replace />} />

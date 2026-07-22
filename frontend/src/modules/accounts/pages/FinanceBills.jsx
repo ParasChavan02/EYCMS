@@ -1,159 +1,442 @@
-import { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Receipt,
+  Search,
+  Download,
+  Eye,
+  RefreshCw,
+  UserCheck,
+  Calendar,
+  Layers,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  X,
+  Loader2,
+  FileText,
+  FileCode
+} from "lucide-react";
+import { reportService, getFileUrl, formatDateTime } from "../../../services/reportService";
+import { useNotification } from "../../common/hooks/useNotification";
 import "../styles/finance.css";
 
-const allBills = [
-  { id: "BILL-001", vendor: "TechCorp Pvt Ltd", date: "08 Jun 2026", amount: "₹45,000", category: "IT", status: "Approved", description: "Annual software license renewal for ERP system." },
-  { id: "BILL-002", vendor: "OfficePro Supplies", date: "07 Jun 2026", amount: "₹88,000", category: "Equipment", status: "Pending", description: "Office furniture and workstation equipment purchase." },
-  { id: "BILL-003", vendor: "EventHouse Pvt Ltd", date: "06 Jun 2026", amount: "₹32,000", category: "Events", status: "Pending", description: "Annual leadership summit venue and catering." },
-  { id: "BILL-004", vendor: "SkillUp Training", date: "05 Jun 2026", amount: "₹12,500", category: "Training", status: "Approved", description: "Employee upskilling program — Batch 4 sessions." },
-  { id: "BILL-005", vendor: "Travel Agency India", date: "04 Jun 2026", amount: "₹28,000", category: "Travel", status: "Rejected", description: "Travel booking for Q2 client visit — duplicate submission." },
-  { id: "BILL-006", vendor: "PowerGrid Ltd", date: "03 Jun 2026", amount: "₹15,600", category: "Operations", status: "Approved", description: "Monthly electricity bill for HQ building." },
-  { id: "BILL-007", vendor: "CloudHost Inc", date: "02 Jun 2026", amount: "₹22,400", category: "IT", status: "Pending", description: "Cloud hosting and storage services for June 2026." },
-  { id: "BILL-008", vendor: "Stationery World", date: "01 Jun 2026", amount: "₹6,800", category: "Operations", status: "Approved", description: "Monthly office stationery and printing supplies." },
-  { id: "BILL-009", vendor: "MedAssist Corp", date: "31 May 2026", amount: "₹18,000", category: "Training", status: "Rejected", description: "Health & Safety training — insufficient documentation." },
-  { id: "BILL-010", vendor: "AV Solutions", date: "30 May 2026", amount: "₹54,000", category: "Equipment", status: "Approved", description: "Projectors and AV equipment for conference rooms." },
-];
-
-const statusMap = {
-  Approved: "badge-success",
-  Pending: "badge-warning",
-  Rejected: "badge-danger",
-};
-
 export default function FinanceBills() {
+  const { addNotification } = useNotification();
+  const [bills, setBills] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [selectedBill, setSelectedBill] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
 
-  const filtered = allBills.filter((b) => {
-    const matchSearch =
-      b.vendor.toLowerCase().includes(search.toLowerCase()) ||
-      b.id.toLowerCase().includes(search.toLowerCase()) ||
-      b.category.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "All" || b.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
-
-  const counts = {
-    total: allBills.length,
-    approved: allBills.filter((b) => b.status === "Approved").length,
-    pending: allBills.filter((b) => b.status === "Pending").length,
-    rejected: allBills.filter((b) => b.status === "Rejected").length,
+  const fetchBills = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    try {
+      const data = await reportService.getAdminFiles("bill");
+      setBills(data || []);
+      if (isManual) {
+        addNotification("Finance bills list refreshed.", "info", 1800, false);
+      }
+    } catch (err) {
+      console.error("Failed to load finance bills:", err);
+      if (isManual) {
+        addNotification("Failed to refresh finance bills.", "error", 1800, false);
+      }
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
-  const kpis = [
-    { label: "Total Bills", value: counts.total, icon: "🧾", accent: "#2563eb", iconBg: "#eff6ff" },
-    { label: "Approved Bills", value: counts.approved, icon: "✅", accent: "#16a34a", iconBg: "#f0fdf4" },
-    { label: "Pending Bills", value: counts.pending, icon: "⏳", accent: "#d97706", iconBg: "#fffbeb" },
-    { label: "Rejected Bills", value: counts.rejected, icon: "❌", accent: "#dc2626", iconBg: "#fef2f2" },
-  ];
+  useEffect(() => {
+    fetchBills();
+    // Real-time polling every 10 seconds for live updates
+    const interval = setInterval(() => {
+      fetchBills();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const safeBills = useMemo(() => {
+    return Array.isArray(bills) ? bills : [];
+  }, [bills]);
+
+  const filteredBills = useMemo(() => {
+    return safeBills.filter((b) => {
+      if (!b) return false;
+      const fileName = b.originalFileName || b.original_file_name || b.fileName || b.file_name || "";
+      const uploaderName = b.uploadedByName || b.uploaded_by_name || "";
+      const projectId = b.projectId || b.project_id || "";
+      const teamId = b.teamId || b.team_id || "";
+      const status = b.status || "";
+
+      const s = search.toLowerCase();
+      const matchesSearch =
+        fileName.toLowerCase().includes(s) ||
+        uploaderName.toLowerCase().includes(s) ||
+        projectId.toLowerCase().includes(s) ||
+        teamId.toLowerCase().includes(s);
+
+      const matchesStatus =
+        statusFilter === "All" || status.toUpperCase() === statusFilter.toUpperCase();
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [safeBills, search, statusFilter]);
+
+  const stats = useMemo(
+    () => ({
+      total: safeBills.length,
+      pending: safeBills.filter((b) => b && b.status === "PENDING").length,
+      approved: safeBills.filter((b) => b && b.status === "APPROVED").length,
+      rejected: safeBills.filter((b) => b && b.status === "REJECTED").length,
+    }),
+    [safeBills]
+  );
+
+  const handleStatusUpdate = async (fileId, newStatus, fileName) => {
+    try {
+      await reportService.updateFileStatus(fileId, newStatus);
+      addNotification(`Bill '${fileName}' marked as ${newStatus}.`, "success", 1800, false);
+      await fetchBills();
+    } catch (err) {
+      console.error(err);
+      addNotification("Failed to update bill status.", "error", 1800, false);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return "0 KB";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status?.toUpperCase()) {
+      case "APPROVED":
+        return <span style={{ background: "#dcfce7", color: "#166534", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}><CheckCircle2 size={12} /> Approved</span>;
+      case "REJECTED":
+        return <span style={{ background: "#fee2e2", color: "#991b1b", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}><XCircle size={12} /> Rejected</span>;
+      default:
+        return <span style={{ background: "#fef3c7", color: "#92400e", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}><Clock size={12} /> Pending Review</span>;
+    }
+  };
 
   return (
-    <div className="fin-page">
-      <div className="fin-header">
-        <div className="fin-header-top">
-          <div>
-            <h1>Bill Management</h1>
-            <p className="subtitle">View and track all submitted bills and their approval status.</p>
-          </div>
-          <span className="fin-badge-role">Read Only Access</span>
+    <div className="fin-page" style={{ padding: "28px", minHeight: "calc(100vh - 60px)", background: "#f8fafc" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: "1.8rem", fontWeight: "800", color: "#0f172a", display: "flex", alignItems: "center", gap: "10px" }}>
+            <Receipt size={26} color="#16a34a" />
+            Finance Bills Review & Auditing
+          </h1>
+          <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: "0.95rem" }}>
+            Inspect, audit, and approve uploaded project bills, expense vouchers, and receipts in real time.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => fetchBills(true)}
+          disabled={refreshing}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "#ffffff",
+            border: "1px solid #cbd5e1",
+            padding: "10px 18px",
+            borderRadius: "10px",
+            fontWeight: "600",
+            color: "#334155",
+            cursor: "pointer",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.04)"
+          }}
+        >
+          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+          {refreshing ? "Refreshing..." : "Refresh Bills"}
+        </button>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px", marginBottom: "28px" }}>
+        <div style={{ background: "#ffffff", padding: "20px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase" }}>Total Bills</span>
+          <strong style={{ display: "block", fontSize: "1.6rem", color: "#0f172a", marginTop: "4px" }}>{stats.total}</strong>
+        </div>
+        <div style={{ background: "#ffffff", padding: "20px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "#b45309", textTransform: "uppercase" }}>Pending Bills</span>
+          <strong style={{ display: "block", fontSize: "1.6rem", color: "#b45309", marginTop: "4px" }}>{stats.pending}</strong>
+        </div>
+        <div style={{ background: "#ffffff", padding: "20px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "#166534", textTransform: "uppercase" }}>Approved Bills</span>
+          <strong style={{ display: "block", fontSize: "1.6rem", color: "#166534", marginTop: "4px" }}>{stats.approved}</strong>
+        </div>
+        <div style={{ background: "#ffffff", padding: "20px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
+          <span style={{ fontSize: "0.82rem", fontWeight: "700", color: "#991b1b", textTransform: "uppercase" }}>Rejected Bills</span>
+          <strong style={{ display: "block", fontSize: "1.6rem", color: "#991b1b", marginTop: "4px" }}>{stats.rejected}</strong>
         </div>
       </div>
 
-      <div className="fin-kpi-grid">
-        {kpis.map((k, i) => (
-          <div key={i} className="fin-kpi-card" style={{ "--accent": k.accent, "--icon-bg": k.iconBg }}>
-            <div className="fin-kpi-icon">{k.icon}</div>
-            <div className="fin-kpi-label">{k.label}</div>
-            <div className="fin-kpi-value">{k.value}</div>
-          </div>
-        ))}
+      {/* Search and Filters */}
+      <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "18px 22px", marginBottom: "28px", display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}>
+        <div style={{ flex: 1, minWidth: "260px", position: "relative" }}>
+          <input
+            type="text"
+            placeholder="Search by bill name, uploader, project ID, team..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{ width: "100%", paddingLeft: "40px", height: "42px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "0.9rem", boxSizing: "border-box", background: "#ffffff", color: "#0f172a" }}
+          />
+          <Search size={18} style={{ position: "absolute", left: "14px", top: "12px", color: "#94a3b8" }} />
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#475569" }}>Status:</span>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ height: "42px", padding: "0 14px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "0.9rem", background: "#ffffff", color: "#0f172a" }}
+          >
+            <option value="All">All Statuses</option>
+            <option value="PENDING">Pending Review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+        </div>
       </div>
 
-      <div className="fin-card">
-        <div className="fin-card-header">
-          <div>
-            <div className="fin-card-title">All Bills</div>
-            <div className="fin-card-subtitle">{filtered.length} records found</div>
+      {/* Table Container */}
+      <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", overflow: "hidden", boxShadow: "0 4px 12px rgba(0,0,0,0.03)" }}>
+        {loading ? (
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
+            <Loader2 className="animate-spin" size={36} color="#16a34a" />
           </div>
-        </div>
-        <div className="fin-card-body">
-          <div className="fin-search-row">
-            <div className="fin-search">
-              <span className="fin-search-icon">🔍</span>
-              <input
-                type="text"
-                placeholder="Search by vendor, bill ID or category..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <select className="fin-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="All">All Status</option>
-              <option value="Approved">Approved</option>
-              <option value="Pending">Pending</option>
-              <option value="Rejected">Rejected</option>
-            </select>
-          </div>
-
-          <div className="fin-table-wrap">
-            <table className="fin-table">
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.88rem" }}>
               <thead>
-                <tr>
-                  <th>Bill ID</th><th>Vendor</th><th>Bill Date</th>
-                  <th>Amount</th><th>Category</th><th>Status</th><th>Action</th>
+                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>
+                  <th style={{ padding: "14px 18px", fontWeight: "700" }}>Bill File Name</th>
+                  <th style={{ padding: "14px 18px", fontWeight: "700" }}>Uploader Name</th>
+                  <th style={{ padding: "14px 18px", fontWeight: "700" }}>Project / Team ID</th>
+                  <th style={{ padding: "14px 18px", fontWeight: "700" }}>Upload Date & Time</th>
+                  <th style={{ padding: "14px 18px", fontWeight: "700" }}>Size</th>
+                  <th style={{ padding: "14px 18px", fontWeight: "700" }}>Status</th>
+                  <th style={{ padding: "14px 18px", fontWeight: "700", textAlign: "center" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7}><div className="fin-empty">No bills match your search criteria.</div></td></tr>
+                {filteredBills.length > 0 ? (
+                  filteredBills.map((b) => {
+                    const fileDirectUrl = getFileUrl(b.filePath || b.file_path || b.url);
+                    const displayName = b.originalFileName || b.original_file_name || b.fileName || b.file_name || "Expense Bill";
+                    const uploaderName = b.uploadedByName || b.uploaded_by_name || "Team Member";
+                    const uploaderEmail = b.uploadedByEmail || b.uploaded_by_email || "";
+                    const createdAtVal = b.createdAt || b.created_at;
+                    const dateStr = formatDateTime(createdAtVal);
+                    const sizeBytes = b.fileSize ?? b.file_size ?? 0;
+                    const projectIdVal = b.projectId || b.project_id || "N/A";
+                    const teamIdVal = b.teamId || b.team_id || "N/A";
+
+                    return (
+                      <tr key={b.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                        <td style={{ padding: "14px 18px", fontWeight: "600", color: "#0f172a" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <Receipt size={18} color="#16a34a" />
+                            <span>{displayName}</span>
+                          </div>
+                        </td>
+
+                        <td style={{ padding: "14px 18px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <UserCheck size={14} color="#10b981" />
+                            <div>
+                              <strong style={{ color: "#1e293b", display: "block" }}>{uploaderName}</strong>
+                              {uploaderEmail && <span style={{ fontSize: "0.78rem", color: "#64748b" }}>{uploaderEmail}</span>}
+                            </div>
+                          </div>
+                        </td>
+
+                        <td style={{ padding: "14px 18px", color: "#334155" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <span><strong>Proj:</strong> {projectIdVal}</span>
+                            <span style={{ fontSize: "0.78rem", color: "#64748b" }}><strong>Team:</strong> {teamIdVal}</span>
+                          </div>
+                        </td>
+
+                        <td style={{ padding: "14px 18px", color: "#475569" }}>
+                          {dateStr}
+                        </td>
+
+                        <td style={{ padding: "14px 18px", color: "#475569" }}>
+                          {formatFileSize(sizeBytes)}
+                        </td>
+
+                        <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
+                          {getStatusBadge(b.status)}
+                        </td>
+
+                        <td style={{ padding: "14px 18px", textAlign: "center", whiteSpace: "nowrap" }}>
+                          <div style={{ display: "flex", justifyContent: "center", gap: "8px", flexWrap: "nowrap" }}>
+                            <button
+                              type="button"
+                              onClick={() => setPreviewFile(b)}
+                              style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#ffffff", color: "#334155", fontWeight: "600", fontSize: "0.78rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                            >
+                              <Eye size={14} />
+                              Preview
+                            </button>
+
+                            <a
+                              href={fileDirectUrl}
+                              download={displayName}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ padding: "6px 12px", borderRadius: "8px", border: "none", background: "#f0fdf4", color: "#16a34a", fontWeight: "600", fontSize: "0.78rem", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px", textDecoration: "none" }}
+                            >
+                              <Download size={14} />
+                              Download
+                            </a>
+
+                            {b.status !== "APPROVED" && (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusUpdate(b.id, "APPROVED", displayName)}
+                                style={{ padding: "6px 12px", borderRadius: "8px", border: "none", background: "#dcfce7", color: "#166534", fontWeight: "600", fontSize: "0.78rem", cursor: "pointer" }}
+                              >
+                                Approve
+                              </button>
+                            )}
+
+                            {b.status !== "REJECTED" && (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusUpdate(b.id, "REJECTED", displayName)}
+                                style={{ padding: "6px 12px", borderRadius: "8px", border: "none", background: "#fee2e2", color: "#991b1b", fontWeight: "600", fontSize: "0.78rem", cursor: "pointer" }}
+                              >
+                                Reject
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
-                  filtered.map((b, i) => (
-                    <tr key={i}>
-                      <td className="mono bold">{b.id}</td>
-                      <td className="bold">{b.vendor}</td>
-                      <td className="mono">{b.date}</td>
-                      <td className="mono bold">{b.amount}</td>
-                      <td><span className="fin-badge badge-info">{b.category}</span></td>
-                      <td><span className={`fin-badge ${statusMap[b.status]}`}>{b.status}</span></td>
-                      <td>
-                        <button className="fin-btn fin-btn-ghost fin-btn-sm" onClick={() => setSelectedBill(b)}>
-                          👁 View
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: "center", padding: "40px 20px", color: "#64748b" }}>
+                      No bills submitted for finance review yet.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        )}
       </div>
 
-      {selectedBill && (
-        <div className="fin-modal-overlay" onClick={() => setSelectedBill(null)}>
-          <div className="fin-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="fin-modal-header">
-              <h3>Bill Details — {selectedBill.id}</h3>
-              <button className="fin-modal-close" onClick={() => setSelectedBill(null)}>✕</button>
-            </div>
-            <div className="fin-modal-body">
-              <div className="fin-modal-row"><span className="fin-modal-key">Vendor</span><span className="fin-modal-val">{selectedBill.vendor}</span></div>
-              <div className="fin-modal-row"><span className="fin-modal-key">Bill Date</span><span className="fin-modal-val">{selectedBill.date}</span></div>
-              <div className="fin-modal-row"><span className="fin-modal-key">Amount</span><span className="fin-modal-val">{selectedBill.amount}</span></div>
-              <div className="fin-modal-row"><span className="fin-modal-key">Category</span><span className="fin-modal-val">{selectedBill.category}</span></div>
-              <div className="fin-modal-row">
-                <span className="fin-modal-key">Description</span>
-                <span className="fin-modal-val" style={{ maxWidth: 260, textAlign: "right", lineHeight: 1.5 }}>{selectedBill.description}</span>
+      {/* Preview Modal */}
+      {previewFile && (() => {
+        const fileName = previewFile.originalFileName || previewFile.original_file_name || previewFile.fileName || previewFile.file_name || "Bill";
+        const uploaderName = previewFile.uploadedByName || previewFile.uploaded_by_name || "Team Member";
+        const createdAtVal = previewFile.createdAt || previewFile.created_at;
+        const dateStr = formatDateTime(createdAtVal);
+        const sizeBytes = previewFile.fileSize ?? previewFile.file_size ?? 0;
+        const filePath = previewFile.filePath || previewFile.file_path || previewFile.url || "";
+        const fileDirectUrl = getFileUrl(filePath);
+        const mimeType = (previewFile.mimeType || previewFile.mime_type || "").toLowerCase();
+
+        const isImage = mimeType.startsWith("image") || /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(fileName) || /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(filePath);
+        const isPdf = mimeType.includes("pdf") || /\.pdf$/i.test(fileName) || /\.pdf$/i.test(filePath);
+
+        return (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 99990,
+              background: "rgba(15, 23, 42, 0.75)",
+              backdropFilter: "blur(4px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px"
+            }}
+            onClick={() => setPreviewFile(null)}
+          >
+            <div
+              style={{
+                background: "#ffffff",
+                borderRadius: "16px",
+                width: "100%",
+                maxWidth: "850px",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                display: "flex",
+                flexDirection: "column",
+                border: "1px solid #e2e8f0"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" }}>
+                <div>
+                  <strong style={{ fontSize: "1rem", color: "#0f172a" }}>{fileName}</strong>
+                  <span style={{ fontSize: "0.78rem", color: "#64748b", display: "block", marginTop: "2px" }}>
+                    Uploaded by {uploaderName} on {dateStr} | Size: {formatFileSize(sizeBytes)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPreviewFile(null)}
+                  style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b" }}
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <div className="fin-modal-row">
-                <span className="fin-modal-key">Status</span>
-                <span className={`fin-badge ${statusMap[selectedBill.status]}`}>{selectedBill.status}</span>
+
+              <div style={{ padding: "20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "350px", background: "#f8fafc" }}>
+                {isImage ? (
+                  <img
+                    src={fileDirectUrl}
+                    alt={fileName}
+                    style={{ maxWidth: "100%", maxHeight: "550px", borderRadius: "10px", objectFit: "contain" }}
+                  />
+                ) : isPdf ? (
+                  <iframe
+                    src={fileDirectUrl}
+                    title={fileName}
+                    style={{ width: "100%", height: "550px", border: "none", borderRadius: "10px", background: "#ffffff" }}
+                  />
+                ) : (
+                  <div style={{ textAlign: "center", padding: "40px 20px", background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", width: "100%", maxWidth: "500px" }}>
+                    <FileCode size={52} color="#16a34a" style={{ marginBottom: "14px" }} />
+                    <h3 style={{ margin: "0 0 6px", color: "#1e293b" }}>Document Preview</h3>
+                    <p style={{ margin: "0 0 20px", color: "#64748b", fontSize: "0.88rem" }}>
+                      File: <strong>{fileName}</strong> ({formatFileSize(sizeBytes)})
+                    </p>
+                    <a
+                      href={fileDirectUrl}
+                      download={fileName}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ textDecoration: "none", padding: "10px 20px", borderRadius: "10px", background: "#16a34a", color: "#ffffff", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "8px" }}
+                    >
+                      <Download size={16} />
+                      Download File to View
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

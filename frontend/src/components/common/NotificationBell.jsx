@@ -8,8 +8,9 @@ import "./notificationBell.css";
 
 function NotificationBell() {
   const { user } = useAuth();
-  const { notifications, removeNotification } = useNotification();
+  const { notifications, removeNotification, refreshNotifications } = useNotification();
   const [isOpen, setIsOpen] = useState(false);
+
   const [dropdownStyle, setDropdownStyle] = useState({});
   const navigate = useNavigate();
   const wrapperRef = useRef(null);
@@ -99,8 +100,14 @@ function NotificationBell() {
 
   return (
     <div className="notification-bell-wrapper" ref={wrapperRef}>
-      <button type="button" className="notification-bell" ref={buttonRef} onClick={() => setIsOpen(!isOpen)} title="Notifications">
+      <button type="button" className="notification-bell" ref={buttonRef} onClick={() => {
+        setIsOpen(!isOpen);
+        if (!isOpen && refreshNotifications) {
+          refreshNotifications();
+        }
+      }} title="Notifications">
         <Bell size={22} aria-hidden="true" />
+
         {unreadCount > 0 && <span className="notification-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>}
       </button>
 

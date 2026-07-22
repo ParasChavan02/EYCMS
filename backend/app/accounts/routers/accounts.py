@@ -1,17 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+
 from app.core.dependencies import get_db, verify_accounts
-from app.common.models.user import User
 from app.accounts.schemas import (
     AccountsDashboardKPIs,
-    LedgerEntry,
-    StatementReconciliationPayload
+    AccountsTransactionItem,
+    AccountsBudgetItem,
 )
 from app.accounts.services import AccountsService
 from app.shared.responses import ResponseEnvelope, make_success_response
 
+# Every route on this router is already gated to SUPER_ADMIN / ACCOUNTS via
+# verify_accounts, and only GET (read) endpoints are defined below, so the
+# Accounts role can never reach a write operation through this module.
 router = APIRouter(prefix="/accounts", tags=["Accounts Operations"], dependencies=[Depends(verify_accounts)])
+
 
 @router.get("/dashboard", response_model=ResponseEnvelope[AccountsDashboardKPIs])
 def get_dashboard_kpis(db: Session = Depends(get_db)):
@@ -21,22 +25,24 @@ def get_dashboard_kpis(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.get("/ledger", response_model=ResponseEnvelope[List[LedgerEntry]])
-def get_ledger(db: Session = Depends(get_db)):
+
+@router.get("/transactions", response_model=ResponseEnvelope[List[AccountsTransactionItem]])
+def get_transactions(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    search: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
     try:
-        ledger = AccountsService.get_ledger(db)
-        return make_success_response(ledger)
+        transactions = AccountsService.get_transactions(db, status_filter, search)
+        return make_success_response(transactions)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.post("/reconcile", response_model=ResponseEnvelope[dict])
-def reconcile_statement(
-    payload: StatementReconciliationPayload,
-    db: Session = Depends(get_db),
-    current_accountant: User = Depends(verify_accounts)
-):
+
+@router.get("/budget", response_model=ResponseEnvelope[List[AccountsBudgetItem]])
+def get_budget_overview(db: Session = Depends(get_db)):
     try:
-        result = AccountsService.reconcile_statement(db, payload, str(current_accountant.id))
-        return make_success_response(result)
+        budgets = AccountsService.get_budget_overview(db)
+        return make_success_response(budgets)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

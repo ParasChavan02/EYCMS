@@ -8,6 +8,8 @@ import {
   ClipboardList,
   ScrollText,
   FileSpreadsheet,
+  CalendarDays,
+  LifeBuoy,
 } from "lucide-react";
 
 import { useAuth } from "../../common/hooks/useAuth";
@@ -17,79 +19,87 @@ function AccountsSidebar({ isOpen, onClose, isCollapsed }) {
   const { user } = useAuth();
 
   const accountsNavItems = [
-    {
-      section: null,
-      items: [
-        {
-          icon: LayoutDashboard,
-          label: "Dashboard",
-          path: "/finance/dashboard",
-        },
-      ],
-    },
-    {
-      section: "Finance Workspace",
-      items: [
-        {
-          icon: WalletCards,
-          label: "Budget Overview",
-          path: "/finance/budget",
-        },
-        {
-          icon: ReceiptIndianRupee,
-          label: "Transactions",
-          path: "/finance/transactions",
-        },
-        {
-          icon: ClipboardList,
-          label: "Bills",
-          path: "/finance/bills",
-        },
-        {
-          icon: FileText,
-          label: "Reports",
-          path: "/finance/reports",
-        },
-        {
-      icon: FileSpreadsheet,
-      label: "Vendor Management",
-      path: "/finance/vendors",
-    },
-    {
-  icon: ScrollText,
-  label: "Approvals",
-  path: "/finance/approvals",
-},
-    {
-      icon: ClipboardList,
-      label: "Invoices",
-      path: "/finance/invoices",
-    },
-    {
-  icon: ScrollText,
-  label: "Bank Reconciliation",
-  path: "/finance/reconciliation",
-},
-        {
-          icon: FileSpreadsheet,
-          label: "Fellow Utilization",
-          path: "/finance/fellow-utilization",
-        },
-        {
-          icon: ScrollText,
-          label: "Audit Trail",
-          path: "/finance/audit",
-        },
-        {
-  icon: Settings,
-  label: "Settings",
-  path: "/finance/settings",
-},
-        
-      ],
-    },
-  ];
+  {
+    section: "Overview",
+    items: [
+      {
+        icon: LayoutDashboard,
+        label: "Dashboard",
+        path: "/finance/dashboard",
+      },
+    ],
+  },
 
+  {
+    section: "Financial Operations",
+    items: [
+      {
+        icon: WalletCards,
+        label: "Budget Overview",
+        path: "/finance/budget",
+      },
+      {
+        icon: ReceiptIndianRupee,
+        label: "Transactions",
+        path: "/finance/transactions",
+      },
+      {
+        icon: ClipboardList,
+        label: "Bills",
+        path: "/finance/bills",
+      },
+    ],
+  },
+
+  {
+    section: "Monitoring & Analytics",
+    items: [
+      {
+        icon: FileText,
+        label: "Reports",
+        path: "/finance/reports",
+      },
+      {
+        icon: ScrollText,
+        label: "Bank Reconciliation",
+        path: "/finance/reconciliation",
+      },
+      {
+        icon: FileSpreadsheet,
+        label: "Fellow Utilization",
+        path: "/finance/fellow-utilization",
+      },
+      
+    ],
+  },
+
+  {
+    section: "Workflow",
+    items: [
+      {
+        icon: ScrollText,
+        label: "Approvals",
+        path: "/finance/approvals",
+      },
+      {
+        icon: CalendarDays, // Import CalendarDays from lucide-react
+        label: "Events",
+        path: "/finance/events",
+      },
+    ],
+  },
+
+  {
+    section: "Support",
+    items: [
+      {
+        icon: LifeBuoy,
+        label: "Contact Support",
+        path: "/finance/ContactSupport",
+      },
+    ],
+  },
+];
   return (
     <aside
       className={`sidebar sidebar-enterprise ${
@@ -100,14 +110,14 @@ function AccountsSidebar({ isOpen, onClose, isCollapsed }) {
         <div className="sidebar-brand-shell">
           {!isCollapsed ? (
             <>
-              <div className="sidebar-brand-mark">EY</div>
+              <img src="/eyuva_logo.jpg" alt="Logo" className="sidebar-brand-mark" style={{ objectFit: 'cover' }} />
               <div className="sidebar-brand">
                 <h2 className="sidebar-logo">E-YUVA ERP</h2>
                 <p className="sidebar-subtitle">Accounts Workspace</p>
               </div>
             </>
           ) : (
-            <div className="sidebar-logo-mini">EY</div>
+            <img src="/eyuva_logo.jpg" alt="Logo" className="sidebar-logo-mini" style={{ objectFit: 'cover' }} />
           )}
         </div>
       </div>

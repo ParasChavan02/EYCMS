@@ -13,7 +13,8 @@ import {
   ChevronRight,
   X,
 } from 'lucide-react';
-import { useTickets } from '../hooks/useTickets';
+import { useTickets, useUpdateTicketStatus, useAssignTicket } from '../hooks/useTickets';
+import { useNotification } from '../../../hooks/useNotification';
 import {
   TicketFilter,
   TicketCategory,
@@ -88,9 +89,16 @@ export const AllTicketsPage: React.FC = () => {
     return Object.keys(f).length ? f : undefined;
   })();
 
+  const { addNotification } = useNotification();
+  const updateStatus = useUpdateTicketStatus();
+  const assignTicket = useAssignTicket();
+  const [hiddenTicketIds, setHiddenTicketIds] = useState<string[]>([]);
+
   const { data, isLoading } = useTickets(page, pageSize, filters);
 
-  const tickets: Ticket[] = data?.data ?? [];
+  const tickets: Ticket[] = (data?.data ?? []).filter(
+    (t) => !hiddenTicketIds.includes(t.ticketId)
+  );
 
   // KPI counts derived from fetched page + totals from server
   const totalTickets  = data?.total ?? 0;
@@ -113,7 +121,34 @@ export const AllTicketsPage: React.FC = () => {
   };
 
   const handleViewTicket = (ticket: Ticket) => {
-    navigate(`/admin/support/ticket/${ticket.ticketId}`);
+    navigate(`/admin/support/ticket/${ticket.id}`);
+  };
+
+  const handleAssignTicket = (ticket: Ticket) => {
+    const currentAssignee = ticket.assignedTo?.id;
+    const nextAssigneeId = currentAssignee === 'admin-1' ? 'admin-2' : 'admin-1';
+    const nextAssigneeName = nextAssigneeId === 'admin-1' ? 'Alice Johnson' : 'Bob Smith';
+
+    assignTicket.mutate(
+      { ticketId: ticket.id, adminId: nextAssigneeId },
+      {
+        onSuccess: () => {
+          addNotification(`👤 Ticket assigned to ${nextAssigneeName} successfully.`, 'success', 3000);
+        },
+      }
+    );
+  };
+
+  const handleMarkResolved = (ticket: Ticket) => {
+    updateStatus.mutate(
+      { ticketId: ticket.id, status: TicketStatus.RESOLVED },
+      {
+        onSuccess: () => {
+          addNotification(`✅ Ticket ${ticket.ticketId} marked as RESOLVED.`, 'success', 3000);
+          setHiddenTicketIds((prev) => [...prev, ticket.ticketId]);
+        },
+      }
+    );
   };
 
   return (
@@ -375,12 +410,14 @@ export const AllTicketsPage: React.FC = () => {
                       <button
                         className="sp-btn-icon"
                         title="Assign ticket"
+                        onClick={() => handleAssignTicket(ticket)}
                       >
                         <UserPlus size={14} />
                       </button>
                       <button
                         className="sp-btn-icon green"
                         title="Mark resolved"
+                        onClick={() => handleMarkResolved(ticket)}
                       >
                         <CheckCircle size={14} />
                       </button>

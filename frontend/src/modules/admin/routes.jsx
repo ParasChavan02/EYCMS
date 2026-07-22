@@ -14,6 +14,8 @@ import AdminEvents from "./pages/AdminEvents";
 import AdminSystemConfig from "./pages/AdminSystemConfig";
 import TransactionReviewCenter from "./pages/TransactionReviewCenter";
 import AdminUCManagement from "./pages/AdminUCManagement";
+import AdminGallery from "./pages/AdminGallery";
+import AdminOtherDocuments from "./pages/AdminOtherDocuments";
 
 export const adminRoutes = (
   <>
@@ -29,8 +31,11 @@ export const adminRoutes = (
     <Route path="/admin/reconciliation" element={<AdminReconciliation />} />
     <Route path="/admin/reports" element={<AdminReports />} />
     <Route path="/admin/events" element={<AdminEvents />} />
+    <Route path="/admin/gallery" element={<AdminGallery />} />
+    <Route path="/admin/other-documents" element={<AdminOtherDocuments />} />
     <Route path="/admin/settings" element={<AdminSystemConfig />} />
     <Route path="/admin/transaction-review" element={<TransactionReviewCenter />} />
     <Route path="/admin/uc-management" element={<AdminUCManagement />} />
+    <Route path="/admin/uc" element={<AdminUCManagement />} />
   </>
 );

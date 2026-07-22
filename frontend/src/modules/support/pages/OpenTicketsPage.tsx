@@ -76,7 +76,7 @@ export const OpenTicketsPage: React.FC = () => {
 
   const handleView = (ticket: Ticket, e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/admin/support/ticket/${ticket.ticketId}`);
+    navigate(`/admin/support/ticket/${ticket.id}`);
   };
 
   return (
@@ -244,7 +244,7 @@ export const OpenTicketsPage: React.FC = () => {
                   <tr
                     key={ticket.id}
                     onClick={() =>
-                      navigate(`/admin/support/ticket/${ticket.ticketId}`)
+                      navigate(`/admin/support/ticket/${ticket.id}`)
                     }
                     style={{ cursor: 'pointer' }}
                   >

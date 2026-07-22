@@ -7,6 +7,7 @@ import {
   AlertCircle,
   CheckCircle,
   UserPlus,
+  ExternalLink,
 } from 'lucide-react';
 import {
   useTicketDetail,
@@ -123,6 +124,65 @@ export const TicketDetailsPage: React.FC<TicketDetailsPageProps> = ({
 
   const handleCloseTicket = () => {
     updateStatus.mutate({ ticketId: ticket.ticketId, status: TicketStatus.CLOSED });
+  };
+
+  const handleReviewIssue = () => {
+    const category = ticket.category?.toLowerCase() || '';
+    const title = ticket.title?.toLowerCase() || '';
+    const desc = ticket.description?.toLowerCase() || '';
+    const url = ticket.systemInfo?.currentPageUrl || '';
+
+    // Check if it's transaction/billing related
+    if (
+      category.includes('billing') ||
+      category.includes('transaction') ||
+      title.includes('transaction') ||
+      title.includes('payment') ||
+      title.includes('billing') ||
+      desc.includes('transaction') ||
+      desc.includes('payment') ||
+      desc.includes('billing') ||
+      url.includes('payments') ||
+      url.includes('transaction')
+    ) {
+      navigate('/admin/transaction-review');
+    }
+    // Check if it's account/users related
+    else if (
+      category.includes('account') ||
+      title.includes('account') ||
+      title.includes('user') ||
+      title.includes('profile') ||
+      desc.includes('account') ||
+      desc.includes('user') ||
+      desc.includes('profile') ||
+      url.includes('user') ||
+      url.includes('profile')
+    ) {
+      navigate('/admin/users');
+    }
+    // Check if it's login/auth/permissions related
+    else if (
+      title.includes('login') ||
+      title.includes('signup') ||
+      title.includes('password') ||
+      title.includes('permission') ||
+      title.includes('role') ||
+      desc.includes('login') ||
+      desc.includes('signup') ||
+      desc.includes('password') ||
+      desc.includes('permission') ||
+      desc.includes('role') ||
+      url.includes('login') ||
+      url.includes('signup') ||
+      url.includes('permission')
+    ) {
+      navigate('/admin/permissions');
+    }
+    // Default fallback to admin dashboard
+    else {
+      navigate('/admin/dashboard');
+    }
   };
 
   return (
@@ -304,6 +364,13 @@ export const TicketDetailsPage: React.FC<TicketDetailsPageProps> = ({
               Quick Actions
             </h3>
             <div className="space-y-2">
+              <button
+                onClick={handleReviewIssue}
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white hover:bg-blue-700 transition-all border border-blue-700 text-sm shadow-sm mb-3"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Review Issue Page
+              </button>
               {ticket.status !== TicketStatus.RESOLVED && (
                 <button
                   onClick={handleMarkResolved}

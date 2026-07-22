@@ -25,24 +25,29 @@ class UserService:
 
     @staticmethod
     def get_transactions(db: Session, user_id: str) -> List[FellowTransactionItem]:
-        # Mock transactions specific to this user
+        from app.common.models.user import User
+        from app.common.models.transaction import Transaction
+        from app.common.models.expense import Expense
+        from app.common.models.budget_head import BudgetHead
+        from app.common.models.budget import Budget
+
+        user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
+        if not user or not user.project_id:
+            return []
+
+        txs = db.query(Transaction).join(Expense).join(BudgetHead).join(Budget).filter(
+            Budget.project_id == user.project_id
+        ).order_by(Transaction.created_at.desc()).all()
+
         return [
             FellowTransactionItem(
-                id="55555555-5555-5555-5555-555555555555",
-                amount=1500.00,
-                budget_head="Contingency",
-                description="Reference text books purchase",
-                status="APPROVED",
-                created_at=datetime(2026, 5, 20, 11, 0, 0, tzinfo=timezone.utc)
-            ),
-            FellowTransactionItem(
-                id="66666666-6666-6666-6666-666666666666",
-                amount=4500.00,
-                budget_head="Travel",
-                description="Train tickets for workshop travel",
-                status="SUBMITTED",
-                created_at=datetime(2026, 6, 18, 9, 15, 0, tzinfo=timezone.utc)
-            )
+                id=str(t.id),
+                amount=float(t.amount),
+                budget_head=t.expense.budget_head.name,
+                description=t.description,
+                status=t.status,
+                created_at=t.created_at
+            ) for t in txs
         ]
 
     @staticmethod

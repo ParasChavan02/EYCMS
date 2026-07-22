@@ -3,7 +3,28 @@ import { Clock3, Mail, MapPin, Phone, RefreshCw, AlertCircle, CheckCircle2, Send
 import { useAuth } from "../../common/hooks/useAuth";
 import { useNotification } from "../../common/hooks/useNotification";
 import { teamService } from "../services/teamService";
+import axios from "axios";
 import "./user-erp.css";
+
+const triggerBackendAction = async (actionType, title, message, targetRoles = ["ADMIN"], actionPath = null, actionLabel = null) => {
+  try {
+    const token = localStorage.getItem("token");
+    const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+    await axios.post(`${API_BASE_URL}/user/actions/trigger`, {
+      action_type: actionType,
+      title,
+      message,
+      notification_type: "info",
+      target_roles: targetRoles,
+      action_path: actionPath,
+      action_label: actionLabel
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  } catch (e) {
+    console.error("Failed to trigger action notification:", e);
+  }
+};
 
 function ContactSupport() {
   const { user } = useAuth();
@@ -26,6 +47,16 @@ function ContactSupport() {
       const req = await teamService.requestTeamReset(user);
       setResetRequest(req);
       addNotification("✉️ Onboarding reset request submitted to admin portal!", "success", 4000);
+
+      // Trigger backend notification for Admins in PostgreSQL
+      triggerBackendAction(
+        "team_invite",
+        "Workspace Reset Requested",
+        `Fellow user ${user.name} requested onboarding workspace setup reset.`,
+        ["ADMIN"],
+        "/admin/support/all",
+        "Review request"
+      );
     } catch (err) {
       addNotification("❌ Failed to submit request. Please try again.", "error", 4000);
     } finally {
@@ -157,7 +188,7 @@ function ContactSupport() {
                     }}
                   >
                     <Send size={16} />
-                    {isSubmitting ? "Submitting Request..." : "Request Workspace Reset"}
+                    {isSubmitting ? "Submitting..." : "Request Workspace Reset"}
                   </button>
                 )}
               </div>

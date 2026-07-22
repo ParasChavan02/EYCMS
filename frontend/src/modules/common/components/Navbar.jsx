@@ -34,7 +34,7 @@ function Navbar({ onMenuClick, onToggleSidebar, isAdmin = false }) {
             <PanelLeft size={18} />
           </button>
           <div className="topbar-brand">
-            <span className="topbar-brand-mark">EY</span>
+            <img src="/eyuva_logo.jpg" alt="Logo" className="topbar-brand-mark" style={{ objectFit: 'cover' }} />
             <span className="topbar-brand-text">{isAdmin ? "Admin ERP" : "E-YUVA"}</span>
           </div>
         </div>

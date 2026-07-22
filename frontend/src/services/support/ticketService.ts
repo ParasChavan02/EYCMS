@@ -1,3 +1,4 @@
+import axios from "axios";
 import {
   Ticket,
   FeatureRequest,
@@ -9,17 +10,75 @@ import {
   TicketStatus,
   TicketMessage,
 } from '../../types/support';
-import {
-  mockTickets,
-  mockFeatureRequests,
-  mockServiceStatus,
-  mockAnalyticsData,
-  mockNotifications,
-} from './mockData';
 
-// Simulate API delay
-const delay = (ms = 300) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("current_user");
+      if (!window.location.pathname.endsWith("/login")) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+
+// Helper to determine if current user is admin/finance
+const checkIsAdmin = (): boolean => {
+  const userStr = localStorage.getItem("current_user");
+  if (!userStr) return false;
+  try {
+    const user = JSON.parse(userStr);
+    const role = user?.role?.toUpperCase();
+    return role === "ADMIN" || role === "SUPER_ADMIN" || role === "ACCOUNTS";
+  } catch (e) {
+    return false;
+  }
+};
+
+const mapTicketFromApi = (ticket: any): Ticket => {
+  if (!ticket) return ticket;
+  return {
+    ...ticket,
+    ticketId: ticket.ticket_id || ticket.ticketId,
+    title: ticket.issue || ticket.title,
+    createdAt: ticket.created_at || ticket.createdAt,
+    updatedAt: ticket.updated_at || ticket.updatedAt,
+    resolvedAt: ticket.resolved_at || ticket.resolvedAt,
+    closedAt: ticket.closed_at || ticket.closedAt,
+    assignedTo: ticket.assigned_to ? {
+      ...ticket.assigned_to,
+      phone: ticket.assigned_to.phone || "N/A",
+      organization: ticket.assigned_to.organization || "E-YUVA Project"
+    } : undefined,
+    adminNotes: ticket.admin_notes || ticket.adminNotes,
+    estimatedResolutionTime: ticket.estimated_resolution_time || ticket.estimatedResolutionTime,
+    messages: (ticket.messages || []).map((msg: any) => ({
+      ...msg,
+      ticketId: msg.ticket_id || msg.ticketId,
+      createdAt: msg.created_at || msg.createdAt,
+      isAdminReply: msg.is_admin_reply !== undefined ? msg.is_admin_reply : msg.isAdminReply
+    }))
+  };
+};
 
 // ============ TICKET SERVICES ============
 
@@ -30,65 +89,25 @@ export const ticketService = {
     pageSize = 10,
     filters?: TicketFilter
   ): Promise<PaginatedResponse<Ticket>> => {
-    await delay();
-
-    let filteredTickets = [...mockTickets];
-
-    // Apply filters
-    if (filters) {
-      if (filters.category) {
-        filteredTickets = filteredTickets.filter(
-          (t) => t.category === filters.category
-        );
-      }
-      if (filters.priority) {
-        filteredTickets = filteredTickets.filter(
-          (t) => t.priority === filters.priority
-        );
-      }
-      if (filters.status) {
-        filteredTickets = filteredTickets.filter(
-          (t) => t.status === filters.status
-        );
-      }
-      if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
-        filteredTickets = filteredTickets.filter(
-          (t) =>
-            t.ticketId.toLowerCase().includes(query) ||
-            t.user.name.toLowerCase().includes(query) ||
-            t.user.email.toLowerCase().includes(query) ||
-            t.title.toLowerCase().includes(query)
-        );
-      }
-      if (filters.dateRange) {
-        const start = new Date(filters.dateRange.startDate).getTime();
-        const end = new Date(filters.dateRange.endDate).getTime();
-        filteredTickets = filteredTickets.filter((t) => {
-          const created = new Date(t.createdAt).getTime();
-          return created >= start && created <= end;
-        });
-      }
-      if (filters.assignedTo) {
-        filteredTickets = filteredTickets.filter(
-          (t) => t.assignedTo?.id === filters.assignedTo
-        );
-      }
+    const isAdmin = checkIsAdmin();
+    const url = isAdmin ? "/admin/support/tickets" : "/user/support/tickets";
+    
+    const params: any = {};
+    if (isAdmin && filters) {
+      if (filters.status) params.status = filters.status;
+      if (filters.priority) params.priority = filters.priority;
+      if (filters.category) params.category = filters.category;
+      if (filters.searchQuery) params.search = filters.searchQuery;
     }
 
-    // Sort by creation date (newest first)
-    filteredTickets.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const response = await api.get(url, { params });
+    const list = response.data.data || [];
+    const mappedData = list.map(mapTicketFromApi);
 
-    // Paginate
-    const total = filteredTickets.length;
+    // Paginate client-side to fit UI paginator
+    const total = mappedData.length;
     const startIndex = (page - 1) * pageSize;
-    const paginatedData = filteredTickets.slice(
-      startIndex,
-      startIndex + pageSize
-    );
+    const paginatedData = mappedData.slice(startIndex, startIndex + pageSize);
 
     return {
       data: paginatedData,
@@ -104,23 +123,17 @@ export const ticketService = {
     page = 1,
     pageSize = 10
   ): Promise<PaginatedResponse<Ticket>> => {
-    await delay();
-    const openTickets = mockTickets.filter(
-      (t) =>
-        t.status === TicketStatus.OPEN ||
-        t.status === TicketStatus.ASSIGNED ||
-        t.status === TicketStatus.IN_PROGRESS ||
-        t.status === TicketStatus.WAITING_RESPONSE
-    );
+    const isAdmin = checkIsAdmin();
+    const url = isAdmin ? "/admin/support/tickets" : "/user/support/tickets";
+    const params = isAdmin ? { status: "OPEN_DESK" } : {};
 
-    openTickets.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const response = await api.get(url, { params });
+    const list = response.data.data || [];
+    const mappedData = list.map(mapTicketFromApi);
 
-    const total = openTickets.length;
+    const total = mappedData.length;
     const startIndex = (page - 1) * pageSize;
-    const paginatedData = openTickets.slice(startIndex, startIndex + pageSize);
+    const paginatedData = mappedData.slice(startIndex, startIndex + pageSize);
 
     return {
       data: paginatedData,
@@ -136,22 +149,17 @@ export const ticketService = {
     page = 1,
     pageSize = 10
   ): Promise<PaginatedResponse<Ticket>> => {
-    await delay();
-    const criticalTickets = mockTickets.filter(
-      (t) => t.priority === 'Critical'
-    );
+    const isAdmin = checkIsAdmin();
+    const url = isAdmin ? "/admin/support/tickets" : "/user/support/tickets";
+    const params = isAdmin ? { priority: "CRITICAL" } : {};
 
-    criticalTickets.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    const response = await api.get(url, { params });
+    const list = response.data.data || [];
+    const mappedData = list.map(mapTicketFromApi);
 
-    const total = criticalTickets.length;
+    const total = mappedData.length;
     const startIndex = (page - 1) * pageSize;
-    const paginatedData = criticalTickets.slice(
-      startIndex,
-      startIndex + pageSize
-    );
+    const paginatedData = mappedData.slice(startIndex, startIndex + pageSize);
 
     return {
       data: paginatedData,
@@ -164,10 +172,28 @@ export const ticketService = {
 
   // Fetch single ticket
   getTicketById: async (ticketId: string): Promise<Ticket> => {
-    await delay();
-    const ticket = mockTickets.find((t) => t.ticketId === ticketId);
-    if (!ticket) throw new Error('Ticket not found');
-    return ticket;
+    const isAdmin = checkIsAdmin();
+    const url = isAdmin ? `/admin/support/tickets/${ticketId}` : `/user/support/tickets/${ticketId}`;
+    const response = await api.get(url);
+    return mapTicketFromApi(response.data.data);
+  },
+
+  // Create ticket (User raises support issue)
+  createTicket: async (
+    issue: string,
+    description: string,
+    category: string,
+    priority: string = "MEDIUM",
+    screenshotPath?: string
+  ): Promise<Ticket> => {
+    const response = await api.post("/user/support/ticket", {
+      issue,
+      description,
+      category,
+      priority,
+      screenshot_path: screenshotPath
+    });
+    return mapTicketFromApi(response.data.data);
   },
 
   // Update ticket status
@@ -175,39 +201,18 @@ export const ticketService = {
     ticketId: string,
     status: TicketStatus
   ): Promise<Ticket> => {
-    await delay();
-    const ticket = mockTickets.find((t) => t.ticketId === ticketId);
-    if (!ticket) throw new Error('Ticket not found');
-
-    ticket.status = status;
-    ticket.updatedAt = new Date().toISOString();
-
-    if (status === TicketStatus.RESOLVED) {
-      ticket.resolvedAt = new Date().toISOString();
+    const isAdmin = checkIsAdmin();
+    if (!isAdmin) {
+      throw new Error("Only administrators can update ticket status.");
     }
-    if (status === TicketStatus.CLOSED) {
-      ticket.closedAt = new Date().toISOString();
-    }
-
-    return ticket;
+    const response = await api.patch(`/admin/support/tickets/${ticketId}/status`, { status });
+    return mapTicketFromApi(response.data.data);
   },
 
   // Assign ticket
   assignTicket: async (ticketId: string, adminId: string): Promise<Ticket> => {
-    await delay();
-    const ticket = mockTickets.find((t) => t.ticketId === ticketId);
-    if (!ticket) throw new Error('Ticket not found');
-
-    ticket.assignedTo = {
-      id: adminId,
-      name: adminId === 'admin-1' ? 'Alice Johnson' : 'Bob Smith',
-      email:
-        adminId === 'admin-1' ? 'alice@support.team' : 'bob@support.team',
-    };
-    ticket.status = TicketStatus.ASSIGNED;
-    ticket.updatedAt = new Date().toISOString();
-
-    return ticket;
+    const response = await api.patch(`/admin/support/tickets/${ticketId}/assign`, { admin_id: adminId });
+    return mapTicketFromApi(response.data.data);
   },
 
   // Add message to ticket
@@ -217,42 +222,23 @@ export const ticketService = {
     attachments: any[] = [],
     isAdminReply = false
   ): Promise<TicketMessage> => {
-    await delay();
-    const ticket = mockTickets.find((t) => t.ticketId === ticketId);
-    if (!ticket) throw new Error('Ticket not found');
-
-    const newMessage: TicketMessage = {
-      id: `msg-${Date.now()}`,
-      ticketId,
-      sender: isAdminReply
-        ? {
-            id: 'admin-1',
-            name: 'Alice Johnson',
-            email: 'alice@support.team',
-          }
-        : ticket.user,
-      message,
-      attachments,
-      createdAt: new Date().toISOString(),
-      isAdminReply,
+    const url = isAdminReply 
+      ? `/admin/support/tickets/${ticketId}/message` 
+      : `/user/support/tickets/${ticketId}/message`;
+    const response = await api.post(url, { message, attachments });
+    const msg = response.data.data;
+    return {
+      ...msg,
+      ticketId: msg.ticket_id || msg.ticketId,
+      createdAt: msg.created_at || msg.createdAt,
+      isAdminReply: msg.is_admin_reply !== undefined ? msg.is_admin_reply : msg.isAdminReply
     };
-
-    ticket.messages.push(newMessage);
-    ticket.updatedAt = new Date().toISOString();
-
-    return newMessage;
   },
 
   // Update admin notes
   updateAdminNotes: async (ticketId: string, notes: string): Promise<Ticket> => {
-    await delay();
-    const ticket = mockTickets.find((t) => t.ticketId === ticketId);
-    if (!ticket) throw new Error('Ticket not found');
-
-    ticket.adminNotes = notes;
-    ticket.updatedAt = new Date().toISOString();
-
-    return ticket;
+    const response = await api.patch(`/admin/support/tickets/${ticketId}/notes`, { notes });
+    return mapTicketFromApi(response.data.data);
   },
 
   // Escalate ticket
@@ -260,97 +246,96 @@ export const ticketService = {
     ticketId: string,
     reason: string
   ): Promise<Ticket> => {
-    await delay();
-    const ticket = mockTickets.find((t) => t.ticketId === ticketId);
-    if (!ticket) throw new Error('Ticket not found');
-
-    ticket.priority = 'Critical';
-    ticket.adminNotes = `Escalated: ${reason}`;
-    ticket.updatedAt = new Date().toISOString();
-
-    return ticket;
+    const response = await api.post(`/admin/support/tickets/${ticketId}/escalate`, { reason });
+    return mapTicketFromApi(response.data.data);
   },
 };
 
 // ============ FEATURE REQUEST SERVICES ============
 
 export const featureRequestService = {
-  // Fetch all feature requests
   getAllRequests: async (
     page = 1,
     pageSize = 10
   ): Promise<PaginatedResponse<FeatureRequest>> => {
-    await delay();
-
-    const sortedRequests = [...mockFeatureRequests].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-
-    const total = sortedRequests.length;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedData = sortedRequests.slice(
-      startIndex,
-      startIndex + pageSize
-    );
-
-    return {
-      data: paginatedData,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    };
+    try {
+      const response = await api.get("/support/feature-requests");
+      const list = response.data.data || [];
+      const mappedList: FeatureRequest[] = list.map((fr: any) => ({
+        id: fr.id,
+        requestId: fr.requestId || fr.request_id,
+        requestedBy: fr.requestedBy || fr.requested_by || { id: "u-1", name: "User", email: "user@eyuva.org" },
+        title: fr.title,
+        description: fr.description,
+        benefit: fr.benefit,
+        votes: fr.votes || 1,
+        status: fr.status || "Open",
+        createdAt: fr.createdAt || fr.created_at,
+        updatedAt: fr.updatedAt || fr.updated_at,
+        comments: fr.comments
+      }));
+      const total = mappedList.length;
+      const startIndex = (page - 1) * pageSize;
+      return {
+        data: mappedList.slice(startIndex, startIndex + pageSize),
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize) || 1,
+      };
+    } catch (e) {
+      console.error("Failed to fetch feature requests from backend", e);
+      return {
+        data: [],
+        total: 0,
+        page: 1,
+        pageSize,
+        totalPages: 1
+      };
+    }
   },
 
-  // Update feature request status
+  createRequest: async (
+    title: string,
+    description: string,
+    benefit: string
+  ): Promise<any> => {
+    const response = await api.post("/support/feature-request", {
+      title,
+      description,
+      benefit
+    });
+    return response.data.data;
+  },
+
   updateStatus: async (
     requestId: string,
     status: string,
     comments?: string
   ): Promise<FeatureRequest> => {
-    await delay();
-    const request = mockFeatureRequests.find(
-      (r) => r.requestId === requestId
-    );
-    if (!request) throw new Error('Feature request not found');
-
-    request.status = status as any;
-    request.updatedAt = new Date().toISOString();
-    if (comments) request.comments = comments;
-
-    return request;
+    const response = await api.patch(`/support/feature-requests/${requestId}/status`, {
+      status,
+      comments
+    });
+    return response.data.data;
   },
 
-  // Vote on feature request
   voteOnRequest: async (requestId: string): Promise<FeatureRequest> => {
-    await delay();
-    const request = mockFeatureRequests.find(
-      (r) => r.requestId === requestId
-    );
-    if (!request) throw new Error('Feature request not found');
-
-    request.votes++;
-    return request;
+    const response = await api.post(`/support/feature-requests/${requestId}/vote`);
+    return response.data.data;
   },
 };
 
 // ============ SERVICE STATUS SERVICES ============
 
 export const serviceStatusService = {
-  // Fetch all service statuses
   getServiceStatus: async (): Promise<ServiceStatus[]> => {
-    await delay();
     return mockServiceStatus;
   },
 
-  // Check specific service
   checkService: async (service: string): Promise<ServiceStatus> => {
-    await delay();
     const status = mockServiceStatus.find((s) => s.service === service);
     if (!status) throw new Error('Service not found');
-
-    // Simulate real-time check
     status.lastChecked = new Date().toISOString();
     return status;
   },
@@ -359,15 +344,11 @@ export const serviceStatusService = {
 // ============ ANALYTICS SERVICES ============
 
 export const analyticsService = {
-  // Fetch analytics data
   getAnalytics: async (): Promise<AnalyticsData> => {
-    await delay();
     return mockAnalyticsData;
   },
 
-  // Get ticket statistics
   getTicketStats: async () => {
-    await delay();
     return {
       totalTickets: mockAnalyticsData.totalTickets,
       openTickets: mockAnalyticsData.openTickets,
@@ -382,25 +363,32 @@ export const analyticsService = {
 // ============ NOTIFICATION SERVICES ============
 
 export const notificationService = {
-  // Fetch notifications
   getNotifications: async (): Promise<NotificationPayload[]> => {
-    await delay();
-    return mockNotifications;
+    const response = await api.get("/notifications");
+    return response.data.data.map((n: any) => ({
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      read: n.is_read,
+      createdAt: n.created_at || new Date().toISOString(),
+    }));
   },
 
-  // Mark notification as read
   markAsRead: async (notificationId: string): Promise<NotificationPayload> => {
-    await delay();
-    const notification = mockNotifications.find((n) => n.id === notificationId);
-    if (!notification) throw new Error('Notification not found');
-
-    notification.read = true;
-    return notification;
+    const response = await api.patch(`/notifications/${notificationId}/read`);
+    const n = response.data.data;
+    return {
+      id: n.id,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      read: n.is_read,
+      createdAt: n.created_at,
+    };
   },
 
-  // Mark all as read
   markAllAsRead: async (): Promise<void> => {
-    await delay();
-    mockNotifications.forEach((n) => (n.read = true));
+    await api.post("/notifications/read-all");
   },
 };

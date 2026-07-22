@@ -1,127 +1,102 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { accountsService, getFileUrl } from "../services/accountsService";
 import "../styles/finance.css";
 
-const monthlyData = [
-  { month: "Jan", expense: 62000 },
-  { month: "Feb", expense: 74000 },
-  { month: "Mar", expense: 88000 },
-  { month: "Apr", expense: 71000 },
-  { month: "May", expense: 95000 },
-  { month: "Jun", expense: 82000 },
-];
-
-const categoryData = [
-  { category: "Travel", amount: 110000 },
-  { category: "Equipment", amount: 287000 },
-  { category: "Training", amount: 72000 },
-  { category: "Events", amount: 113400 },
-  { category: "Operations", amount: 225000 },
-  { category: "IT", amount: 148000 },
-];
-
-const kpis = [
-  {
-    label: "Monthly Expense",
-    value: "₹82,000",
-    icon: "📅",
-    accent: "#2563eb",
-    iconBg: "#eff6ff",
-  },
-  {
-    label: "Quarterly Expense",
-    value: "₹2,48,000",
-    icon: "📆",
-    accent: "#9333ea",
-    iconBg: "#fdf4ff",
-  },
-  {
-    label: "Annual Expense",
-    value: "₹10,42,400",
-    icon: "📊",
-    accent: "#d97706",
-    iconBg: "#fffbeb",
-  },
-  {
-    label: "Reports Generated",
-    value: "24",
-    icon: "📄",
-    accent: "#16a34a",
-    iconBg: "#f0fdf4",
-  },
-];
-
-const reports = [
-  {
-    id: 1,
-    name: "Monthly Expense Report — Jun 2026",
-    category: "Expense",
-    period: "June 2026",
-    generated: "08 Jun 2026",
-    generatedBy: "Finance Manager",
-    version: "v1.2",
-    status: "Approved",
-    summary:
-      "Monthly expenditure analysis including training, operations and procurement expenses.",
-  },
-  {
-    id: 2,
-    name: "Q2 Budget Utilization Report",
-    category: "Budget",
-    period: "Apr–Jun 2026",
-    generated: "07 Jun 2026",
-    generatedBy: "Admin",
-    version: "v2.0",
-    status: "Approved",
-    summary:
-      "Quarterly budget utilization and remaining balance across all budget heads.",
-  },
-  {
-    id: 3,
-    name: "Annual Finance Summary 2025",
-    category: "Finance",
-    period: "FY 2025",
-    generated: "01 Jan 2026",
-    generatedBy: "System",
-    version: "v3.0",
-    status: "Approved",
-    summary:
-      "Year-end financial summary including grants, expenditures and balances.",
-  },
-  {
-    id: 4,
-    name: "Vendor Payment Report",
-    category: "Vendor",
-    period: "May 2026",
-    generated: "02 Jun 2026",
-    generatedBy: "Finance Executive",
-    version: "v1.1",
-    status: "Approved",
-    summary:
-      "Vendor settlements and payment status report.",
-  },
-  {
-    id: 5,
-    name: "Audit Compliance Report",
-    category: "Audit",
-    period: "Q1 2026",
-    generated: "28 Mar 2026",
-    generatedBy: "System",
-    version: "v1.0",
-    status: "Pending",
-    summary:
-      "Compliance observations and audit recommendations.",
-  },
-];
+function fmtINR(n) {
+  return "₹" + Math.round(n || 0).toLocaleString("en-IN");
+}
 
 export default function FinanceReports() {
   const [search, setSearch] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
+
+  const [documents, setDocuments] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        // GET /reports/admin-files is reused as-is; the backend already
+        // restricts the Accounts role to "bill" and "uc" categories only.
+        const [docs, txns] = await Promise.all([
+          accountsService.getFinanceDocuments(),
+          accountsService.getTransactions(),
+        ]);
+        if (!isMounted) return;
+        setDocuments(docs || []);
+        setTransactions(txns || []);
+      } catch (err) {
+        if (isMounted) setError(err?.response?.data?.error || "Unable to load reports.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Reports table, mapped from real ProjectFile records (bills & UCs)
+  const reports = documents.map((d) => ({
+    id: d.id,
+    name: d.originalFileName || d.original_file_name || d.fileName,
+    category: d.category,
+    period: d.eventName || d.event_name || "—",
+    generated: d.createdAt || d.created_at,
+    generatedBy: d.uploadedByName || d.uploaded_by_name || "Unknown",
+    status: d.status,
+    summary: `${(d.category || "").toUpperCase()} document uploaded by ${d.uploadedByName || d.uploaded_by_name || "Unknown"}.`,
+    url: d.url,
+  }));
 
   const filtered = reports.filter(
     (r) =>
       r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.period.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Monthly / category breakdowns derived client-side from the real
+  // transaction list (reusing GET /accounts/transactions - no new endpoint).
+  const now = new Date();
+  const monthlyData = Array.from({ length: 6 }).map((_, idx) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
+    const label = d.toLocaleString("en-IN", { month: "short" });
+    const total = transactions
+      .filter((t) => {
+        const td = new Date(t.date);
+        return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth();
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
+    return { month: label, expense: total };
+  });
+
+  const categoryTotals = {};
+  transactions.forEach((t) => {
+    categoryTotals[t.budget_head] = (categoryTotals[t.budget_head] || 0) + t.amount;
+  });
+  const categoryData = Object.entries(categoryTotals).map(([category, amount]) => ({
+    category,
+    amount,
+  }));
+
+  const monthlyExpense = monthlyData[monthlyData.length - 1]?.expense || 0;
+  const quarterlyExpense = monthlyData.slice(-3).reduce((s, m) => s + m.expense, 0);
+  const annualExpense = transactions.reduce((s, t) => s + t.amount, 0);
+
+  const kpis = [
+    { label: "This Month's Expense", value: fmtINR(monthlyExpense), icon: "📅", accent: "#2563eb", iconBg: "#eff6ff" },
+    { label: "Last 3 Months", value: fmtINR(quarterlyExpense), icon: "📆", accent: "#9333ea", iconBg: "#fdf4ff" },
+    { label: "Total Expense (all time)", value: fmtINR(annualExpense), icon: "📊", accent: "#d97706", iconBg: "#fffbeb" },
+    { label: "Bills / UCs Available", value: String(documents.length), icon: "📄", accent: "#16a34a", iconBg: "#f0fdf4" },
+  ];
 
   return (
     <div className="fin-page">
@@ -141,6 +116,11 @@ export default function FinanceReports() {
         </div>
       </div>
 
+      {error && <div className="fin-empty">{error}</div>}
+      {loading && !error && <div className="fin-empty">Loading reports…</div>}
+
+      {!loading && !error && (
+        <>
       {/* KPI Cards */}
       <div className="fin-kpi-grid">
         {kpis.map((kpi, index) => (
@@ -160,77 +140,17 @@ export default function FinanceReports() {
       </div>
 
       {/* Analytics */}
-      <div className="fin-two-col">
-        <div className="fin-card">
-          <div className="fin-card-header">
-            <div className="fin-card-title">
-              Monthly Expense Trend
-            </div>
-          </div>
-
-          <div className="fin-card-body">
-            <table className="fin-table">
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Expense</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {monthlyData.map((item, index) => (
-                  <tr key={index}>
-                    <td>{item.month}</td>
-                    <td>
-                      ₹{item.expense.toLocaleString("en-IN")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="fin-card">
-          <div className="fin-card-header">
-            <div className="fin-card-title">
-              Category Breakdown
-            </div>
-          </div>
-
-          <div className="fin-card-body">
-            <table className="fin-table">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {categoryData.map((item, index) => (
-                  <tr key={index}>
-                    <td>{item.category}</td>
-                    <td>
-                      ₹{item.amount.toLocaleString("en-IN")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Reports */}
       <div className="fin-card fin-section">
         <div className="fin-card-header">
           <div>
             <div className="fin-card-title">
-              Generated Reports
+              Bills & Utilization Certificates
             </div>
             <div className="fin-card-subtitle">
-              {filtered.length} reports available
+              {filtered.length} document(s) available
             </div>
           </div>
         </div>
@@ -240,7 +160,7 @@ export default function FinanceReports() {
             <div className="fin-search">
               <input
                 type="text"
-                placeholder="Search reports..."
+                placeholder="Search documents..."
                 value={search}
                 onChange={(e) =>
                   setSearch(e.target.value)
@@ -249,13 +169,15 @@ export default function FinanceReports() {
             </div>
           </div>
 
+          {filtered.length === 0 ? (
+            <div className="fin-empty">No matching documents found.</div>
+          ) : (
           <div className="fin-table-wrap">
             <table className="fin-table">
               <thead>
                 <tr>
-                  <th>Report</th>
+                  <th>Document</th>
                   <th>Category</th>
-                  <th>Version</th>
                   <th>Generated By</th>
                   <th>Status</th>
                   <th>Action</th>
@@ -280,14 +202,15 @@ export default function FinanceReports() {
                     </td>
 
                     <td>{report.category}</td>
-                    <td>{report.version}</td>
                     <td>{report.generatedBy}</td>
 
                     <td>
                       <span
                         className={`fin-badge ${
-                          report.status === "Approved"
+                          report.status === "APPROVED"
                             ? "badge-success"
+                            : report.status === "REJECTED"
+                            ? "badge-danger"
                             : "badge-warning"
                         }`}
                       >
@@ -298,10 +221,7 @@ export default function FinanceReports() {
                     <td>
                       <button
                         className="fin-btn fin-btn-sm"
-                        onClick={() => {
-  console.log(report);
-  setSelectedReport(report);
-}}
+                        onClick={() => setSelectedReport(report)}
                       >
                         View
                       </button>
@@ -311,6 +231,7 @@ export default function FinanceReports() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
 
@@ -326,6 +247,7 @@ export default function FinanceReports() {
       alignItems: "center",
       zIndex: 9999,
     }}
+    onClick={() => setSelectedReport(null)}
   >
     <div
       style={{
@@ -337,6 +259,7 @@ export default function FinanceReports() {
         maxHeight: "80vh",
         overflowY: "auto",
       }}
+      onClick={(e) => e.stopPropagation()}
     >
       <div
         style={{
@@ -361,11 +284,6 @@ export default function FinanceReports() {
       </p>
 
       <p>
-        <strong>Version:</strong>{" "}
-        {selectedReport.version}
-      </p>
-
-      <p>
         <strong>Generated By:</strong>{" "}
         {selectedReport.generatedBy}
       </p>
@@ -379,24 +297,29 @@ export default function FinanceReports() {
 
       <p>{selectedReport.summary}</p>
 
-      <div
-        style={{
-          marginTop: "20px",
-          display: "flex",
-          gap: "10px",
-        }}
-      >
-        <button className="fin-btn">
-          Download PDF
-        </button>
-
-        <button className="fin-btn fin-btn-ghost">
-          Export Excel
-        </button>
-      </div>
+      {selectedReport.url && (
+        <div
+          style={{
+            marginTop: "20px",
+            display: "flex",
+            gap: "10px",
+          }}
+        >
+          <a
+            className="fin-btn"
+            href={getFileUrl(selectedReport.url)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open File
+          </a>
+        </div>
+      )}
     </div>
   </div>
 )}
+        </>
+      )}
     </div>
   );
 }

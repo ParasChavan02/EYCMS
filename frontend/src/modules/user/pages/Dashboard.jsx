@@ -1,9 +1,11 @@
+import { useNavigate } from "react-router-dom";
 import { Clock3, FileCheck2, FolderOpen, Pin, CalendarDays, Hourglass, Award, TrendingUp } from "lucide-react";
 import { useAuth } from "../../common/hooks/useAuth";
 import "./user-erp.css";
 
 function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const today = new Date();
   const hasStartedThisYear = today.getMonth() > 5 || (today.getMonth() === 5 && today.getDate() >= 14);
@@ -165,10 +167,10 @@ function Dashboard() {
         <section className="user-erp-card">
           <h2>Quick Actions</h2>
           <div className="user-action-row">
-            <button className="user-action-button" type="button">Upload Report</button>
-            <button className="user-action-button" type="button">Upload Bills</button>
-            <button className="user-action-button" type="button">Upload Event Images</button>
-            <button className="user-action-button" type="button">View Events</button>
+            <button className="user-action-button" type="button" onClick={() => navigate("/reports", { state: { category: "report" } })}>Upload Report</button>
+            <button className="user-action-button" type="button" onClick={() => navigate("/reports", { state: { category: "bill" } })}>Upload Bills</button>
+            <button className="user-action-button" type="button" onClick={() => navigate("/reports", { state: { category: "image" } })}>Upload Event Images</button>
+            <button className="user-action-button" type="button" onClick={() => navigate("/events")}>View Events</button>
           </div>
         </section>
 

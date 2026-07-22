@@ -18,6 +18,8 @@ class Notification(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(String(50), default="info")
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
+    action_path: Mapped[str] = mapped_column(String(255), nullable=True)
+    action_label: Mapped[str] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

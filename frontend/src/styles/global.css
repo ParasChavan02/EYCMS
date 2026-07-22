@@ -4,10 +4,10 @@
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
+
   color: #1f2937;
   background: #f9fafb;
-  
+
   --surface: #ffffff;
   --surface-muted: #f9fafb;
   --border: #e5e7eb;
@@ -19,129 +19,7 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* DARK THEME */
-html[data-theme="dark"] {
-  color: #e5e7eb;
-  background: #0f172a;
-  
-  --surface: #1f2937;
-  --surface-muted: #111827;
-  --border: #374151;
-  --primary: #3b82f6;
-  --primary-dark: #1e40af;
-  --text-muted: #d1d5db;
-  --text-light: #9ca3af;
-  --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
 
-html[data-theme="dark"] body {
-  background: var(--surface-muted);
-  color: var(--text-muted);
-}
-
-html[data-theme="dark"] .sidebar-enterprise,
-html[data-theme="dark"] .topbar-enterprise,
-html[data-theme="dark"] .profile-form-card,
-html[data-theme="dark"] .account-card,
-html[data-theme="dark"] .appearance-card,
-html[data-theme="dark"] .notification-card,
-html[data-theme="dark"] .security-card,
-html[data-theme="dark"] .preferences-card,
-html[data-theme="dark"] .profile-header,
-html[data-theme="dark"] .avatar-upload-card,
-html[data-theme="dark"] .activity-card {
-  background: var(--surface);
-  color: var(--text-muted);
-  border-color: var(--border);
-}
-
-html[data-theme="dark"] input[type="text"],
-html[data-theme="dark"] input[type="email"],
-html[data-theme="dark"] input[type="password"],
-html[data-theme="dark"] input[type="tel"],
-html[data-theme="dark"] input[type="number"],
-html[data-theme="dark"] select,
-html[data-theme="dark"] textarea,
-html[data-theme="dark"] .form-input {
-  background: #111827;
-  color: var(--text-muted);
-  border-color: var(--border);
-}
-
-html[data-theme="dark"] input[type="text"]:focus,
-html[data-theme="dark"] input[type="email"]:focus,
-html[data-theme="dark"] input[type="password"]:focus,
-html[data-theme="dark"] input[type="tel"]:focus,
-html[data-theme="dark"] input[type="number"]:focus,
-html[data-theme="dark"] select:focus,
-html[data-theme="dark"] textarea:focus,
-html[data-theme="dark"] .form-input:focus {
-  background: #1f2937;
-}
-
-html[data-theme="dark"] .card-header,
-html[data-theme="dark"] .form-header,
-html[data-theme="dark"] .security-header,
-html[data-theme="dark"] .activity-header {
-  border-bottom-color: var(--border);
-}
-
-html[data-theme="dark"] .btn-primary,
-html[data-theme="dark"] .btn-edit,
-html[data-theme="dark"] .btn-submit,
-html[data-theme="dark"] .btn-save-settings,
-html[data-theme="dark"] .btn-profile-action {
-  background: var(--primary);
-  color: white;
-}
-
-html[data-theme="dark"] .btn-primary:hover,
-html[data-theme="dark"] .btn-edit:hover,
-html[data-theme="dark"] .btn-submit:hover,
-html[data-theme="dark"] .btn-save-settings:hover,
-html[data-theme="dark"] .btn-profile-action:hover {
-  background: var(--primary-dark);
-}
-
-html[data-theme="dark"] .btn-secondary,
-html[data-theme="dark"] .btn-cancel,
-html[data-theme="dark"] .btn-remove {
-  background: #374151;
-  color: #e5e7eb;
-  border-color: #4b5563;
-}
-
-html[data-theme="dark"] .btn-secondary:hover,
-html[data-theme="dark"] .btn-cancel:hover,
-html[data-theme="dark"] .btn-remove:hover {
-  background: #4b5563;
-  border-color: #6b7280;
-}
-
-html[data-theme="dark"] .f9fafb {
-  background: #111827;
-}
-
-html[data-theme="dark"] .breadcrumb-item a {
-  color: var(--primary);
-}
-
-html[data-theme="dark"] .breadcrumb-item a:hover {
-  color: var(--primary-dark);
-}
-
-html[data-theme="dark"] a {
-  color: var(--primary);
-}
-
-html[data-theme="dark"] a:hover {
-  color: var(--primary-dark);
-}
-
-* {
-  box-sizing: border-box;
-}
 
 html,
 body,
@@ -236,7 +114,12 @@ input::placeholder {
 }
 
 /* TYPOGRAPHY */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin: 0;
   font-weight: 600;
   color: #1f2937;
@@ -398,10 +281,58 @@ button:hover {
 }
 
 .auth-page {
-  display: grid;
-  place-items: center;
-  min-height: calc(100vh - 24px);
-  gap: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 24px 0;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.auth-wrapper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 60px;
+  width: min(100%, 1000px);
+  padding: 0 24px;
+  margin-top: 20px;
+}
+
+.auth-logo-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  max-width: 320px;
+  margin-top: 15px;
+}
+
+.auth-logo-side img {
+  width: 100%;
+  height: auto;
+  max-height: 280px;
+  object-fit: contain;
+}
+
+@media (max-width: 768px) {
+  .auth-wrapper {
+    flex-direction: column;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .auth-logo-side {
+    max-width: 180px;
+    margin-top: 0;
+  }
+
+  .auth-logo-side img {
+    max-height: 140px;
+  }
 }
 
 .login-topbar {
@@ -497,6 +428,8 @@ button:hover {
 
 .auth-actions {
   margin-top: 12px;
+  display: flex;
+  justify-content: center;
 }
 
 .divider {
@@ -728,6 +661,7 @@ button:hover {
     opacity: 0;
     transform: translateY(10px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -754,4 +688,212 @@ button:hover {
   .auth-help-submit {
     width: 100%;
   }
+}
+
+/* Forgot Password Link Button */
+.forgot-password-link-btn {
+  background: transparent;
+  color: var(--primary, #0f5aff);
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.forgot-password-link-btn:hover {
+  background: rgba(15, 90, 255, 0.05);
+  color: var(--primary-dark, #0d47d1);
+  text-decoration: underline;
+}
+
+/* Forgot Password Modal */
+.forgot-password-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(2px);
+}
+
+.forgot-password-modal {
+  width: min(550px, 100%);
+  background: var(--surface, #ffffff);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.34);
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: authHelpIn 0.22s ease both;
+}
+
+.forgot-password-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.forgot-password-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.forgot-password-title .blue-text {
+  color: var(--primary, #0f5aff);
+}
+
+.forgot-password-title .orange-text {
+  color: #f97316;
+}
+
+.forgot-password-close {
+  background: transparent;
+  color: var(--text-light, #9ca3af);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.forgot-password-close:hover {
+  background: var(--surface-muted, #f9fafb);
+  color: var(--text-muted, #6b7280);
+}
+
+.forgot-password-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.forgot-password-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--surface-muted, #f9fafb);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  padding: 0 14px;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.forgot-password-input-wrapper:focus-within {
+  border-color: var(--primary, #0f5aff);
+  box-shadow: 0 0 0 3px rgba(15, 90, 255, 0.12);
+}
+
+.forgot-password-input-icon {
+  color: var(--text-light, #9ca3af);
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.forgot-password-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 0.95rem;
+  color: #0f172a;
+  padding: 0;
+}
+
+.forgot-password-input::placeholder {
+  color: var(--text-light, #9ca3af);
+}
+
+.forgot-password-warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff8f6;
+  border-left: 4px solid #f97316;
+  border-radius: 0 8px 8px 0;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.forgot-password-warning-icon {
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.forgot-password-warning-text {
+  color: #dc2626;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.45;
+  margin: 0;
+  text-align: left;
+}
+
+.forgot-password-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+.forgot-password-btn-send {
+  background: var(--primary, #0f5aff);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 12px 32px;
+  border: none;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(15, 90, 255, 0.15);
+  transition: all 0.2s;
+}
+
+.forgot-password-btn-send:hover {
+  background: var(--primary-dark, #0d47d1);
+  transform: translateY(-1px);
+}
+
+.forgot-password-btn-send:active {
+  transform: translateY(0);
+}
+
+.forgot-password-btn-cancel {
+  background: var(--surface, #ffffff);
+  color: #f97316;
+  font-weight: 600;
+  padding: 10px 32px;
+  border: 2px solid #f97316;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.forgot-password-btn-cancel:hover {
+  background: #fff7ed;
+  transform: translateY(-1px);
+}
+
+.forgot-password-btn-cancel:active {
+  transform: translateY(0);
+}
+
+/* Remove default MS Edge password reveal and clear buttons to prevent duplicates */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
 }

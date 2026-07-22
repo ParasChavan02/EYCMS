@@ -48,14 +48,14 @@ function SuperAdminSidebar({ isOpen, onClose, isCollapsed }) {
         <div className="sidebar-brand-shell">
           {!isCollapsed ? (
             <>
-              <div className="sidebar-brand-mark">SA</div>
+              <img src="/eyuva_logo.jpg" alt="Logo" className="sidebar-brand-mark" style={{ objectFit: 'cover' }} />
               <div className="sidebar-brand">
                 <h2 className="sidebar-logo">E-YUVA ERP</h2>
                 <p className="sidebar-subtitle">Super Admin portal</p>
               </div>
             </>
           ) : (
-            <div className="sidebar-logo-mini">SA</div>
+            <img src="/eyuva_logo.jpg" alt="Logo" className="sidebar-logo-mini" style={{ objectFit: 'cover' }} />
           )}
         </div>
       </div>

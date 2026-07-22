@@ -242,6 +242,7 @@
 .user-secondary-button {
   min-height: 44px;
   color: #16a34a;
+  white-space: nowrap;
 }
 
 .user-dashboard-grid {
@@ -432,7 +433,9 @@
   background: #ffffff;
   color: #0f1f34;
   font: inherit;
-  padding: 14px 16px;
+  padding: 10px 14px;
+  min-height: 44px;
+  line-height: 1.4;
   box-sizing: border-box;
 }
 

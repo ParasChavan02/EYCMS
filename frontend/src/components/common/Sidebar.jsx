@@ -7,6 +7,7 @@ import {
   Clock,
   FileText,
   Inbox,
+  Image as ImageIcon,
   LayoutDashboard,
   Lightbulb,
   LockKeyhole,
@@ -50,6 +51,7 @@ function Sidebar({ isOpen, onClose, isCollapsed, isAdmin = false }) {
       section: "Operations",
       items: [
         { icon: Sparkles, label: "Events", path: ROUTES.ADMIN_EVENTS },
+        { icon: ImageIcon, label: "Gallery", path: ROUTES.ADMIN_GALLERY },
         { icon: BarChart3, label: "Reports", path: ROUTES.ADMIN_REPORTS },
         { icon: ClipboardCheck, label: "Approvals", path: ROUTES.ADMIN_APPROVALS },
         { icon: FileText, label: "Audit Logs", path: ROUTES.ADMIN_AUDIT_LOGS },
@@ -96,14 +98,14 @@ function Sidebar({ isOpen, onClose, isCollapsed, isAdmin = false }) {
         <div className="sidebar-brand-shell">
           {!isCollapsed ? (
             <>
-              <div className="sidebar-brand-mark">EY</div>
+              <img src="/eyuva_logo.jpg" alt="Logo" className="sidebar-brand-mark" style={{ objectFit: 'cover' }} />
               <div className="sidebar-brand">
                 <h2 className="sidebar-logo">E-YUVA ERP</h2>
                 <p className="sidebar-subtitle">{adminMode ? "Administration workspace" : "Workspace"}</p>
               </div>
             </>
           ) : (
-            <div className="sidebar-logo-mini">EY</div>
+            <img src="/eyuva_logo.jpg" alt="Logo" className="sidebar-logo-mini" style={{ objectFit: 'cover' }} />
           )}
         </div>
       </div>

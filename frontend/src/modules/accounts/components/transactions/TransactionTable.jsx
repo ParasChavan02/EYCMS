@@ -29,15 +29,12 @@ export default function TransactionTable({ transactions, viewOnly }) {
             <table className="fin-table">
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>Date</th>
-                  <th>Voucher No.</th>
-                  <th>Type</th>
-                  <th>Budget Head</th>
-                  <th>Debit Account</th>
-                  <th>Credit Account</th>
+                  <th>Category</th>
+                  <th>Description</th>
                   <th>Amount</th>
                   <th>Status</th>
-                  <th>Remarks</th>
                 </tr>
               </thead>
               <tbody>

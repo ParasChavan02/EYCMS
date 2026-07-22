@@ -1,24 +1,43 @@
-import { useNotification } from '../hooks/useNotification'
-import './toast.css'
+import { useNotification } from '../hooks/useNotification';
+import { CheckCircle2, XCircle, AlertTriangle, Info } from 'lucide-react';
+import './toast.css';
 
 function Toast() {
-  const { notifications } = useNotification()
+  const { notifications, toasts } = useNotification();
 
-  // Filter notifications that should show as toast (temporary)
-  const toastNotifications = notifications.filter(n => !n.showInBell)
+  // Use dedicated toasts array from context or fallback to filter
+  const toastList = (toasts && toasts.length > 0)
+    ? toasts 
+    : (notifications || []).filter((n) => n.isToast || !n.showInBell);
+
+  const getIcon = (type) => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle2 size={20} style={{ flexShrink: 0 }} />;
+      case 'error':
+        return <XCircle size={20} style={{ flexShrink: 0 }} />;
+      case 'warning':
+        return <AlertTriangle size={20} style={{ flexShrink: 0 }} />;
+      default:
+        return <Info size={20} style={{ flexShrink: 0 }} />;
+    }
+  };
 
   return (
     <div className="toast-container">
-      {toastNotifications.map(notification => (
+      {toastList.map((notification) => (
         <div
           key={notification.id}
           className={`toast toast--${notification.type}`}
+          role="alert"
         >
-          {notification.message}
+          {getIcon(notification.type)}
+          <span>{notification.message}</span>
         </div>
       ))}
     </div>
-  )
+  );
 }
 
-export default Toast
+export default Toast;
+
