@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from app.common.models.feature_request import FeatureRequestModel
     from app.common.models.transaction import Transaction
     from app.common.models.utilization_certificate import UCRequest
-    from app.common.models.event import Event
     from app.common.models.report import QuarterlyReport
     from app.common.models.support_ticket import SupportTicket
     from app.common.models.audit_log import AuditLog
@@ -61,7 +60,6 @@ class User(Base):
         foreign_keys="[UCRequest.requested_by_id]", back_populates="requester"
     )
     
-    coordinated_events: Mapped[List["Event"]] = relationship(back_populates="coordinator")
     submitted_reports: Mapped[List["QuarterlyReport"]] = relationship(back_populates="submitter")
     feature_requests: Mapped[List["FeatureRequestModel"]] = relationship(back_populates="creator")
     support_tickets: Mapped[List["SupportTicket"]] = relationship(

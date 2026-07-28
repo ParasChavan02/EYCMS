@@ -1,7 +1,15 @@
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy.orm import Session
+from decimal import Decimal
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session, joinedload
+from app.common.constants.enums import TransactionStatusEnum
+from app.common.models.audit_log import AuditLog
+from app.common.models.budget_head import BudgetHead
+from app.common.models.expense import Expense
+from app.common.models.transaction import Transaction
+from app.common.models.user import User
 from app.admin.schemas import (
     AdminDashboardKPIs,
     UserProgressMonitoring,
@@ -78,21 +86,85 @@ class AdminService:
         )
 
     @staticmethod
+    def get_budget_heads(db: Session) -> List[str]:
+        heads = db.query(BudgetHead.name).order_by(BudgetHead.name.asc()).all()
+
+        unique_heads = []
+        seen = set()
+        for (name,) in heads:
+            normalized = (name or "").strip()
+            if not normalized:
+                continue
+
+            key = normalized.lower()
+            if key in seen:
+                continue
+
+            seen.add(key)
+            unique_heads.append(normalized)
+
+        return unique_heads
+
+    @staticmethod
     def admin_create_transaction(
         db: Session, 
         transaction_data: AdminCreateTransaction, 
         admin_id: str
     ) -> dict:
-        # Mock transaction payload creation
+        admin = db.query(User).filter(User.id == uuid.UUID(admin_id)).first()
+        if not admin:
+            raise ValueError("Admin user not found")
+
+        budget_head = (
+            db.query(BudgetHead)
+            .filter(func.lower(BudgetHead.name) == transaction_data.budget_head.strip().lower())
+            .first()
+        )
+        if not budget_head:
+            raise ValueError("Budget Head not found")
+
+        amount = Decimal(str(transaction_data.amount)).quantize(Decimal("0.01"))
+        if amount <= 0:
+            raise ValueError("Invalid amount")
+
+        now_utc = datetime.now(timezone.utc)
+        description = (transaction_data.description or budget_head.name).strip()
+        expense = Expense(
+            budget_head_id=budget_head.id,
+            title=description[:150],
+            allocated_amount=amount,
+        )
+        transaction = Transaction(
+            expense=expense,
+            amount=amount,
+            description=description,
+            transaction_date=now_utc,
+            created_by_id=admin.id,
+            status=TransactionStatusEnum.DRAFT.value,
+            source="MANUAL",
+        )
+        db.add(expense)
+        db.add(transaction)
+        db.add(
+            AuditLog(
+                user_id=admin.id,
+                action="Transaction Created",
+                entity="Transaction",
+                remarks=f"Budget Head: {budget_head.name}\nAmount: {amount}\nTimestamp: {now_utc.isoformat()}",
+            )
+        )
+        db.commit()
+        db.refresh(transaction)
+
         return {
-            "id": str(uuid.uuid4()),
-            "amount": transaction_data.amount,
-            "budget_head": transaction_data.budget_head,
-            "description": transaction_data.description,
-            "creator_role": "ADMIN",
+            "id": str(transaction.id),
+            "amount": float(transaction.amount),
+            "budget_head": budget_head.name,
+            "description": transaction.description,
+            "creator_role": admin.role.name if admin.role else "ADMIN",
             "created_by": admin_id,
-            "status": "APPROVED",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "status": transaction.status,
+            "created_at": transaction.created_at.isoformat() if transaction.created_at else now_utc.isoformat(),
         }
 
     @staticmethod
@@ -101,11 +173,53 @@ class AdminService:
         review_data: AdminTransactionReview, 
         admin_id: str
     ) -> dict:
-        # Mock transaction review operation
+        admin = db.query(User).filter(User.id == uuid.UUID(admin_id)).first()
+        if not admin:
+            raise ValueError("Admin user not found")
+
+        transaction = (
+            db.query(Transaction)
+            .options(joinedload(Transaction.expense).joinedload(Expense.budget_head))
+            .filter(Transaction.id == uuid.UUID(review_data.transaction_id))
+            .first()
+        )
+        if not transaction:
+            raise ValueError("Transaction not found")
+
+        action = review_data.action.upper().strip()
+        if action == "APPROVE":
+            transaction.status = TransactionStatusEnum.APPROVED.value
+            transaction.approved_by_id = admin.id
+        elif action == "REJECT":
+            transaction.status = TransactionStatusEnum.REJECTED.value
+        elif action == "REQUEST_REVISION":
+            transaction.status = TransactionStatusEnum.REVISION_REQUESTED.value
+        else:
+            raise ValueError("Invalid review action")
+
+        transaction.admin_remarks = review_data.remarks
+        transaction.updated_at = datetime.now(timezone.utc)
+
+        db.add(transaction)
+        db.add(
+            AuditLog(
+                user_id=admin.id,
+                action="Transaction Reviewed",
+                entity="Transaction",
+                remarks=(
+                    f"Transaction: {review_data.transaction_id}\n"
+                    f"Action: {action}\n"
+                    f"Remarks: {review_data.remarks or '-'}\n"
+                    f"Timestamp: {datetime.now(timezone.utc).isoformat()}"
+                ),
+            )
+        )
+        db.commit()
+
         return {
             "transaction_id": review_data.transaction_id,
-            "status": f"{review_data.action}ED",
+            "status": transaction.status,
             "remarks": review_data.remarks,
             "reviewed_by": admin_id,
-            "reviewed_at": datetime.now(timezone.utc).isoformat()
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
         }

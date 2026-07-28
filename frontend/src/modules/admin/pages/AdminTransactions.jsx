@@ -1,200 +1,417 @@
 import { useMemo, useState } from "react";
+import { Download, Loader2, RefreshCw, Upload, X } from "lucide-react";
+import { useQuery } from "react-query";
 import { useAuth } from "../../common/hooks/useAuth";
-import { transactionService } from "../../../services/transactionService";
-import { FileText, Eye, History, Check, X, CornerDownRight } from "lucide-react";
+import { adminTransactionService } from "../../../services/adminTransactionService";
 import "../../../styles/admin-management.css";
 
-function AdminTransactions() {
-  const { user } = useAuth();
-  const currentAdmin = user?.email || "admin@example.com";
-  const currentAdminName = user?.name || "Admin";
+const initialCreateForm = {
+  budgetHead: "",
+  amount: "",
+  description: "",
+};
 
-  const [form, setForm] = useState({
-    budgetHead: "",
-    amount: "",
-    description: "",
-    date: "",
+const initialFilters = {
+  search: "",
+  status: "ALL",
+  budgetHead: "",
+  dateFrom: "",
+  dateTo: "",
+  createdBy: "",
+};
+
+function parseCsvPreview(text) {
+  const rows = [];
+  let row = [];
+  let value = "";
+  let inQuotes = false;
+
+  const pushValue = () => {
+    row.push(value);
+    value = "";
+  };
+
+  const pushRow = () => {
+    if (row.length > 0) {
+      rows.push(row);
+    }
+    row = [];
+  };
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        value += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      pushValue();
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") {
+        i += 1;
+      }
+      pushValue();
+      pushRow();
+      continue;
+    }
+
+    value += char;
+  }
+
+  if (value.length > 0 || row.length > 0) {
+    pushValue();
+    pushRow();
+  }
+
+  if (rows.length === 0) {
+    return { headers: [], records: [] };
+  }
+
+  const headers = rows[0].map((header) => header.trim().toLowerCase());
+  const records = rows.slice(1).map((columns) => {
+    const record = {};
+    headers.forEach((header, index) => {
+      record[header] = (columns[index] ?? "").trim();
+    });
+    return record;
   });
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [sourceFilter, setSourceFilter] = useState("ALL"); // ALL, MY, USER
+  return { headers, records };
+}
+
+function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+function formatCurrency(amount) {
+  const numericAmount = Number(amount || 0);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(numericAmount);
+}
+
+function AdminTransactions() {
+  useAuth();
+
+  const [createForm, setCreateForm] = useState(initialCreateForm);
+  const [filters, setFilters] = useState(initialFilters);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [transactions, setTransactions] = useState(() => transactionService.getTransactions());
 
-  const [selectedTxnId, setSelectedTxnId] = useState("");
-  const [remarks, setRemarks] = useState("");
-  const [modalMode, setModalMode] = useState(""); // "", "APPROVE", "REJECT", "REVISION", "AUDIT", "BILL"
-  const [viewBillName, setViewBillName] = useState("");
-  const [actionMessage, setActionMessage] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewRows, setPreviewRows] = useState([]);
+  const [previewCount, setPreviewCount] = useState(0);
+  const [previewError, setPreviewError] = useState("");
+  const [importProgress, setImportProgress] = useState(0);
+  const [importSummary, setImportSummary] = useState(null);
+  const [importing, setImporting] = useState(false);
 
-  const refreshTransactions = () => {
-    setTransactions(transactionService.getTransactions());
-  };
+  const queryKey = useMemo(
+    () => [
+      "admin-transactions",
+      filters.search,
+      filters.status,
+      filters.budgetHead,
+      filters.dateFrom,
+      filters.dateTo,
+      filters.createdBy,
+    ],
+    [filters.search, filters.status, filters.budgetHead, filters.dateFrom, filters.dateTo, filters.createdBy]
+  );
 
-  const selectedTxn = useMemo(() => {
-    return transactions.find(t => t.id === selectedTxnId) || null;
-  }, [transactions, selectedTxnId]);
+  const {
+    data: transactions = [],
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery(queryKey, () => adminTransactionService.getTransactions(filters), {
+    keepPreviousData: true,
+  });
 
-  const handleActionClick = (mode, txnId) => {
-    setSelectedTxnId(txnId);
-    setRemarks("");
-    setModalMode(mode);
-    setActionMessage("");
-  };
-
-  const submitAction = () => {
-    if (!remarks.trim()) {
-      setActionMessage("❌ Remarks are required for this action.");
-      return;
+  const { data: budgetHeads = [] } = useQuery(
+    ["admin-budget-heads"],
+    () => adminTransactionService.getBudgetHeads(),
+    {
+      staleTime: 5 * 60 * 1000,
     }
+  );
 
-    if (modalMode === "APPROVE") {
-      transactionService.approveTransaction(selectedTxnId, currentAdmin, remarks);
-    } else if (modalMode === "REJECT") {
-      transactionService.rejectTransaction(selectedTxnId, currentAdmin, remarks);
-    } else if (modalMode === "REVISION") {
-      transactionService.requestRevision(selectedTxnId, currentAdmin, remarks, "ADMIN");
-    }
+  const filteredCount = useMemo(() => transactions.length, [transactions]);
 
-    refreshTransactions();
-    setModalMode("");
-    setSelectedTxnId("");
-    setRemarks("");
+  const handleCreateChange = (event) => {
+    const { name, value } = event.target;
+    setCreateForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCreateTransaction = () => {
+  const handleCreateTransaction = async () => {
     setMessage("");
-    if (!form.budgetHead || !form.amount || !form.description) {
-      setMessage("❌ Please fill all required fields");
+
+    if (!createForm.budgetHead || !createForm.amount || !createForm.description) {
+      setMessage("Please fill all required fields.");
       return;
     }
 
-    const payload = {
-      amount: form.amount,
-      budgetHead: form.budgetHead,
-      description: form.description,
-      uploadedBills: ["admin_manual_invoice.pdf"]
-    };
+    setSaving(true);
+    try {
+      await adminTransactionService.createTransaction({
+        budget_head: createForm.budgetHead,
+        amount: Number(createForm.amount),
+        description: createForm.description,
+      });
 
-    transactionService.createTransaction(payload, currentAdmin, "ADMIN");
-    refreshTransactions();
-    setForm({ budgetHead: "", amount: "", description: "", date: "" });
-    setMessage("✅ Transaction created successfully");
+      setCreateForm(initialCreateForm);
+      await refetch();
+      setMessage("Transaction created successfully.");
+    } catch (error) {
+      setMessage(error?.response?.data?.detail || error?.response?.data?.error || "Failed to create transaction");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((txn) => {
-      const matchesSearch =
-        txn.id.toLowerCase().includes(search.toLowerCase()) ||
-        txn.budgetHead.toLowerCase().includes(search.toLowerCase()) ||
-        txn.description.toLowerCase().includes(search.toLowerCase());
+  const handleReview = async (transactionId, action) => {
+    setMessage("");
+    try {
+      await adminTransactionService.reviewTransaction({
+        transaction_id: transactionId,
+        action,
+        remarks: null,
+      });
+      await refetch();
+      setMessage(`Transaction ${action.toLowerCase()}d successfully.`);
+    } catch (error) {
+      setMessage(error?.response?.data?.detail || error?.response?.data?.error || "Failed to review transaction");
+    }
+  };
 
-      const matchesStatus = statusFilter === "ALL" ? true : txn.status.toUpperCase() === statusFilter.toUpperCase();
+  const handleExport = async () => {
+    setMessage("");
+    try {
+      const { blob, filename } = await adminTransactionService.exportTransactions(filters);
+      const safeName = filename || `transactions_${new Date().toISOString().slice(0, 10)}.csv`;
+      downloadBlob(blob, safeName);
+      setMessage("Export completed successfully.");
+    } catch (error) {
+      setMessage(error?.response?.data?.detail || error?.response?.data?.error || "Failed to export transactions");
+    }
+  };
 
-      let matchesSource = true;
-      if (sourceFilter === "MY") {
-        matchesSource = txn.creatorRole === "ADMIN" || txn.transactionType === "ADMIN_CREATED";
-      } else if (sourceFilter === "USER") {
-        matchesSource = txn.creatorRole === "USER" || txn.transactionType === "USER_REQUEST";
-      }
+  const openImportModal = () => {
+    setImportOpen(true);
+    setSelectedFile(null);
+    setPreviewRows([]);
+    setPreviewCount(0);
+    setPreviewError("");
+    setImportProgress(0);
+    setImportSummary(null);
+  };
 
-      return matchesSearch && matchesStatus && matchesSource;
-    });
-  }, [transactions, search, statusFilter, sourceFilter]);
+  const closeImportModal = () => {
+    if (importing) {
+      return;
+    }
+    setImportOpen(false);
+  };
+
+  const handleFileSelect = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setPreviewError("Please choose a valid .csv file.");
+      setSelectedFile(null);
+      setPreviewRows([]);
+      setPreviewCount(0);
+      return;
+    }
+
+    setPreviewError("");
+    setSelectedFile(file);
+
+    try {
+      const text = await file.text();
+      const parsed = parseCsvPreview(text);
+      const preview = parsed.records.slice(0, 3).map((record) => ({
+        budget_head: record.budget_head || "",
+        amount: record.amount || "",
+        description: record.description || "",
+        date: record.date || "",
+        status: record.status || "",
+      }));
+
+      setPreviewRows(preview);
+      setPreviewCount(parsed.records.length);
+    } catch {
+      setPreviewError("Unable to read the CSV file.");
+      setSelectedFile(null);
+      setPreviewRows([]);
+      setPreviewCount(0);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!selectedFile) {
+      setPreviewError("Please choose a CSV file first.");
+      return;
+    }
+
+    setImporting(true);
+    setPreviewError("");
+    setMessage("");
+
+    try {
+      const result = await adminTransactionService.importTransactions(selectedFile, setImportProgress);
+      setImportSummary(result);
+      await refetch();
+      setMessage("Import completed successfully.");
+    } catch (error) {
+      setPreviewError(error?.response?.data?.detail || error?.response?.data?.error || "Failed to import transactions");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const clearFilters = () => {
+    setFilters(initialFilters);
+  };
 
   return (
     <main className="admin-page">
       <section className="admin-header">
-        <h1>💳 Transactions Management</h1>
-        <p>Create and search financial transactions across the enterprise</p>
+        <h1>Transactions Management</h1>
+        <p>Admin-only transaction creation, review, CSV import, and filtered export.</p>
       </section>
 
-      {/* CREATE TRANSACTION */}
       <section className="admin-card">
         <h2>Create New Transaction</h2>
         <div className="form-grid">
-          <select name="budgetHead" value={form.budgetHead} onChange={handleChange}>
-            <option value="">Select Budget Head</option>
-            <option value="Venue">Venue</option>
-            <option value="Food & Refreshments">Food & Refreshments</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Travel">Travel</option>
-            <option value="Equipment">Equipment</option>
-            <option value="Training">Training</option>
-            <option value="Maintenance">Maintenance</option>
-            <option value="Miscellaneous">Miscellaneous</option>
+          <select name="budgetHead" value={createForm.budgetHead} onChange={handleCreateChange}>
+            <option value="">{budgetHeads.length > 0 ? "Select Budget Head" : "No Budget Heads Available"}</option>
+            {budgetHeads.map((head) => (
+              <option key={head} value={head}>
+                {head}
+              </option>
+            ))}
           </select>
           <input
             name="amount"
             type="number"
-            value={form.amount}
-            onChange={handleChange}
+            min="0"
+            step="0.01"
+            value={createForm.amount}
+            onChange={handleCreateChange}
             placeholder="Amount (₹)"
           />
           <input
             name="description"
-            value={form.description}
-            onChange={handleChange}
+            value={createForm.description}
+            onChange={handleCreateChange}
             placeholder="Description"
           />
         </div>
         <div className="form-actions">
-          <button onClick={handleCreateTransaction} className="btn-primary">
-            + Create Transaction
+          <button onClick={handleCreateTransaction} className="btn-primary" disabled={saving}>
+            {saving ? "Saving..." : "+ Create Transaction"}
           </button>
         </div>
-        {message && <div className={`form-message ${message.includes("✅") ? "success" : "error"}`}>{message}</div>}
       </section>
 
-      {/* TRANSACTIONS TABLE */}
       <section className="admin-card">
-        <div className="tab-nav" style={{ marginBottom: "20px" }}>
-          <button
-            type="button"
-            className={`tab-chip ${sourceFilter === "ALL" ? "active" : ""}`}
-            onClick={() => setSourceFilter("ALL")}
-          >
-            All Transactions
-          </button>
-          <button
-            type="button"
-            className={`tab-chip ${sourceFilter === "MY" ? "active" : ""}`}
-            onClick={() => setSourceFilter("MY")}
-          >
-            My Transactions (Admin)
-          </button>
-          <button
-            type="button"
-            className={`tab-chip ${sourceFilter === "USER" ? "active" : ""}`}
-            onClick={() => setSourceFilter("USER")}
-          >
-            User Transactions
-          </button>
+        <div className="transactions-toolbar">
+          <div className="transactions-toolbar-filters">
+            <input
+              type="text"
+              name="search"
+              placeholder="Search Transactions..."
+              value={filters.search}
+              onChange={handleFilterChange}
+              className="search-input"
+            />
+            <select name="status" value={filters.status} onChange={handleFilterChange} className="filter-select">
+              <option value="ALL">All Status</option>
+              <option value="DRAFT">Draft</option>
+              <option value="PENDING">Pending</option>
+              <option value="VERIFIED">Verified</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="REVISION_REQUESTED">Revision Requested</option>
+            </select>
+            <input
+              type="text"
+              name="budgetHead"
+              placeholder="Budget Head"
+              value={filters.budgetHead}
+              onChange={handleFilterChange}
+              className="search-input"
+            />
+            <input
+              type="date"
+              name="dateFrom"
+              value={filters.dateFrom}
+              onChange={handleFilterChange}
+              className="filter-select"
+            />
+            <input
+              type="date"
+              name="dateTo"
+              value={filters.dateTo}
+              onChange={handleFilterChange}
+              className="filter-select"
+            />
+            <input
+              type="text"
+              name="createdBy"
+              placeholder="Created By"
+              value={filters.createdBy}
+              onChange={handleFilterChange}
+              className="search-input"
+            />
+          </div>
+          <div className="transactions-toolbar-actions">
+            <button type="button" className="btn-sm" onClick={openImportModal}>
+              <Upload size={14} style={{ marginRight: "6px", verticalAlign: "middle" }} />
+              Import CSV
+            </button>
+            <button type="button" className="btn-sm" onClick={handleExport}>
+              <Download size={14} style={{ marginRight: "6px", verticalAlign: "middle" }} />
+              Export CSV
+            </button>
+            <button type="button" className="btn-sm" onClick={clearFilters}>
+              <RefreshCw size={14} style={{ marginRight: "6px", verticalAlign: "middle" }} />
+              Reset
+            </button>
+          </div>
         </div>
 
-        <div className="table-header">
-          <input
-            type="text"
-            placeholder="Search transactions..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="search-input"
-          />
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select">
-            <option value="ALL">All Status</option>
-            <option value="DRAFT">Draft</option>
-            <option value="SUBMITTED">Submitted</option>
-            <option value="ADMIN_APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="REVISION_REQUESTED">Revision Requested</option>
-          </select>
-        </div>
+        {message && <div className={`form-message ${message.toLowerCase().includes("failed") ? "error" : "success"}`}>{message}</div>}
 
         <div className="table-wrapper">
           <table className="admin-table">
@@ -204,91 +421,69 @@ function AdminTransactions() {
                 <th>Budget Head</th>
                 <th>Amount</th>
                 <th>Description</th>
+                <th>Date</th>
+                <th>Status</th>
                 <th>Created By</th>
                 <th>Source</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredTransactions.length > 0 ? (
-                filteredTransactions.map((txn) => (
-                  <tr key={txn.id}>
-                    <td style={{ fontWeight: "600" }}>{txn.id}</td>
-                    <td>{txn.budgetHead}</td>
-                    <td>₹{txn.amount.toLocaleString("en-IN")}</td>
-                    <td>{txn.description}</td>
-                    <td>
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span style={{ fontWeight: "500" }}>{txn.createdBy}</span>
-                        <span style={{ fontSize: "11px", color: "#64748b" }}>{txn.creatorRole}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          backgroundColor: txn.transactionType === "ADMIN_CREATED" ? "#f3e8ff" : "#e0f2fe",
-                          color: txn.transactionType === "ADMIN_CREATED" ? "#6b21a8" : "#0369a1",
-                        }}
-                      >
-                        {txn.transactionType || (txn.creatorRole === "ADMIN" ? "ADMIN_CREATED" : "USER_REQUEST")}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${txn.status.toLowerCase().replace("_", "")}`}>
-                        {txn.status === "ADMIN_APPROVED" ? "Approved" :
-                         txn.status === "ADMIN_REJECTED" || txn.status === "REJECTED" ? "Rejected" :
-                         txn.status === "REVISION_REQUESTED" || txn.status === "ADMIN_REVISION_REQUESTED" ? "Revision Requested" :
-                         txn.status === "SUBMITTED" ? "Submitted" :
-                         txn.status === "DRAFT" ? "Draft" :
-                         txn.status === "PENDING" ? "Pending" :
-                         txn.status.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td>{txn.createdAt ? new Date(txn.createdAt).toLocaleDateString() : "-"}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
-                        <button
-                          className="btn-sm"
-                          onClick={() => handleActionClick("DETAILS_MODAL", txn.id)}
-                          title="View Details"
-                        >
-                          <Eye size={12} style={{ marginRight: "2px", verticalAlign: "middle" }} /> Details
-                        </button>
-                        {txn.creatorRole === "USER" && (txn.status === "SUBMITTED" || txn.status === "PENDING" || txn.status === "UNDER_REVIEW") && (
-                          <>
-                            <button
-                              className="btn-sm"
-                              style={{ borderColor: "#16a34a", color: "#16a34a" }}
-                              onClick={() => handleActionClick("APPROVE", txn.id)}
-                            >
+              {isLoading ? (
+                <tr>
+                  <td colSpan="9" className="empty-state">
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      <Loader2 size={16} className="spin" /> Loading transactions...
+                    </span>
+                  </td>
+                </tr>
+              ) : queryError ? (
+                <tr>
+                  <td colSpan="9" className="empty-state">
+                    {(queryError?.response?.data?.detail || queryError?.response?.data?.error || "Failed to load transactions")}
+                  </td>
+                </tr>
+              ) : transactions.length > 0 ? (
+                transactions.map((txn) => {
+                  const canReview = !["APPROVED", "REJECTED"].includes(String(txn.status || "").toUpperCase());
+                  const txnDate = txn.date ? new Date(txn.date) : null;
+
+                  return (
+                    <tr key={txn.id}>
+                      <td>{txn.id.slice(0, 8).toUpperCase()}</td>
+                      <td>{txn.budget_head}</td>
+                      <td>{formatCurrency(txn.amount)}</td>
+                      <td>{txn.description}</td>
+                      <td>{txnDate && !Number.isNaN(txnDate.getTime()) ? txnDate.toLocaleDateString() : "-"}</td>
+                      <td>
+                        <span className={`status-badge ${(txn.status || "").toLowerCase()}`}>{txn.status}</span>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <strong>{txn.created_by_name || "-"}</strong>
+                          <span style={{ fontSize: "11px", color: "#64748b" }}>{txn.created_by_email || txn.created_by_role || ""}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`role-badge ${txn.source === "IMPORT" ? "admin" : ""}`}>{txn.source}</span>
+                      </td>
+                      <td>
+                        {canReview ? (
+                          <div className="action-buttons">
+                            <button className="btn-sm" onClick={() => handleReview(txn.id, "APPROVE")}>
                               Approve
                             </button>
-                            <button
-                              className="btn-sm danger"
-                              onClick={() => handleActionClick("REJECT", txn.id)}
-                            >
+                            <button className="btn-sm danger" onClick={() => handleReview(txn.id, "REJECT")}>
                               Reject
                             </button>
-                            <button
-                              className="btn-sm"
-                              style={{ borderColor: "#d97706", color: "#d97706" }}
-                              onClick={() => handleActionClick("REVISION", txn.id)}
-                            >
-                              Revision
-                            </button>
-                          </>
+                          </div>
+                        ) : (
+                          <span style={{ color: "#94a3b8", fontSize: "13px" }}>-</span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan="9" className="empty-state">
@@ -299,188 +494,116 @@ function AdminTransactions() {
             </tbody>
           </table>
         </div>
+
+        <div className="pagination-bar">
+          <span>{filteredCount} transaction(s) loaded</span>
+          <span>Admin only access for transaction CSV operations</span>
+        </div>
       </section>
 
-      {/* DETAILS MODAL */}
-      {modalMode === "DETAILS_MODAL" && selectedTxn && (
-        <div style={modalOverlayStyle}>
-          <div style={{ ...modalContentStyle, maxWidth: "550px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
-              <h3 style={{ margin: 0 }}>Transaction Details - {selectedTxn.id}</h3>
-              <button style={{ border: "none", background: "none", cursor: "pointer", fontSize: "18px", color: "#94a3b8" }} onClick={() => setModalMode("")}>✕</button>
-            </div>
-            <div className="detail-grid">
-              <div className="detail-item">
-                <span>Amount</span>
-                <strong style={{ fontSize: "1.2rem", color: "#0f5aff" }}>
-                  ₹{selectedTxn.amount.toLocaleString("en-IN")}
-                </strong>
-              </div>
-              <div className="detail-item">
-                <span>Budget Head</span>
-                <strong>{selectedTxn.budgetHead}</strong>
-              </div>
-              <div className="detail-item">
-                <span>Created By</span>
-                <strong>{selectedTxn.createdBy} ({selectedTxn.creatorRole})</strong>
-              </div>
-              <div className="detail-item">
-                <span>Created Date</span>
-                <strong>{new Date(selectedTxn.createdAt).toLocaleString()}</strong>
-              </div>
-              <div className="detail-item detail-item-wide">
-                <span>Description</span>
-                <strong>{selectedTxn.description}</strong>
-              </div>
-              {selectedTxn.adminRemarks && (
-                <div className="detail-item detail-item-wide" style={{ borderLeft: "4px solid #0f5aff", background: "#eff6ff" }}>
-                  <span style={{ color: "#1d4ed8" }}>Admin Remarks</span>
-                  <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>{selectedTxn.adminRemarks}</p>
-                  {selectedTxn.approvedBy && <small style={{ color: "#64748b" }}>Processed by: {selectedTxn.approvedBy}</small>}
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginTop: "24px", display: "flex", gap: "12px" }}>
-              <button
-                className="btn-primary"
-                style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                onClick={() => setModalMode("BILL")}
-              >
-                <FileText size={16} /> View Bills
-              </button>
-              <button
-                className="btn-secondary"
-                style={{ display: "flex", alignItems: "center", gap: "6px" }}
-                onClick={() => setModalMode("AUDIT")}
-              >
-                <History size={16} /> Audit Trail ({selectedTxn.auditTrail?.length || 0})
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ACTION REMARKS MODAL */}
-      {(modalMode === "APPROVE" || modalMode === "REJECT" || modalMode === "REVISION") && (
+      {importOpen && (
         <div style={modalOverlayStyle}>
           <div style={modalContentStyle}>
-            <h3>Confirm {modalMode === "APPROVE" ? "Approval" : modalMode === "REJECT" ? "Rejection" : "Revision Request"}</h3>
-            <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "16px" }}>
-              Please enter detailed remarks below. Remarks are **required** to process this action.
-            </p>
-            <textarea
-              style={textareaStyle}
-              placeholder="Enter remarks..."
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              rows={4}
-            />
-            {actionMessage && <p style={{ color: "#ef4444", fontSize: "12px", margin: "8px 0" }}>{actionMessage}</p>}
-            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "16px" }}>
-              <button className="btn-secondary" onClick={() => setModalMode("")}>Cancel</button>
-              <button
-                className="btn-primary"
-                style={{
-                  backgroundColor: modalMode === "APPROVE" ? "#16a34a" : modalMode === "REJECT" ? "#ef4444" : "#d97706"
-                }}
-                onClick={submitAction}
-              >
-                Submit {modalMode === "APPROVE" ? "Approve" : modalMode === "REJECT" ? "Reject" : "Request Revision"}
+            <div style={modalHeaderStyle}>
+              <h3 style={{ margin: 0 }}>Import Transactions</h3>
+              <button type="button" className="icon-close-button" onClick={closeImportModal} disabled={importing}>
+                <X size={18} />
               </button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* AUDIT TRAIL MODAL */}
-      {modalMode === "AUDIT" && selectedTxn && (
-        <div style={modalOverlayStyle}>
-          <div style={{ ...modalContentStyle, maxWidth: "600px" }}>
-            <h3>Audit Trail - {selectedTxn.id}</h3>
-            <div style={{ maxHeight: "350px", overflowY: "auto", margin: "16px 0", paddingRight: "8px" }}>
-              {selectedTxn.auditTrail && selectedTxn.auditTrail.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {selectedTxn.auditTrail.map((entry, idx) => (
-                    <div key={idx} style={auditItemStyle}>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                        <strong style={{ fontSize: "13px" }}>{entry.action}</strong>
-                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>{new Date(entry.timestamp).toLocaleString()}</span>
-                      </div>
-                      <div style={{ fontSize: "12px", color: "#475569" }}>
-                        By: <strong>{entry.user}</strong> ({entry.role})
-                      </div>
-                      {entry.remarks && (
-                        <div style={auditRemarksBoxStyle}>
-                          <CornerDownRight size={12} style={{ marginRight: "4px", color: "#64748b" }} />
-                          <span>Remarks: {entry.remarks}</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ textAlign: "center", color: "#94a3b8" }}>No audit log found</p>
-              )}
+            <div className="config-grid">
+              <label className="config-field">
+                <span>Choose File</span>
+                <input type="file" accept=".csv,text/csv" onChange={handleFileSelect} disabled={importing} />
+              </label>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button className="btn-secondary" onClick={() => setModalMode("DETAILS_MODAL")}>Back</button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* ATTACHED BILLS MODAL */}
-      {modalMode === "BILL" && selectedTxn && (
-        <div style={modalOverlayStyle}>
-          <div style={{ ...modalContentStyle, maxWidth: "600px" }}>
-            <h3>Attached Bills - {selectedTxn.id}</h3>
-            <div style={{ margin: "16px 0" }}>
-              <p style={{ fontSize: "13px", color: "#64748b" }}>Select a document below to view invoice details:</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
-                {(selectedTxn.uploadedBills || ["invoice_receipt.pdf"]).map((bill, idx) => (
-                  <div key={idx} style={billRowStyle}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <FileText size={18} style={{ color: "#0f5aff" }} />
-                      <span style={{ fontSize: "13px", fontWeight: "600" }}>{bill}</span>
-                    </div>
-                    <button
-                      className="btn-sm"
-                      onClick={() => setViewBillName(bill)}
-                    >
-                      Inspect File
-                    </button>
-                  </div>
-                ))}
+            {selectedFile && (
+              <div className="config-field">
+                <span>Selected File</span>
+                <strong>{selectedFile.name}</strong>
               </div>
+            )}
 
-              {viewBillName && (
-                <div style={billInspectBoxStyle}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", borderBottom: "1px solid #e2e8f0", paddingBottom: "6px" }}>
-                    <strong style={{ fontSize: "12px", color: "#334155" }}>File Preview: {viewBillName}</strong>
-                    <button style={{ border: "none", background: "none", color: "#94a3b8", cursor: "pointer" }} onClick={() => setViewBillName("")}><X size={14} /></button>
-                  </div>
-                  <div style={{ padding: "12px", background: "white", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "6px" }}>
-                      <span><strong>Invoice No:</strong> INV-{selectedTxn.id.replace("TXN-", "")}-093</span>
-                      <span><strong>Date:</strong> {selectedTxn.createdAt ? selectedTxn.createdAt.split("T")[0] : "N/A"}</span>
-                    </div>
-                    <div style={{ fontSize: "12px", marginBottom: "6px" }}>
-                      <strong>Vendor:</strong> Enterprise Logistics & Services Ltd.
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "700", borderTop: "1px solid #f1f5f9", paddingTop: "6px", marginTop: "6px", color: "#0f5aff" }}>
-                      <span>Grand Total:</span>
-                      <span>₹{selectedTxn.amount.toLocaleString("en-IN")}</span>
-                    </div>
-                    <div style={{ fontSize: "11px", color: "#22c55e", marginTop: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Check size={12} /> Digital Signature Verified (SHA256 checksum OK)
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div className="config-field">
+              <span>Records Detected</span>
+              <strong>{previewCount}</strong>
             </div>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button className="btn-secondary" onClick={() => { setModalMode("DETAILS_MODAL"); setViewBillName(""); }}>Back</button>
+
+            {previewError && <div className="form-message error">{previewError}</div>}
+
+            {previewRows.length > 0 && (
+              <div>
+                <h4 style={{ marginBottom: "10px" }}>Preview</h4>
+                <div className="table-wrapper">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Budget Head</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewRows.map((row, index) => (
+                        <tr key={`${row.budget_head || "row"}-${index}`}>
+                          <td>{row.budget_head || "-"}</td>
+                          <td>{row.amount || "-"}</td>
+                          <td>{row.description || "-"}</td>
+                          <td>{row.date || "-"}</td>
+                          <td>{row.status || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {importSummary && (
+              <div className="config-field">
+                <span>Import Summary</span>
+                <div style={{ display: "grid", gap: "6px" }}>
+                  <strong>Imported: {importSummary.imported}</strong>
+                  <strong>Skipped: {importSummary.skipped}</strong>
+                  <strong>Batch ID: {importSummary.batch_id}</strong>
+                </div>
+                {Array.isArray(importSummary.errors) && importSummary.errors.length > 0 && (
+                  <div style={{ marginTop: "12px" }}>
+                    <strong>Skipped Rows</strong>
+                    <div style={{ display: "grid", gap: "6px", marginTop: "8px" }}>
+                      {importSummary.errors.map((item) => (
+                        <div key={`${item.row}-${item.reason}`} className="form-message error">
+                          Row {item.row}: {item.reason}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {importing && (
+              <div className="config-field">
+                <span>Upload Progress</span>
+                <div className="progress-inline">
+                  <div className="progress-track">
+                    <div className="progress-fill healthy" style={{ width: `${importProgress}%` }} />
+                  </div>
+                  <strong>{importProgress}%</strong>
+                </div>
+              </div>
+            )}
+
+            <div className="form-actions" style={{ justifyContent: "flex-end", marginTop: "16px" }}>
+              <button type="button" className="btn-secondary" onClick={closeImportModal} disabled={importing}>
+                Cancel
+              </button>
+              <button type="button" className="btn-primary" onClick={handleImport} disabled={!selectedFile || importing}>
+                {importing ? "Importing..." : "Import"}
+              </button>
             </div>
           </div>
         </div>
@@ -489,75 +612,36 @@ function AdminTransactions() {
   );
 }
 
-// Inline Styles for Modal
 const modalOverlayStyle = {
   position: "fixed",
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
+  inset: 0,
   backgroundColor: "rgba(15, 23, 42, 0.65)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   zIndex: 1000,
-  backdropFilter: "blur(4px)"
+  backdropFilter: "blur(4px)",
+  padding: "16px",
 };
 
 const modalContentStyle = {
   backgroundColor: "white",
   padding: "24px",
   borderRadius: "12px",
-  width: "90%",
-  maxWidth: "450px",
+  width: "min(960px, 100%)",
+  maxHeight: "90vh",
+  overflowY: "auto",
   boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)",
-  border: "1px solid #e2e8f0"
+  border: "1px solid #e2e8f0",
 };
 
-const textareaStyle = {
-  width: "100%",
-  padding: "12px",
-  borderRadius: "8px",
-  border: "1px solid #cbd5e1",
-  fontFamily: "inherit",
-  fontSize: "14px",
-  resize: "vertical"
-};
-
-const auditItemStyle = {
-  padding: "12px",
-  borderRadius: "8px",
-  background: "#f8fafc",
-  border: "1px solid #e2e8f0"
-};
-
-const auditRemarksBoxStyle = {
-  display: "flex",
-  alignItems: "center",
-  marginTop: "6px",
-  padding: "6px 8px",
-  background: "#f1f5f9",
-  borderRadius: "6px",
-  fontSize: "11px",
-  color: "#475569"
-};
-
-const billRowStyle = {
+const modalHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  padding: "10px 12px",
-  background: "#f8fafc",
-  borderRadius: "8px",
-  border: "1px solid #e2e8f0"
-};
-
-const billInspectBoxStyle = {
-  marginTop: "16px",
-  padding: "12px",
-  background: "#f1f5f9",
-  borderRadius: "8px",
-  border: "1px solid #cbd5e1"
+  marginBottom: "18px",
+  paddingBottom: "10px",
+  borderBottom: "1px solid #e2e8f0",
 };
 
 export default AdminTransactions;

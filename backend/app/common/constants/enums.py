@@ -36,7 +36,8 @@ class ReportStatusEnum(str, Enum):
     REVISION_REQUESTED = "REVISION_REQUESTED"
 
 class EventStatusEnum(str, Enum):
-    ACTIVE = "ACTIVE"
+    UPCOMING = "UPCOMING"
+    ONGOING = "ONGOING"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
 

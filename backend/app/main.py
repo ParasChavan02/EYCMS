@@ -8,13 +8,14 @@ from app.core.database import init_db, SessionLocal
 from app.core.seed import seed_db
 
 from app.auth.routers import auth_router, admin_tokens_router
-from app.admin.routers import admin_router
+from app.admin.routers import admin_router, uc_router
 from app.accounts.routers import accounts_router
 from app.user.routers import user_router, notifications_router
 from app.support.routers import support_router
 from app.teams.routers import router as teams_router
 from app.invitations.routers import router as invitations_router
 from app.reports.router import router as reports_router
+from app.events.router import router as events_router
 
 from app.shared.middleware import RequestLoggerMiddleware
 from app.shared.exceptions import register_exception_handlers
@@ -91,6 +92,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(admin_tokens_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
+app.include_router(uc_router, prefix=settings.API_V1_STR)
 app.include_router(accounts_router, prefix=settings.API_V1_STR)
 app.include_router(user_router, prefix=settings.API_V1_STR)
 app.include_router(notifications_router, prefix=settings.API_V1_STR)
@@ -98,5 +100,6 @@ app.include_router(support_router, prefix=settings.API_V1_STR)
 app.include_router(teams_router, prefix=settings.API_V1_STR)
 app.include_router(invitations_router, prefix=settings.API_V1_STR)
 app.include_router(reports_router, prefix=settings.API_V1_STR)
+app.include_router(events_router, prefix=settings.API_V1_STR)
 
 # No root-level endpoints are exposed to enforce API versioning.

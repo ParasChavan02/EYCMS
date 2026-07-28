@@ -9,7 +9,6 @@ from app.core.database import Base
 if TYPE_CHECKING:
     from app.common.models.user import User
     from app.common.models.budget import Budget
-    from app.common.models.event import Event
     from app.common.models.report import QuarterlyReport
     from app.common.models.utilization_certificate import UCRequest
     from app.common.models.team import Team
@@ -36,7 +35,6 @@ class Project(Base):
     # Relationships
     users: Mapped[List["User"]] = relationship(back_populates="project")
     budgets: Mapped[List["Budget"]] = relationship(back_populates="project", cascade="all, delete-orphan")
-    events: Mapped[List["Event"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     reports: Mapped[List["QuarterlyReport"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     uc_requests: Mapped[List["UCRequest"]] = relationship(back_populates="project", cascade="all, delete-orphan")
     teams: Mapped[List["Team"]] = relationship(back_populates="project", cascade="all, delete-orphan")
