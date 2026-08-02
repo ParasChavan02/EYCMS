@@ -1,31 +1,38 @@
-# Python
+# Python Virtual Environments
 .venv/
+**/.venv/
 venv/
-__pycache__/
+**/venv/
+
+# Python Cache
+**/__pycache__/
 *.py[cod]
 *.pyo
 
-# Environment
+# Node Modules
+node_modules/
+**/node_modules/
+
+# Environment Variables (CRITICAL: Protects your secrets)
 .env
 *.env
+**/.*env*
 !.env.example
 
-# Node
-node_modules/
-
-# Database
+# Databases
 *.db
+/**/*.db
 *.sqlite3
+/**/*.sqlite3
 
-# Zip files
+# Archives
 *.zip
+/**/*.zip
 
 # Uploads
 uploads/
+**/uploads/
 
-# Logs
-*.log
-
-# OS
+# OS Files
 .DS_Store
 Thumbs.db

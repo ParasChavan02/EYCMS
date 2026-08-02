@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRightLeft, CreditCard, DollarSign, Download, FileSpreadsheet, FileText, CheckCircle2, Clock, XCircle, Activity, Info, IndianRupee, Send, FileCheck2, UploadCloud } from "lucide-react";
 import Chart from "chart.js/auto";
 import { useNotification } from "../../common/hooks/useNotification";
+import { transactionService } from "../../../services/transactionService";
 import "./user-erp.css";
 // Reusable Chart Component matching existing ERP architecture
 function CategoryChart({ type, data, options }) {
@@ -46,50 +47,98 @@ function Transactions() {
     setUcStatus("TEMPLATE_UPLOADED");
     addNotification("Admin uploaded the UC template successfully.", "success", 3000, false);
   };
-  // Mock data aligned to Rs 3,00,000 total budget
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const res = await transactionService.getBackendTransactions();
+      const mapped = (res || []).map(t => {
+        const tone = t.status === "APPROVED" ? "approved" : t.status === "REJECTED" ? "rejected" : "pending";
+        let categoryName = "Miscellaneous";
+        const catLower = (t.category || t.budget_head || "").toLowerCase();
+        if (catLower.includes("venue")) categoryName = "Venue";
+        else if (catLower.includes("food") || catLower.includes("refreshment")) categoryName = "Food & Refreshments";
+        else if (catLower.includes("marketing")) categoryName = "Marketing";
+        else if (catLower.includes("travel")) categoryName = "Travel";
+        
+        return {
+          id: t.id.substring(0, 8).toUpperCase(),
+          date: new Date(t.created_at || new Date()).toLocaleDateString("en-IN"),
+          category: categoryName,
+          description: t.description,
+          amount: t.amount,
+          status: t.status === "APPROVED" ? "Approved" : t.status === "REJECTED" ? "Rejected" : "Pending",
+          tone: tone,
+          rawStatus: t.status
+        };
+      });
+      setTransactions(mapped);
+    } catch (err) {
+      console.error("Failed to fetch transactions:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const sanctionedTotal = 300000;
+  const spentTotal = transactions.filter(t => t.rawStatus === "APPROVED").reduce((sum, t) => sum + t.amount, 0);
+  const remainingTotal = sanctionedTotal - spentTotal;
+  const pendingTotal = transactions.filter(t => t.rawStatus === "PENDING").reduce((sum, t) => sum + t.amount, 0);
+
   const summaryCards = [
-    { icon: DollarSign, label: "Total Budget Allocated", value: 300000, note: "Overall event budget limit", color: "#1d5cff" },
-    { icon: CreditCard, label: "Total Amount Spent", value: 215000, note: "Sum of approved expenses", color: "#16a34a" },
-    { icon: CheckCircle2, label: "Remaining Budget", value: 85000, note: "Available to spend", color: "#7c3aed" },
-    { icon: Clock, label: "Pending Reimbursements", value: 15000, note: "Awaiting approval", color: "#b45309" },
+    { icon: DollarSign, label: "Total Budget Allocated", value: sanctionedTotal, note: "Overall event budget limit", color: "#1d5cff" },
+    { icon: CreditCard, label: "Total Amount Spent", value: spentTotal, note: "Sum of approved expenses", color: "#16a34a" },
+    { icon: CheckCircle2, label: "Remaining Budget", value: remainingTotal, note: "Available to spend", color: "#7c3aed" },
+    { icon: Clock, label: "Pending Reimbursements", value: pendingTotal, note: "Awaiting approval", color: "#b45309" },
   ];
-  const categories = [
-    { name: "Venue", allocated: 100000, spent: 90000 },
-    { name: "Food & Refreshments", allocated: 80000, spent: 55000 },
-    { name: "Marketing", allocated: 50000, spent: 35000 },
-    { name: "Travel", allocated: 40000, spent: 20000 },
-    { name: "Miscellaneous", allocated: 30000, spent: 15000 },
-  ];
-  const events = [
-    { name: "Leadership Workshop", allocated: 120000, spent: 95000, remaining: 25000 },
-    { name: "Startup Workshop", allocated: 80000, spent: 60000, remaining: 20000 },
-    { name: "Team Collaboration Day", allocated: 60000, spent: 40000, remaining: 20000 },
-    { name: "Finance Review Event", allocated: 40000, spent: 20000, remaining: 20000 },
-  ];
-  const transactions = [
-    { id: "TXN-001", date: "2026-06-12", category: "Marketing", description: "Digital ads campaign", amount: 15000, status: "Approved", tone: "approved" },
-    { id: "TXN-002", date: "2026-06-11", category: "Food & Refreshments", description: "Lunch catering for workshop", amount: 25000, status: "Approved", tone: "approved" },
-    { id: "TXN-003", date: "2026-06-10", category: "Venue", description: "Auditorium booking deposit", amount: 50000, status: "Approved", tone: "approved" },
-    { id: "TXN-004", date: "2026-06-08", category: "Travel", description: "Flight tickets for guest speaker", amount: 20000, status: "Approved", tone: "approved" },
-    { id: "TXN-005", date: "2026-06-07", category: "Food & Refreshments", description: "Coffee and snacks for panel", amount: 8000, status: "Approved", tone: "approved" },
-    { id: "TXN-006", date: "2026-06-06", category: "Miscellaneous", description: "Stationery and printing", amount: 5000, status: "Approved", tone: "approved" },
-    { id: "TXN-007", date: "2026-06-05", category: "Venue", description: "Audio-visual equipment rental", amount: 40000, status: "Approved", tone: "approved" },
-    { id: "TXN-008", date: "2026-06-04", category: "Marketing", description: "Brochure printing", amount: 10000, status: "Approved", tone: "approved" },
-    { id: "TXN-009", date: "2026-06-03", category: "Travel", description: "Local taxi reimbursements", amount: 5000, status: "Pending", tone: "pending" },
-    { id: "TXN-010", date: "2026-06-02", category: "Food & Refreshments", description: "Dinner for organizing committee", amount: 10000, status: "Pending", tone: "pending" },
-    { id: "TXN-011", date: "2026-06-01", category: "Marketing", description: "Social media promotions", amount: 10000, status: "Approved", tone: "approved" },
-    { id: "TXN-012", date: "2026-05-30", category: "Venue", description: "Stage setup charges", amount: 20000, status: "Approved", tone: "approved" },
-    { id: "TXN-013", date: "2026-05-29", category: "Miscellaneous", description: "Clean up crew fees", amount: 10000, status: "Approved", tone: "approved" },
-    { id: "TXN-014", date: "2026-05-28", category: "Miscellaneous", description: "Emergency medical kit", amount: 10000, status: "Rejected", tone: "rejected" },
-    { id: "TXN-015", date: "2026-05-27", category: "Travel", description: "Hotel stay for speakers", amount: 2000, status: "Approved", tone: "approved" },
-  ];
-  const financialActivity = [
-    { time: "Today, 02:40 PM", text: "Rahul S. submitted food bills for 'Leadership Workshop'", type: "submission", status: "pending", tone: "pending" },
-    { time: "Yesterday, 11:15 AM", text: "Venue payment of Rs 50,000 approved by Finance Team for 'Leadership Workshop'", type: "approval", status: "Approved", tone: "approved" },
-    { time: "Jun 10, 04:30 PM", text: "Travel reimbursement of Rs 20,000 approved for guest speakers", type: "approval", status: "Approved", tone: "approved" },
-    { time: "Jun 08, 09:20 AM", text: "Marketing team requested extra Rs 10,000 for brochure printing", type: "approval", status: "Approved", tone: "approved" },
-    { time: "Jun 06, 01:10 PM", text: "Reimbursement request of Rs 10,000 for Emergency medical kit rejected", type: "rejection", status: "Rejected", tone: "rejected" },
-  ];
+
+  const categories = useMemo(() => {
+    const allocations = {
+      "Venue": 100000,
+      "Food & Refreshments": 50000,
+      "Marketing": 40000,
+      "Travel": 50000,
+      "Miscellaneous": 60000
+    };
+    const spents = {
+      "Venue": 0,
+      "Food & Refreshments": 0,
+      "Marketing": 0,
+      "Travel": 0,
+      "Miscellaneous": 0
+    };
+    transactions.forEach(t => {
+      if (t.rawStatus === "APPROVED") {
+        if (spents[t.category] !== undefined) {
+          spents[t.category] += t.amount;
+        } else {
+          spents["Miscellaneous"] += t.amount;
+        }
+      }
+    });
+
+    return [
+      { name: "Venue", allocated: allocations["Venue"], spent: spents["Venue"] },
+      { name: "Food & Refreshments", allocated: allocations["Food & Refreshments"], spent: spents["Food & Refreshments"] },
+      { name: "Marketing", allocated: allocations["Marketing"], spent: spents["Marketing"] },
+      { name: "Travel", allocated: allocations["Travel"], spent: spents["Travel"] },
+      { name: "Miscellaneous", allocated: allocations["Miscellaneous"], spent: spents["Miscellaneous"] }
+    ];
+  }, [transactions]);
+
+  const events = [];
+  const financialActivity = transactions.slice(0, 5).map(t => ({
+    text: `${t.description} (${t.category})`,
+    time: t.date,
+    status: t.status,
+    tone: t.tone
+  }));
   // Filtering Logic
   const filteredTransactions = useMemo(() => {
     return transactions.filter((txn) => {
@@ -337,22 +386,28 @@ function Transactions() {
               <p style={{ margin: "4px 0 0", color: "#536987", fontSize: "0.85rem" }}>Timeline of latest approvals, rejections, and bill submittals.</p>
             </div>
             <div className="user-list">
-              {financialActivity.map((activity, index) => (
-                <div className="user-list-row" key={index} style={{ borderLeft: `3px solid ${activity.tone === "approved" ? "#10b981" : activity.tone === "pending" ? "#f59e0b" : "#ef4444"}` }}>
-                  <div className="user-list-main" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignContent: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "50%", background: activity.tone === "approved" ? "#e8fff5" : activity.tone === "pending" ? "#fff0d8" : "#ffdede", color: activity.tone === "approved" ? "#10b981" : activity.tone === "pending" ? "#f59e0b" : "#ef4444", flexShrink: 0, padding: "8px" }}>
-                      {activity.tone === "approved" ? <CheckCircle2 size={16} /> : activity.tone === "pending" ? <Clock size={16} /> : <XCircle size={16} />}
-                    </div>
-                    <div>
-                      <h3 style={{ fontSize: "0.95rem", fontWeight: "600", margin: 0, color: "#304761" }}>{activity.text}</h3>
-                      <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>{activity.time}</span>
-                    </div>
-                  </div>
-                  <span className={`user-status ${activity.tone}`} style={{ fontSize: "0.75rem", padding: "4px 10px" }}>
-                    {activity.status}
-                  </span>
+              {financialActivity.length === 0 ? (
+                <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.9rem" }}>
+                  No recent financial activity recorded.
                 </div>
-              ))}
+              ) : (
+                financialActivity.map((activity, index) => (
+                  <div className="user-list-row" key={index} style={{ borderLeft: `3px solid ${activity.tone === "approved" ? "#10b981" : activity.tone === "pending" ? "#f59e0b" : "#ef4444"}` }}>
+                    <div className="user-list-main" style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignContent: "center", justifyContent: "center", width: "32px", height: "32px", borderRadius: "50%", background: activity.tone === "approved" ? "#e8fff5" : activity.tone === "pending" ? "#fff0d8" : "#ffdede", color: activity.tone === "approved" ? "#10b981" : activity.tone === "pending" ? "#f59e0b" : "#ef4444", flexShrink: 0, padding: "8px" }}>
+                        {activity.tone === "approved" ? <CheckCircle2 size={16} /> : activity.tone === "pending" ? <Clock size={16} /> : <XCircle size={16} />}
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: "0.95rem", fontWeight: "600", margin: 0, color: "#304761" }}>{activity.text}</h3>
+                        <span style={{ fontSize: "0.78rem", color: "#9ca3af" }}>{activity.time}</span>
+                      </div>
+                    </div>
+                    <span className={`user-status ${activity.tone}`} style={{ fontSize: "0.75rem", padding: "4px 10px" }}>
+                      {activity.status}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </article>
         </section>

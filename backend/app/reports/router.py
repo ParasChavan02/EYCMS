@@ -13,7 +13,12 @@ router = APIRouter(prefix="/reports", tags=["Reports & Document Management"], de
 async def upload_file(
     category: str = Form("document"),
     event_name: Optional[str] = Form(None),
-    file: UploadFile = File(...),
+    file: Optional[UploadFile] = File(None),
+    bill_amount: Optional[float] = Form(None),
+    transaction_mode: Optional[str] = Form(None),
+    transactions: Optional[str] = Form(None),
+    status: Optional[str] = Form(None),
+    bill_id: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -23,7 +28,12 @@ async def upload_file(
             user=current_user,
             category=category,
             upload_file=file,
-            event_name=event_name
+            event_name=event_name,
+            bill_amount=bill_amount,
+            transaction_mode=transaction_mode,
+            transactions_json=transactions,
+            status_val=status,
+            bill_id=bill_id
         )
         return make_success_response(file_resp)
     except HTTPException:

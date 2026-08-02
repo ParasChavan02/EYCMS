@@ -14,6 +14,7 @@ import {
   IndianRupee
 } from "lucide-react";
 import { useNotification } from "../../common/hooks/useNotification";
+import { transactionService } from "../../../services/transactionService";
 import "./user-erp.css";
 import Chart from "chart.js/auto";
 
@@ -38,77 +39,74 @@ export default function BankReconciliation() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
 
-  // Mock data representing the 8 transactions in the screenshots
-  const transactions = useMemo(() => [
-    {
-      id: "TXN-REC-001",
-      date: "2026-06-18",
-      category: "Travel",
-      description: "Train ticket to meet research mentor in Delhi",
-      amount: 25000,
-      status: "Approved by Admin"
-    },
-    {
-      id: "TXN-REC-002",
-      date: "2026-06-17",
-      category: "Food",
-      description: "Working lunch with industry experts for research guidance",
-      amount: 15000,
-      status: "Bill Uploaded, Awaiting Admin Approval"
-    },
-    {
-      id: "TXN-REC-003",
-      date: "2026-06-15",
-      category: "Marketing",
-      description: "Printing survey questionnaires and feedback forms",
-      amount: 40000,
-      status: "Approved by Admin"
-    },
-    {
-      id: "TXN-REC-004",
-      date: "2026-06-14",
-      category: "Travel",
-      description: "Local cab fare for field research and data collection visits",
-      amount: 20000,
-      status: "Approved by Admin"
-    },
-    {
-      id: "TXN-REC-005",
-      date: "2026-06-12",
-      category: "Equipment & Misc",
-      description: "Purchase of laboratory test tubes and research chemical consumables",
-      amount: 120000,
-      status: "Approved by Admin"
-    },
-    {
-      id: "TXN-REC-006",
-      date: "2026-06-10",
-      category: "Venue",
-      description: "Meeting room rental for co-researchers discussion group",
-      amount: 50000,
-      status: "Approved by Admin"
-    },
-    {
-      id: "TXN-REC-007",
-      date: "2026-06-08",
-      category: "Equipment & Misc",
-      description: "Reference books bill purchase for project literature review",
-      amount: 20000,
-      status: "Bill Uploaded, Awaiting Admin Approval"
-    },
-    {
-      id: "TXN-REC-008",
-      date: "2026-06-05",
-      category: "Marketing",
-      description: "Poster design and printing for academic research presentation",
-      amount: 10000,
-      status: "Rejected by Admin"
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const res = await transactionService.getBackendTransactions();
+      const mapped = (res || []).map(t => {
+        let categoryName = "Equipment & Misc";
+        const catLower = (t.category || t.budget_head || "").toLowerCase();
+        if (catLower.includes("venue")) categoryName = "Venue";
+        else if (catLower.includes("food") || catLower.includes("refreshment")) categoryName = "Food";
+        else if (catLower.includes("marketing")) categoryName = "Marketing";
+        else if (catLower.includes("travel")) categoryName = "Travel";
+        
+        return {
+          id: t.id.substring(0, 8).toUpperCase(),
+          date: new Date(t.created_at || new Date()).toLocaleDateString("en-IN"),
+          category: categoryName,
+          description: t.description,
+          amount: t.amount,
+          status: (t.reconciliation_status || "PENDING") === "APPROVED" ? "Verified" : (t.reconciliation_status || "PENDING") === "REJECTED" ? "Rejected" : "Awaiting Clearance",
+          rawStatus: t.reconciliation_status || "PENDING"
+        };
+      });
+      setTransactions(mapped);
+    } catch (err) {
+      console.error("Failed to fetch transactions:", err);
+    } finally {
+      setLoading(false);
     }
-  ], []);
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const allocations = [100000, 50000, 40000, 50000, 60000];
+  const spentAmounts = useMemo(() => {
+    const spents = {
+      "Venue": 0,
+      "Food": 0,
+      "Marketing": 0,
+      "Travel": 0,
+      "Equipment & Misc": 0
+    };
+    transactions.forEach(t => {
+      if (t.rawStatus === "APPROVED") {
+        if (spents[t.category] !== undefined) {
+          spents[t.category] += t.amount;
+        } else {
+          spents["Equipment & Misc"] += t.amount;
+        }
+      }
+    });
+    return [
+      spents["Venue"],
+      spents["Food"],
+      spents["Marketing"],
+      spents["Travel"],
+      spents["Equipment & Misc"]
+    ];
+  }, [transactions]);
 
   // Filtered transactions for verification panel
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
+      if (t.rawStatus !== "APPROVED") return false;
       const matchesSearch =
         t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         t.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -144,14 +142,14 @@ export default function BankReconciliation() {
     datasets: [
       {
         label: "Budget Allocated (Rs)",
-        data: [140000, 70000, 50000, 40000, 30000],
+        data: allocations,
         backgroundColor: "#1d5cff",
         borderRadius: 4,
         barPercentage: 0.6
       },
       {
         label: "Actual Spendings (Rs)",
-        data: [50000, 0, 40000, 45000, 120000],
+        data: spentAmounts,
         backgroundColor: "#10b981",
         borderRadius: 4,
         barPercentage: 0.6
@@ -189,7 +187,7 @@ export default function BankReconciliation() {
     labels: ["Venue", "Food", "Marketing", "Travel", "Equipment & Misc"],
     datasets: [
       {
-        data: [50000, 0, 40000, 45000, 120000],
+        data: spentAmounts,
         backgroundColor: ["#1d5cff", "#10b981", "#8b5cf6", "#f97316", "#06b6d4"]
       }
     ]
@@ -212,21 +210,34 @@ export default function BankReconciliation() {
     cutout: "60%"
   };
 
-  const lineData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        label: "Spend Trend",
-        data: [15000, 45000, 35000, 60000, 40000, 255000],
-        borderColor: "#8b5cf6",
-        backgroundColor: "rgba(139, 92, 246, 0.1)",
-        fill: true,
-        tension: 0.35,
-        pointRadius: 4,
-        pointBackgroundColor: "#8b5cf6"
+  const lineData = useMemo(() => {
+    const monthSpents = new Array(6).fill(0);
+    transactions.forEach(t => {
+      if (t.rawStatus === "ADMIN_APPROVED") {
+        // Fallback to current month if date isn't fully parseable
+        const d = new Date(t.date || new Date());
+        const m = d.getMonth();
+        if (m >= 0 && m < 6) {
+          monthSpents[m] += t.amount;
+        }
       }
-    ]
-  };
+    });
+    return {
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+      datasets: [
+        {
+          label: "Spend Trend",
+          data: monthSpents,
+          borderColor: "#8b5cf6",
+          backgroundColor: "rgba(139, 92, 246, 0.1)",
+          fill: true,
+          tension: 0.35,
+          pointRadius: 4,
+          pointBackgroundColor: "#8b5cf6"
+        }
+      ]
+    };
+  }, [transactions]);
 
   const lineOptions = {
     responsive: true,
@@ -245,6 +256,11 @@ export default function BankReconciliation() {
       }
     }
   };
+
+  const approvedCount = useMemo(() => transactions.filter(t => t.rawStatus === "APPROVED").length, [transactions]);
+  const awaitingCount = useMemo(() => transactions.filter(t => t.rawStatus === "PENDING").length, [transactions]);
+  const rejectedCount = useMemo(() => transactions.filter(t => t.rawStatus === "REJECTED").length, [transactions]);
+  const totalTransactionsCount = useMemo(() => transactions.length, [transactions]);
 
   return (
     <main className="user-erp-page">
@@ -289,7 +305,7 @@ export default function BankReconciliation() {
             </div>
             <div>
               <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Total Budget</p>
-              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 3,30,000</strong>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs {(300000).toLocaleString()}</strong>
               <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Overall limit assigned</span>
             </div>
           </article>
@@ -300,7 +316,7 @@ export default function BankReconciliation() {
             </div>
             <div>
               <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Amount Received</p>
-              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 3,00,000</strong>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs {(300000).toLocaleString()}</strong>
               <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Disbursed by Admin</span>
             </div>
           </article>
@@ -311,7 +327,7 @@ export default function BankReconciliation() {
             </div>
             <div>
               <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Amount Utilized</p>
-              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 2,55,000</strong>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs {spentAmounts.reduce((a,b)=>a+b, 0).toLocaleString()}</strong>
               <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Total verified expenses</span>
             </div>
           </article>
@@ -322,7 +338,7 @@ export default function BankReconciliation() {
             </div>
             <div>
               <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Remaining Balance</p>
-              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 45,000</strong>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs {(300000 - spentAmounts.reduce((a,b)=>a+b, 0)).toLocaleString()}</strong>
               <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Funds unspent</span>
             </div>
           </article>
@@ -333,7 +349,7 @@ export default function BankReconciliation() {
             </div>
             <div>
               <p style={{ margin: "0 0 4px", fontSize: "0.85rem", color: "#64748b" }}>Pending Verification</p>
-              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs 35,000</strong>
+              <strong style={{ fontSize: "1.3rem", margin: 0, color: "#1e293b" }}>Rs {transactions.filter(t => t.rawStatus === "PENDING").reduce((a,b)=>a+b.amount, 0).toLocaleString()}</strong>
               <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Awaiting review</span>
             </div>
           </article>
@@ -348,7 +364,7 @@ export default function BankReconciliation() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
                 <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Project ID</span>
-                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>PRJ-2026-089</strong>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>PROJ-2026-001</strong>
               </div>
               <div>
                 <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Bank Name</span>
@@ -356,15 +372,15 @@ export default function BankReconciliation() {
               </div>
               <div style={{ gridColumn: "span 2" }}>
                 <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Project Name</span>
-                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>EcoDrive Clean Energy Campaign</strong>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>Active Seeding ERP Project</strong>
               </div>
               <div>
                 <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Assigned Account</span>
-                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>xxxx-xxxx-4993</strong>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>39482938102</strong>
               </div>
               <div>
                 <span style={{ fontSize: "0.7rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>IFSC Code</span>
-                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>SBIN0000301</strong>
+                <strong style={{ display: "block", fontSize: "0.95rem", color: "#1e293b", marginTop: "4px" }}>SBIN0001827</strong>
               </div>
             </div>
           </article>
@@ -378,32 +394,32 @@ export default function BankReconciliation() {
             
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ background: "#dcfce7", color: "#15803d", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <CheckCircle2 size={16} />
+                <div style={{ background: "#f1f5f9", color: "#64748b", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Clock size={16} />
                 </div>
                 <div>
-                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#1e293b" }}>Bank Statement Uploaded</strong>
-                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Completed on May 30, 2026</span>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#1e293b" }}>No Bank Statement Uploaded Yet</strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Awaiting statement upload</span>
                 </div>
               </div>
               
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ background: "#dcfce7", color: "#15803d", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <CheckCircle2 size={16} />
+                <div style={{ background: "#f1f5f9", color: "#64748b", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <Clock size={16} />
                 </div>
                 <div>
-                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#1e293b" }}>Transactions Reconciled (5 of 8)</strong>
-                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Rs 2,55,000 matched and locked to book ledgers</span>
+                  <strong style={{ display: "block", fontSize: "0.88rem", color: "#1e293b" }}>Transactions Reconciled ({transactions.filter(t => t.rawStatus === "APPROVED").length} of {transactions.length})</strong>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>Rs {spentAmounts.reduce((a,b)=>a+b, 0).toLocaleString()} matched and locked to book ledgers</span>
                 </div>
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <div style={{ background: "#fffbeb", color: "#d97706", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ background: "#f1f5f9", color: "#64748b", borderRadius: "50%", padding: "4px", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <Clock size={16} />
                 </div>
                 <div>
                   <strong style={{ display: "block", fontSize: "0.88rem", color: "#1e293b" }}>Admin Audit Clearance</strong>
-                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>2 bills awaiting Admin clearance (Rs 35,000)</span>
+                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>{transactions.filter(t => t.rawStatus === "PENDING").length} bills awaiting Admin clearance (Rs {transactions.filter(t => t.rawStatus === "PENDING").reduce((a,b)=>a+b.amount,0).toLocaleString()})</span>
                 </div>
               </div>
             </div>
@@ -415,28 +431,28 @@ export default function BankReconciliation() {
           <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px", borderLeft: "5px solid #10b981", boxShadow: "0 4px 10px rgba(0,0,0,0.02)" }}>
             <div>
               <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Approved</div>
-              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>5</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>{approvedCount}</div>
             </div>
           </div>
 
           <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px", borderLeft: "5px solid #f59e0b", boxShadow: "0 4px 10px rgba(0,0,0,0.02)" }}>
             <div>
               <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Awaiting Approval</div>
-              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>2</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>{awaitingCount}</div>
             </div>
           </div>
 
           <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px", borderLeft: "5px solid #ef4444", boxShadow: "0 4px 10px rgba(0,0,0,0.02)" }}>
             <div>
               <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Rejected</div>
-              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>1</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>{rejectedCount}</div>
             </div>
           </div>
 
           <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px 20px", display: "flex", alignItems: "center", gap: "16px", borderLeft: "5px solid #3b82f6", boxShadow: "0 4px 10px rgba(0,0,0,0.02)" }}>
             <div>
               <div style={{ fontSize: "0.72rem", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Total Transactions</div>
-              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>8</div>
+              <div style={{ fontSize: "1.6rem", fontWeight: "800", color: "#1e293b", marginTop: "2px" }}>{totalTransactionsCount}</div>
             </div>
           </div>
         </section>

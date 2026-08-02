@@ -1,7 +1,15 @@
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy.orm import Session
+from decimal import Decimal
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session, joinedload
+from app.common.constants.enums import TransactionStatusEnum
+from app.common.models.audit_log import AuditLog
+from app.common.models.budget_head import BudgetHead
+from app.common.models.expense import Expense
+from app.common.models.transaction import Transaction
+from app.common.models.user import User
 from app.admin.schemas import (
     AdminDashboardKPIs,
     UserProgressMonitoring,
@@ -19,11 +27,11 @@ class AdminService:
     def get_dashboard_kpis(db: Session) -> AdminDashboardKPIs:
         # Mock KPIs representation
         return AdminDashboardKPIs(
-            total_active_users=15,
-            users_near_deadline=4,
-            pending_reviews=6,
-            completed_reports=24,
-            pending_uc_requests=3
+            total_active_users=0,
+            users_near_deadline=0,
+            pending_reviews=0,
+            completed_reports=0,
+            pending_uc_requests=0
         )
 
     @staticmethod
@@ -33,49 +41,40 @@ class AdminService:
         search_query: Optional[str] = None
     ) -> List[UserProgressMonitoring]:
         # Mock progress list
-        return [
-            UserProgressMonitoring(
-                user_id="11111111-1111-1111-1111-111111111111",
-                user_name="John Doe",
-                project_id="EY-2026-042",
-                date_of_joining=datetime(2025, 8, 1, tzinfo=timezone.utc),
-                days_remaining=185,
-                fellowship_month=11,
-                program_progress_percent=82.5,
-                assigned_events=5,
-                submitted_reports=10,
-                uploaded_documents=12,
-                pending_reviews=1,
-                current_status="Active"
-            ),
-            UserProgressMonitoring(
-                user_id="22222222-2222-2222-2222-222222222222",
-                user_name="Jane Smith",
-                project_id="EY-2026-089",
-                date_of_joining=datetime(2025, 4, 1, tzinfo=timezone.utc),
-                days_remaining=45,
-                fellowship_month=15,
-                program_progress_percent=95.0,
-                assigned_events=3,
-                submitted_reports=14,
-                uploaded_documents=18,
-                pending_reviews=0,
-                current_status="Completed"
-            )
-        ]
+        return []
 
     @staticmethod
     def get_user_progress_detail(db: Session, user_id: str) -> UserProgressDetail:
         # Mock user detailed status
         return UserProgressDetail(
-            project_id="EY-2026-042",
-            user_name="John Doe",
-            email="johndoe@example.com",
-            date_of_joining=datetime(2025, 8, 1, tzinfo=timezone.utc),
-            fellowship_duration_months=24,
-            days_remaining=185,
-            current_status="Active"
+            project_id="",
+            user_name="",
+            email="",
+            date_of_joining=datetime.now(timezone.utc),
+            fellowship_duration_months=0,
+            days_remaining=0,
+            current_status=""
         )
+
+    @staticmethod
+    def get_budget_heads(db: Session) -> List[str]:
+        heads = db.query(BudgetHead.name).order_by(BudgetHead.name.asc()).all()
+
+        unique_heads = []
+        seen = set()
+        for (name,) in heads:
+            normalized = (name or "").strip()
+            if not normalized:
+                continue
+
+            key = normalized.lower()
+            if key in seen:
+                continue
+
+            seen.add(key)
+            unique_heads.append(normalized)
+
+        return unique_heads
 
     @staticmethod
     def admin_create_transaction(
@@ -83,16 +82,60 @@ class AdminService:
         transaction_data: AdminCreateTransaction, 
         admin_id: str
     ) -> dict:
-        # Mock transaction payload creation
+        admin = db.query(User).filter(User.id == uuid.UUID(admin_id)).first()
+        if not admin:
+            raise ValueError("Admin user not found")
+
+        budget_head = (
+            db.query(BudgetHead)
+            .filter(func.lower(BudgetHead.name) == transaction_data.budget_head.strip().lower())
+            .first()
+        )
+        if not budget_head:
+            raise ValueError("Budget Head not found")
+
+        amount = Decimal(str(transaction_data.amount)).quantize(Decimal("0.01"))
+        if amount <= 0:
+            raise ValueError("Invalid amount")
+
+        now_utc = datetime.now(timezone.utc)
+        description = (transaction_data.description or budget_head.name).strip()
+        expense = Expense(
+            budget_head_id=budget_head.id,
+            title=description[:150],
+            allocated_amount=amount,
+        )
+        transaction = Transaction(
+            expense=expense,
+            amount=amount,
+            description=description,
+            transaction_date=now_utc,
+            created_by_id=admin.id,
+            status=TransactionStatusEnum.DRAFT.value,
+            source="MANUAL",
+        )
+        db.add(expense)
+        db.add(transaction)
+        db.add(
+            AuditLog(
+                user_id=admin.id,
+                action="Transaction Created",
+                entity="Transaction",
+                remarks=f"Budget Head: {budget_head.name}\nAmount: {amount}\nTimestamp: {now_utc.isoformat()}",
+            )
+        )
+        db.commit()
+        db.refresh(transaction)
+
         return {
-            "id": str(uuid.uuid4()),
-            "amount": transaction_data.amount,
-            "budget_head": transaction_data.budget_head,
-            "description": transaction_data.description,
-            "creator_role": "ADMIN",
+            "id": str(transaction.id),
+            "amount": float(transaction.amount),
+            "budget_head": budget_head.name,
+            "description": transaction.description,
+            "creator_role": admin.role.name if admin.role else "ADMIN",
             "created_by": admin_id,
-            "status": "APPROVED",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "status": transaction.status,
+            "created_at": transaction.created_at.isoformat() if transaction.created_at else now_utc.isoformat(),
         }
 
     @staticmethod
@@ -101,11 +144,95 @@ class AdminService:
         review_data: AdminTransactionReview, 
         admin_id: str
     ) -> dict:
-        # Mock transaction review operation
+        admin = db.query(User).filter(User.id == uuid.UUID(admin_id)).first()
+        if not admin:
+            raise ValueError("Admin user not found")
+
+        transaction = (
+            db.query(Transaction)
+            .options(joinedload(Transaction.expense).joinedload(Expense.budget_head))
+            .filter(Transaction.id == uuid.UUID(review_data.transaction_id))
+            .first()
+        )
+        if not transaction:
+            raise ValueError("Transaction not found")
+
+        action = review_data.action.upper().strip()
+        is_recon = getattr(review_data, "is_reconciliation", False)
+
+        if is_recon:
+            if action == "APPROVE":
+                transaction.reconciliation_status = "APPROVED"
+                transaction.approved_by_id = admin.id
+            elif action == "REJECT":
+                transaction.reconciliation_status = "REJECTED"
+            elif action == "REQUEST_REVISION":
+                transaction.reconciliation_status = "REVISION_REQUESTED"
+            else:
+                raise ValueError("Invalid review action")
+        else:
+            if action == "APPROVE":
+                transaction.status = TransactionStatusEnum.APPROVED.value
+                transaction.approved_by_id = admin.id
+            elif action == "REJECT":
+                transaction.status = TransactionStatusEnum.REJECTED.value
+            elif action == "REQUEST_REVISION":
+                transaction.status = TransactionStatusEnum.REVISION_REQUESTED.value
+            else:
+                raise ValueError("Invalid review action")
+
+        transaction.admin_remarks = review_data.remarks
+        transaction.updated_at = datetime.now(timezone.utc)
+
+        db.add(transaction)
+
+        # Send dynamic notification to the creator/uploader
+        target_user_id = transaction.uploaded_by_id or transaction.created_by_id
+        if target_user_id:
+            from app.notifications.services.notification_service import NotificationService
+            if is_recon:
+                title_msg = "Transaction Reconciled" if action == "APPROVE" else "Reconciliation Rejected" if action == "REJECT" else "Reconciliation Revision Requested"
+                detail_msg = f"Your transaction '{transaction.description}' has been reconciled and approved by the admin." if action == "APPROVE" else f"Your transaction reconciliation '{transaction.description}' has been rejected by the admin." if action == "REJECT" else f"Reconciliation details update requested for '{transaction.description}'."
+                type_msg = "success" if action == "APPROVE" else "error" if action == "REJECT" else "info"
+                path_msg = "/reconciliation"
+                label_msg = "View Reconciliation"
+            else:
+                title_msg = "Transaction Approved" if action == "APPROVE" else "Transaction Rejected" if action == "REJECT" else "Transaction Revision Requested"
+                detail_msg = f"Your expense bill transaction '{transaction.description}' has been approved by the admin." if action == "APPROVE" else f"Your transaction '{transaction.description}' has been rejected." if action == "REJECT" else f"Revision requested for transaction '{transaction.description}'."
+                type_msg = "success" if action == "APPROVE" else "error" if action == "REJECT" else "info"
+                path_msg = "/transactions"
+                label_msg = "View Transactions"
+
+            NotificationService.create_notification(
+                db=db,
+                user_id=str(target_user_id),
+                title=title_msg,
+                message=detail_msg,
+                type=type_msg,
+                action_path=path_msg,
+                action_label=label_msg
+              )
+
+        db.add(
+            AuditLog(
+                user_id=admin.id,
+                action="Transaction Reviewed",
+                entity="Transaction",
+                remarks=(
+                    f"Transaction: {review_data.transaction_id}\n"
+                    f"Action: {action}\n"
+                    f"Reconciliation Review: {is_recon}\n"
+                    f"Remarks: {review_data.remarks or '-'}\n"
+                    f"Timestamp: {datetime.now(timezone.utc).isoformat()}"
+                ),
+            )
+        )
+        db.commit()
+
         return {
             "transaction_id": review_data.transaction_id,
-            "status": f"{review_data.action}ED",
+            "status": transaction.status,
             "remarks": review_data.remarks,
             "reviewed_by": admin_id,
-            "reviewed_at": datetime.now(timezone.utc).isoformat()
+            "reviewed_at": datetime.now(timezone.utc).isoformat(),
         }

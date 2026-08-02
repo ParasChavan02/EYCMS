@@ -2,13 +2,7 @@ import { useMemo, useState } from "react";
 import "../../../styles/admin-management.css";
 
 function AdminBudgetHeads() {
-  const [heads] = useState([
-    { id: 1, name: "Travel", sanctioned: 500000, utilized: 250000, remaining: 250000, percentage: 50 },
-    { id: 2, name: "Equipment", sanctioned: 1000000, utilized: 820000, remaining: 180000, percentage: 82 },
-    { id: 3, name: "Supplies", sanctioned: 300000, utilized: 120000, remaining: 180000, percentage: 40 },
-    { id: 4, name: "Training", sanctioned: 800000, utilized: 610000, remaining: 190000, percentage: 76 },
-    { id: 5, name: "Maintenance", sanctioned: 400000, utilized: 100000, remaining: 300000, percentage: 25 },
-  ]);
+  const [heads] = useState([]);
 
   const totals = useMemo(
     () => ({

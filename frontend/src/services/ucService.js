@@ -3,51 +3,14 @@ const USER_UC_STATUS_KEY = "uc_status";
 const USER_UC_FILE_KEY = "uc_submitted_file";
 const USER_UC_DATE_KEY = "uc_submitted_date";
 
-const defaultUCRequests = [
-  {
-    id: "UC-001",
-    requestedBy: "Rahul S. (rahul@example.com)",
-    status: "ADMIN_APPROVED",
-    templateGranted: {
-      templateFile: "UC_Template_Phase1.docx",
-      instructions: "Please fill section A and sign the document before uploading.",
-      grantedAt: "2026-06-05T10:00:00.000Z"
-    },
-    uploadedUcFile: "Utilization_Certificate_Signed.pdf",
-    uploadedBills: ["food_invoice_workshop.pdf", "taxi_receipt.pdf"],
-    financeRemarks: "All bills match expenditure values",
-    adminRemarks: "Approved, ready for disbursement release",
-    verifiedBy: "finance@example.com",
-    approvedBy: "admin@example.com",
-    submittedAt: "2026-06-06T15:00:00.000Z",
-    updatedAt: "2026-06-08T11:00:00.000Z",
-    auditTrail: [
-      { timestamp: "2026-06-04T09:00:00.000Z", action: "Created", user: "rahul@example.com", role: "USER", remarks: "Requested UC template" },
-      { timestamp: "2026-06-05T10:00:00.000Z", action: "Submitted", user: "admin@example.com", role: "ADMIN", remarks: "Template granted" },
-      { timestamp: "2026-06-06T15:00:00.000Z", action: "Submitted", user: "rahul@example.com", role: "USER", remarks: "Uploaded filled UC document" },
-      { timestamp: "2026-06-07T11:00:00.000Z", action: "Verified", user: "finance@example.com", role: "ACCOUNTS", remarks: "All bills match expenditure values" },
-      { timestamp: "2026-06-08T11:00:00.000Z", action: "Approved", user: "admin@example.com", role: "ADMIN", remarks: "Approved, ready for disbursement release" }
-    ]
-  },
-  {
-    id: "UC-002",
-    requestedBy: "Priya S. (priya@example.com)",
-    status: "TEMPLATE_GRANTED",
-    templateGranted: {
-      templateFile: "UC_Template_General.docx",
-      instructions: "Provide receipts for AV equipment rentals and venue charges.",
-      grantedAt: "2026-06-10T12:00:00.000Z"
-    },
-    updatedAt: "2026-06-10T12:00:00.000Z",
-    auditTrail: [
-      { timestamp: "2026-06-09T14:00:00.000Z", action: "Created", user: "priya@example.com", role: "USER", remarks: "Requested UC template" },
-      { timestamp: "2026-06-10T12:00:00.000Z", action: "Submitted", user: "admin@example.com", role: "ADMIN", remarks: "Template granted with instructions" }
-    ]
-  }
-];
+const defaultUCRequests = [];
 
 function initUCRequests() {
   const stored = localStorage.getItem(UC_REQUESTS_KEY);
+  if (stored && stored.includes("UC-001")) {
+    localStorage.removeItem(UC_REQUESTS_KEY);
+    return defaultUCRequests;
+  }
   let list = [];
   if (!stored) {
     list = defaultUCRequests;

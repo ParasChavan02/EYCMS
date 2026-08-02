@@ -6,94 +6,68 @@ function AdminDashboard() {
 
   // Sample data - in real app, this would come from API
   const dashboardStats = {
-    totalUsers: 245,
-    activeUsers: 189,
-    totalTransactions: 1250,
-    totalBudget: 5750000,
-    pendingApprovals: 42,
-    generatedReports: 156,
+    totalUsers: 0,
+    activeUsers: 0,
+    totalTransactions: 0,
+    totalBudget: 0,
+    pendingApprovals: 0,
+    generatedReports: 0,
   };
 
   const analyticsCards = [
     {
       title: "Total Users",
       value: dashboardStats.totalUsers,
-      trend: "+12%",
+      trend: "+0%",
       icon: "👥",
       color: "#3b82f6",
     },
     {
       title: "Active Users",
       value: dashboardStats.activeUsers,
-      trend: "+8%",
+      trend: "+0%",
       icon: "✓",
       color: "#10b981",
     },
     {
       title: "Total Transactions",
       value: dashboardStats.totalTransactions,
-      trend: "+23%",
+      trend: "+0%",
       icon: "💳",
       color: "#f59e0b",
     },
     {
       title: "Total Budget",
       value: `₹${(dashboardStats.totalBudget / 1000000).toFixed(1)}M`,
-      trend: "+5%",
+      trend: "+0%",
       icon: "💰",
       color: "#8b5cf6",
     },
     {
       title: "Pending Approvals",
       value: dashboardStats.pendingApprovals,
-      trend: "-15%",
+      trend: "0%",
       icon: "⏳",
       color: "#ef4444",
     },
     {
       title: "Generated Reports",
       value: dashboardStats.generatedReports,
-      trend: "+31%",
+      trend: "+0%",
       icon: "📊",
       color: "#06b6d4",
     },
   ];
 
-  const recentRegistrations = [
-    { id: 1, name: "Raj Kumar", email: "raj@eyuva.com", date: "2026-05-30", role: "USER" },
-    { id: 2, name: "Priya Singh", email: "priya@eyuva.com", date: "2026-05-29", role: "USER" },
-    { id: 3, name: "Arjun Patel", email: "arjun@eyuva.com", date: "2026-05-28", role: "USER" },
-    { id: 4, name: "Neha Verma", email: "neha@eyuva.com", date: "2026-05-27", role: "USER" },
-    { id: 5, name: "Vikram Singh", email: "vikram@eyuva.com", date: "2026-05-26", role: "USER" },
-  ];
+  const recentRegistrations = [];
 
-  const recentTransactions = [
-    { id: "TXN001", amount: 50000, status: "Approved", date: "2026-05-30", head: "Travel" },
-    { id: "TXN002", amount: 75000, status: "Pending", date: "2026-05-29", head: "Equipment" },
-    { id: "TXN003", amount: 30000, status: "Approved", date: "2026-05-28", head: "Supplies" },
-    { id: "TXN004", amount: 120000, status: "Rejected", date: "2026-05-27", head: "Training" },
-    { id: "TXN005", amount: 45000, status: "Pending", date: "2026-05-26", head: "Maintenance" },
-  ];
+  const recentTransactions = [];
 
-  const pendingApprovals = [
-    { id: "APR001", type: "User", title: "New User Creation - Amit Kumar", date: "2026-05-30" },
-    { id: "APR002", type: "Transaction", title: "Budget Head Allocation ₹100,000", date: "2026-05-29" },
-    { id: "APR003", type: "Event", title: "Workshop Registration - May 31", date: "2026-05-28" },
-    { id: "APR004", type: "User", title: "Role Change Request - Priya Singh", date: "2026-05-27" },
-  ];
+  const pendingApprovals = [];
 
-  const upcomingEvents = [
-    { id: 1, title: "Startup Workshop", date: "2026-06-05", type: "Workshop" },
-    { id: 2, title: "Leadership Training", date: "2026-06-10", type: "Training" },
-    { id: 3, title: "Budget Review", date: "2026-06-15", type: "Review" },
-  ];
+  const upcomingEvents = [];
 
-  const systemNotifications = [
-    { id: 1, message: "Database backup completed successfully", type: "success", time: "2 mins ago" },
-    { id: 2, message: "3 users pending approval", type: "warning", time: "15 mins ago" },
-    { id: 3, message: "Monthly budget review scheduled for June 5", type: "info", time: "1 hour ago" },
-    { id: 4, message: "System maintenance scheduled for June 10", type: "info", time: "2 hours ago" },
-  ];
+  const systemNotifications = [];
 
   return (
     <main className="page admin-dashboard-page">
@@ -153,14 +127,22 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentRegistrations.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.name}</td>
-                      <td>{user.email}</td>
-                      <td>{user.date}</td>
-                      <td><span className="status-badge new">Active</span></td>
+                  {recentRegistrations.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="empty-state" style={{ textAlign: "center", color: "#64748b" }}>
+                        No recent registrations
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    recentRegistrations.map((user) => (
+                      <tr key={user.id}>
+                        <td>{user.name}</td>
+                        <td>{user.email}</td>
+                        <td>{user.date}</td>
+                        <td><span className="status-badge new">Active</span></td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -183,18 +165,26 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentTransactions.map((txn) => (
-                    <tr key={txn.id}>
-                      <td>{txn.id}</td>
-                      <td>₹{txn.amount.toLocaleString()}</td>
-                      <td>
-                        <span className={`status-badge ${txn.status.toLowerCase()}`}>
-                          {txn.status}
-                        </span>
+                  {recentTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="empty-state" style={{ textAlign: "center", color: "#64748b" }}>
+                        No recent transactions
                       </td>
-                      <td>{txn.head}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    recentTransactions.map((txn) => (
+                      <tr key={txn.id}>
+                        <td>{txn.id}</td>
+                        <td>₹{txn.amount.toLocaleString()}</td>
+                        <td>
+                          <span className={`status-badge ${txn.status.toLowerCase()}`}>
+                            {txn.status}
+                          </span>
+                        </td>
+                        <td>{txn.head}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -210,17 +200,23 @@ function AdminDashboard() {
               <a href="/admin/approvals" className="view-all-link">View All →</a>
             </div>
             <div className="approval-list">
-              {pendingApprovals.map((approval) => (
-                <div key={approval.id} className="approval-item">
-                  <div className="approval-icon">📋</div>
-                  <div className="approval-content">
-                    <h4>{approval.title}</h4>
-                    <span className="approval-type">{approval.type}</span>
-                    <span className="approval-date">{approval.date}</span>
-                  </div>
-                  <button className="action-btn">→</button>
+              {pendingApprovals.length === 0 ? (
+                <div className="empty-state" style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
+                  No pending approvals
                 </div>
-              ))}
+              ) : (
+                pendingApprovals.map((approval) => (
+                  <div key={approval.id} className="approval-item">
+                    <div className="approval-icon">📋</div>
+                    <div className="approval-content">
+                      <h4>{approval.title}</h4>
+                      <span className="approval-type">{approval.type}</span>
+                      <span className="approval-date">{approval.date}</span>
+                    </div>
+                    <button className="action-btn">→</button>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
@@ -231,15 +227,21 @@ function AdminDashboard() {
               <a href="/admin/events" className="view-all-link">View All →</a>
             </div>
             <div className="events-list">
-              {upcomingEvents.map((event) => (
-                <div key={event.id} className="event-item">
-                  <div className="event-date">{event.date.split("-")[2]}</div>
-                  <div className="event-content">
-                    <h4>{event.title}</h4>
-                    <span className="event-type">{event.type}</span>
-                  </div>
+              {upcomingEvents.length === 0 ? (
+                <div className="empty-state" style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
+                  No upcoming events scheduled
                 </div>
-              ))}
+              ) : (
+                upcomingEvents.map((event) => (
+                  <div key={event.id} className="event-item">
+                    <div className="event-date">{event.date.split("-")[2]}</div>
+                    <div className="event-content">
+                      <h4>{event.title}</h4>
+                      <span className="event-type">{event.type}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
 
@@ -249,15 +251,21 @@ function AdminDashboard() {
               <h2>System Notifications</h2>
             </div>
             <div className="notifications-list">
-              {systemNotifications.map((notif) => (
-                <div key={notif.id} className={`notification-item ${notif.type}`}>
-                  <div className="notif-indicator"></div>
-                  <div className="notif-content">
-                    <p>{notif.message}</p>
-                    <span className="notif-time">{notif.time}</span>
-                  </div>
+              {systemNotifications.length === 0 ? (
+                <div className="empty-state" style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>
+                  No new notifications
                 </div>
-              ))}
+              ) : (
+                systemNotifications.map((notif) => (
+                  <div key={notif.id} className={`notification-item ${notif.type}`}>
+                    <div className="notif-indicator"></div>
+                    <div className="notif-content">
+                      <p>{notif.message}</p>
+                      <span className="notif-time">{notif.time}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </div>

@@ -400,7 +400,7 @@ function TransactionReviewCenter() {
                 background: "#ffffff",
                 borderRadius: "16px",
                 width: "100%",
-                maxWidth: "850px",
+                maxWidth: "1050px",
                 maxHeight: "90vh",
                 overflowY: "auto",
                 boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
@@ -426,38 +426,113 @@ function TransactionReviewCenter() {
                 </button>
               </div>
 
-              <div style={{ padding: "20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "350px", background: "#f8fafc" }}>
-                {isImage ? (
-                  <img
-                    src={fileDirectUrl}
-                    alt={fileName}
-                    style={{ maxWidth: "100%", maxHeight: "550px", borderRadius: "10px", objectFit: "contain" }}
-                  />
-                ) : isPdf ? (
-                  <iframe
-                    src={fileDirectUrl}
-                    title={fileName}
-                    style={{ width: "100%", height: "550px", border: "none", borderRadius: "10px", background: "#ffffff" }}
-                  />
-                ) : (
-                  <div style={{ textAlign: "center", padding: "40px 20px", background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", width: "100%", maxWidth: "500px" }}>
-                    <FileCode size={52} color="#1d5cff" style={{ marginBottom: "14px" }} />
-                    <h3 style={{ margin: "0 0 6px", color: "#1e293b" }}>Document Preview</h3>
-                    <p style={{ margin: "0 0 20px", color: "#64748b", fontSize: "0.88rem" }}>
-                      File: <strong>{fileName}</strong> ({formatFileSize(sizeBytes)})
-                    </p>
-                    <a
-                      href={fileDirectUrl}
-                      download={fileName}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ textDecoration: "none", padding: "10px 20px", borderRadius: "10px", background: "#1d5cff", color: "#ffffff", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "8px" }}
-                    >
-                      <Download size={16} />
-                      Download File to View
-                    </a>
+              <div style={{ padding: "20px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px", background: "#f8fafc", minHeight: "450px" }}>
+                {/* Left Panel: Preview */}
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "10px" }}>
+                  {isImage ? (
+                    <img
+                      src={fileDirectUrl}
+                      alt={fileName}
+                      style={{ maxWidth: "100%", maxHeight: "500px", borderRadius: "8px", objectFit: "contain" }}
+                    />
+                  ) : isPdf ? (
+                    <iframe
+                      src={fileDirectUrl}
+                      title={fileName}
+                      style={{ width: "100%", height: "500px", border: "none", borderRadius: "8px", background: "#ffffff" }}
+                    />
+                  ) : (
+                    <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                      <FileCode size={52} color="#1d5cff" style={{ marginBottom: "14px" }} />
+                      <h3 style={{ margin: "0 0 6px", color: "#1e293b" }}>Document Preview</h3>
+                      <p style={{ margin: "0 0 20px", color: "#64748b", fontSize: "0.88rem" }}>
+                        File: <strong>{fileName}</strong> ({formatFileSize(sizeBytes)})
+                      </p>
+                      <a
+                        href={fileDirectUrl}
+                        download={fileName}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: "none", padding: "10px 20px", borderRadius: "10px", background: "#1d5cff", color: "#ffffff", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "8px" }}
+                      >
+                        <Download size={16} />
+                        Download File to View
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Panel: Transaction splits details */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", padding: "20px" }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 6px", fontSize: "1.1rem", fontWeight: "800", color: "#0f172a" }}>Transaction & Budget Head Allocations</h3>
+                    <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748b" }}>Detailed split entries recorded for this bill.</p>
                   </div>
-                )}
+
+                  {previewFile.transactions && previewFile.transactions.length > 0 ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", overflowY: "auto", maxHeight: "380px" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem", textAlign: "left" }}>
+                        <thead>
+                          <tr style={{ borderBottom: "2px solid #e2e8f0", color: "#475569", background: "#f8fafc" }}>
+                            <th style={{ padding: "8px", fontWeight: "700" }}>Category</th>
+                            <th style={{ padding: "8px", fontWeight: "700" }}>Description</th>
+                            <th style={{ padding: "8px", fontWeight: "700", textAlign: "right" }}>Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewFile.transactions.map((t, index) => (
+                            <tr key={t.id || index} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                              <td style={{ padding: "8px", fontWeight: "700", color: "#1d5cff" }}>{t.category}</td>
+                              <td style={{ padding: "8px", color: "#334155" }}>{t.description || "—"}</td>
+                              <td style={{ padding: "8px", textAlign: "right", fontWeight: "700", color: "#0f172a" }}>
+                                Rs {t.amount.toLocaleString("en-IN")}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "2px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", fontWeight: "800", color: "#0f172a" }}>
+                        <span>Total Split Amount:</span>
+                        <span style={{ color: "#166534" }}>
+                          Rs {previewFile.transactions.reduce((sum, t) => sum + t.amount, 0).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: "30px", background: "#f8fafc", borderRadius: "8px", border: "1px dashed #cbd5e1", textAlign: "center", color: "#64748b" }}>
+                      No split transactions found.
+                    </div>
+                  )}
+
+                  {/* Actions inside modal preview */}
+                  <div style={{ marginTop: "auto", borderTop: "1px solid #f1f5f9", paddingTop: "14px", display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                    {previewFile.status !== "APPROVED" && previewFile.status !== "ADMIN_APPROVED" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleStatusUpdate(previewFile.id, "APPROVED", fileName);
+                          setPreviewFile(null);
+                        }}
+                        style={{ padding: "10px 18px", borderRadius: "8px", border: "none", background: "#16a34a", color: "#ffffff", fontWeight: "700", fontSize: "0.85rem", cursor: "pointer" }}
+                      >
+                        Approve Bill
+                      </button>
+                    )}
+                    {previewFile.status !== "REJECTED" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleStatusUpdate(previewFile.id, "REJECTED", fileName);
+                          setPreviewFile(null);
+                        }}
+                        style={{ padding: "10px 18px", borderRadius: "8px", border: "none", background: "#ef4444", color: "#ffffff", fontWeight: "700", fontSize: "0.85rem", cursor: "pointer" }}
+                      >
+                        Reject Bill
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

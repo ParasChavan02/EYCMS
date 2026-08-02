@@ -1,13 +1,20 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useNotification } from "../../common/hooks/useNotification";
+import { adminTransactionService } from "../../../services/adminTransactionService";
 import "../../../styles/admin-management.css";
 
+const PENDING_STATUSES = ["DRAFT", "PENDING", "VERIFIED", "REVISION_REQUESTED"];
+
 function AdminReconciliation() {
-  const [reconciliations, setReconciliations] = useState([
-    { id: "REC001", period: "May 2026", status: "Completed", matchedTxn: 145, pendingTxn: 2, failedTxn: 1, completedDate: "2026-05-30", source: "USER" },
-    { id: "REC002", period: "April 2026", status: "Completed", matchedTxn: 138, pendingTxn: 0, failedTxn: 0, completedDate: "2026-04-30", source: "ADMIN" },
-    { id: "REC003", period: "March 2026", status: "In Review", matchedTxn: 142, pendingTxn: 1, failedTxn: 2, completedDate: "2026-03-31", source: "USER" },
-    { id: "REC004", period: "June 2026", status: "In Review", matchedTxn: 80, pendingTxn: 15, failedTxn: 5, completedDate: "2026-06-23", source: "ADMIN" },
-  ]);
+  const { addNotification } = useNotification();
+
+  // State
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // User-created runs (merged with live ones)
+  const [createdRuns, setCreatedRuns] = useState([]);
 
   // Form State
   const [form, setForm] = useState({
@@ -28,13 +35,44 @@ function AdminReconciliation() {
   const [selectedRec, setSelectedRec] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // Review Modal State for user transactions
+  const [selectedTxn, setSelectedTxn] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRemarks, setReviewRemarks] = useState("");
+
+  // Fetch transactions from backend
+  const fetchTransactions = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await adminTransactionService.getTransactions();
+      const mapped = (data || []).map(t => ({
+        ...t,
+        source: t.source || "USER",
+        reconciliation_status: t.reconciliation_status || "PENDING",
+        vendor: t.description?.split(" ")[0] || "Vendor Service",
+        reference_number: `REF-${t.id.substring(0, 6).toUpperCase()}`
+      }));
+      setTransactions(mapped);
+    } catch (err) {
+      setError(err?.response?.data?.error || "Unable to load transaction ledger.");
+      addNotification("Failed to fetch ledger transactions.", "error", 2000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
   // Form Change Handler
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Create New Reconciliation Handler
+  // Create New Reconciliation Handler (stores run locally, merged into the list)
   const handleCreateReconciliation = () => {
     setMessage("");
     if (!form.period || form.matchedTxn === "" || form.pendingTxn === "" || form.failedTxn === "") {
@@ -43,7 +81,7 @@ function AdminReconciliation() {
     }
 
     const newRec = {
-      id: `REC00${reconciliations.length + 1}`,
+      id: `REC_MAN_${Date.now()}`,
       period: form.period,
       status: form.status,
       matchedTxn: parseInt(form.matchedTxn, 10),
@@ -51,9 +89,11 @@ function AdminReconciliation() {
       failedTxn: parseInt(form.failedTxn, 10),
       completedDate: new Date().toISOString().slice(0, 10),
       source: "ADMIN",
+      sortDate: new Date(),
+      items: []
     };
 
-    setReconciliations((prev) => [newRec, ...prev]);
+    setCreatedRuns((prev) => [newRec, ...prev]);
     setForm({
       period: "",
       status: "Completed",
@@ -64,13 +104,77 @@ function AdminReconciliation() {
     setMessage("✅ Reconciliation cycle created successfully");
   };
 
-  const handleUpdateStatus = (id, newStatus) => {
-    setReconciliations((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: newStatus, completedDate: new Date().toISOString().slice(0, 10) } : r))
-    );
-  };
+  // Reconciliation cycles grouping
+  const reconciliations = useMemo(() => {
+    const groups = {};
 
-  // Filtered List
+    transactions.forEach((t) => {
+      const d = new Date(t.date);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const periodName = d.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+      // Group by period & transaction source (USER or ADMIN)
+      const isSystemAdmin = t.source === "ADMIN" || t.created_by_role?.toUpperCase() === "ADMIN";
+      const txnSource = isSystemAdmin ? "ADMIN" : "USER";
+      const groupKey = `${key}_${txnSource}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          id: `REC_LIVE_${groupKey}`,
+          period: periodName,
+          sortDate: new Date(d.getFullYear(), d.getMonth(), 1),
+          status: "Completed",
+          matchedTxn: 0,
+          pendingTxn: 0,
+          failedTxn: 0,
+          completedDate: "",
+          source: txnSource,
+          items: []
+        };
+      }
+
+      const g = groups[groupKey];
+      g.items.push(t);
+
+      if (t.status === "APPROVED" || t.reconciliation_status === "APPROVED" || t.reconciliation_status === "LOCKED") {
+        g.matchedTxn += 1;
+      } else if (t.status === "REJECTED" || t.status === "FAILED") {
+        g.failedTxn += 1;
+      } else {
+        g.pendingTxn += 1;
+      }
+
+      const formattedDate = d.toISOString().slice(0, 10);
+      if (!g.completedDate || formattedDate > g.completedDate) {
+        g.completedDate = formattedDate;
+      }
+    });
+
+    const liveRuns = Object.values(groups).map((g) => {
+      let status = "Completed";
+      if (g.pendingTxn > 0) {
+        status = "In Review";
+      } else if (g.matchedTxn === 0 && g.failedTxn === 0) {
+        status = "Pending";
+      }
+      return {
+        ...g,
+        status
+      };
+    });
+
+    const combined = [...createdRuns, ...liveRuns];
+
+    return combined.sort((a, b) => {
+      const dateA = a.sortDate ? new Date(a.sortDate).getTime() : 0;
+      const dateB = b.sortDate ? new Date(b.sortDate).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA;
+      return a.source.localeCompare(b.source);
+    });
+  }, [transactions, createdRuns]);
+
+  // Filtered reconciliation cycles
   const filteredReconciliations = useMemo(() => {
     return reconciliations.filter((r) => {
       const matchesSearch = r.period.toLowerCase().includes(search.toLowerCase());
@@ -89,41 +193,144 @@ function AdminReconciliation() {
     });
   }, [reconciliations, search, statusFilter, sourceFilter]);
 
-  // Aggregate Stats based on filtered lists
-  const stats = useMemo(() => {
-    return filteredReconciliations.reduce(
-      (acc, r) => {
-        acc.matched += r.matchedTxn;
-        acc.pending += r.pendingTxn;
-        acc.failed += r.failedTxn;
-        return acc;
-      },
-      { matched: 0, pending: 0, failed: 0 }
-    );
-  }, [filteredReconciliations]);
+  // Filtered user transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      // Only show user-submitted transactions
+      const isSystemAdmin = t.source === "ADMIN" || t.created_by_role?.toUpperCase() === "ADMIN";
+      if (isSystemAdmin) return false;
 
-  // Mock Detail transaction links
-  const mockDetailsList = {
-    REC001: [
-      { type: "Debit", desc: "GOOGLE ADS / MKTG SERVICE", erpId: "TXN-001", amount: 15000, matchStatus: "Matched (Auto)" },
-      { type: "Debit", desc: "CATERING EXPS / WORKSHOP LUNCH", erpId: "TXN-002", amount: 25000, matchStatus: "Matched (Auto)" },
-      { type: "Debit", desc: "CITY HALL AUDITORIUM DEP", erpId: "TXN-003", amount: 50000, matchStatus: "Matched (Auto)" },
-      { type: "Debit", desc: "MONTHLY BANK CHARGES", erpId: "Unresolved", amount: 3000, matchStatus: "Pending Adjustment" }
-    ],
-    REC002: [
-      { type: "Debit", desc: "OFFICE STATIONERY CORP", erpId: "TXN-099", amount: 4500, matchStatus: "Matched (Manual)" },
-      { type: "Debit", desc: "REIMBURSEMENT CAB CHARGES", erpId: "TXN-101", amount: 1200, matchStatus: "Matched (Auto)" },
-      { type: "Credit", desc: "INTEREST EARNED INTEGRATED", erpId: "TXN-102", amount: 800, matchStatus: "Matched (Auto)" }
-    ],
-    REC003: [
-      { type: "Debit", desc: "VENUE AUDIO VISUAL RENTALS", erpId: "TXN-007", amount: 40000, matchStatus: "Matched (Auto)" },
-      { type: "Debit", desc: "TRAVEL FLIGHT SPEAKS", erpId: "TXN-004", amount: 20000, matchStatus: "Matched (Auto)" },
-      { type: "Debit", desc: "UNAUTHORIZED CARD CHARGE", erpId: "None", amount: 2500, matchStatus: "Discrepancy (Failed)" }
-    ],
-    REC004: [
-      { type: "Debit", desc: "PRINTING FAST BROCHURES", erpId: "TXN-008", amount: 10000, matchStatus: "Matched (Auto)" },
-      { type: "Debit", desc: "META ADS / MKTG PROMO", erpId: "TXN-011", amount: 10000, matchStatus: "Matched (Manual)" }
-    ]
+      // Filter by status dropdown
+      let matchesStatus = true;
+      if (statusFilter === "COMPLETED") {
+        matchesStatus = t.status === "APPROVED";
+      } else if (statusFilter === "IN REVIEW") {
+        matchesStatus = PENDING_STATUSES.includes(t.status?.toUpperCase());
+      } else if (statusFilter === "PENDING") {
+        matchesStatus = ["PENDING", "DRAFT"].includes(t.status?.toUpperCase());
+      }
+
+      // Search filter: ID, description, category
+      const dateObj = new Date(t.date);
+      const monthName = isNaN(dateObj.getTime()) ? "" : dateObj.toLocaleString("en-US", { month: "long", year: "numeric" });
+      const matchesSearch =
+        t.id.toLowerCase().includes(search.toLowerCase()) ||
+        t.description?.toLowerCase().includes(search.toLowerCase()) ||
+        (t.category || t.budget_head || "").toLowerCase().includes(search.toLowerCase()) ||
+        monthName.toLowerCase().includes(search.toLowerCase());
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [transactions, search, statusFilter]);
+
+  // Summary Metrics (Stats)
+  const stats = useMemo(() => {
+    if (sourceFilter === "USER") {
+      let matched = 0;
+      let pending = 0;
+      let failed = 0;
+      filteredTransactions.forEach((t) => {
+        if (t.status === "APPROVED") matched++;
+        else if (t.status === "REJECTED" || t.status === "FAILED") failed++;
+        else pending++;
+      });
+      return { matched, pending, failed };
+    } else {
+      return filteredReconciliations.reduce(
+        (acc, r) => {
+          acc.matched += r.matchedTxn;
+          acc.pending += r.pendingTxn;
+          acc.failed += r.failedTxn;
+          return acc;
+        },
+        { matched: 0, pending: 0, failed: 0 }
+      );
+    }
+  }, [sourceFilter, filteredReconciliations, filteredTransactions]);
+
+  // Category budget analytics
+  const categoryBudgets = useMemo(() => {
+    const allocations = {
+      "Venue": 100000,
+      "Food": 50000,
+      "Marketing": 40000,
+      "Travel": 50000,
+      "Printing": 30000,
+      "Equipment": 30000,
+      "Miscellaneous": 50000
+    };
+    
+    const spents = {
+      "Venue": 0, "Food": 0, "Marketing": 0, "Travel": 0, "Printing": 0, "Equipment": 0, "Miscellaneous": 0
+    };
+
+    transactions.forEach(t => {
+      if (t.status === "APPROVED" || t.reconciliation_status === "APPROVED" || t.reconciliation_status === "LOCKED") {
+        let categoryName = "Miscellaneous";
+        const catLower = (t.category || t.budget_head || "").toLowerCase();
+        if (catLower.includes("venue")) categoryName = "Venue";
+        else if (catLower.includes("food") || catLower.includes("refreshment")) categoryName = "Food";
+        else if (catLower.includes("marketing")) categoryName = "Marketing";
+        else if (catLower.includes("travel")) categoryName = "Travel";
+        else if (catLower.includes("printing")) categoryName = "Printing";
+        else if (catLower.includes("equipment")) categoryName = "Equipment";
+        
+        if (spents[categoryName] !== undefined) {
+          spents[categoryName] += t.amount || 0;
+        } else {
+          spents["Miscellaneous"] += t.amount || 0;
+        }
+      }
+    });
+
+    return Object.keys(allocations).map(name => ({
+      name,
+      allocated: allocations[name],
+      spent: spents[name],
+      remaining: allocations[name] - spents[name]
+    }));
+  }, [transactions]);
+
+  // Review user transaction clearance handler
+  const handleReviewTransaction = async (action) => {
+    if (!selectedTxn) return;
+    try {
+      await adminTransactionService.reviewTransaction({
+        transaction_id: selectedTxn.id,
+        action,
+        remarks: reviewRemarks,
+        is_reconciliation: true
+      });
+      addNotification(`Transaction status updated to ${action.toLowerCase()}.`, "success", 2000);
+      setShowReviewModal(false);
+      setSelectedTxn(null);
+      setReviewRemarks("");
+      fetchTransactions(); // Reload transactions
+    } catch (err) {
+      addNotification(err?.response?.data?.error || "Failed to update transaction status.", "error", 2000);
+    }
+  };
+
+  // Export cycle transactions to CSV
+  const exportCycleCsv = (c) => {
+    const header = ["Transaction ID", "Date", "Category", "Description", "Amount", "Status", "Source"];
+    const rows = (c.items || []).map((t) => [
+      t.id,
+      t.date,
+      t.category || t.budget_head || "Miscellaneous",
+      t.description,
+      t.amount,
+      t.status,
+      t.source || "USER"
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reconciliation_report_${c.period.replace(/\s+/g, "_")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const openDetails = (rec) => {
@@ -198,7 +405,7 @@ function AdminReconciliation() {
         {message && <div className={`form-message ${message.includes("✅") ? "success" : "error"}`}>{message}</div>}
       </section>
 
-      {/* STATS GRID */}
+      {/* STATS GRID / SUMMARY CARDS */}
       <section className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Matched Transactions</div>
@@ -209,14 +416,13 @@ function AdminReconciliation() {
           <div className="stat-value">{stats.pending}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Failed/Discrepancy Txn</div>
+          <div className="stat-label">Failed Transactions</div>
           <div className="stat-value">{stats.failed}</div>
         </div>
       </section>
 
       {/* RECONCILIATIONS LIST */}
       <section className="admin-card">
-        
         {/* Navigation Tabs */}
         <div className="tab-nav">
           <button
@@ -242,6 +448,48 @@ function AdminReconciliation() {
           </button>
         </div>
 
+        {sourceFilter === "USER" && (
+          <div style={{ marginBottom: "24px", borderBottom: "1px solid #e2e8f0", paddingBottom: "24px" }}>
+            <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#1e293b", marginBottom: "16px" }}>Category-wise Allocated Budget Analytics</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+              {categoryBudgets.map((b) => {
+                const percent = Math.min(100, Math.round((b.spent / b.allocated) * 100)) || 0;
+                const isOverspent = b.spent > b.allocated;
+                const barColor = isOverspent ? "critical" : percent > 75 ? "warning" : "healthy";
+                return (
+                  <div key={b.name} style={{ display: "flex", flexDirection: "column", gap: "6px", background: "#f8fafc", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "700", color: "#334155" }}>
+                      <span>{b.name}</span>
+                      <span style={{ color: "#475569" }}>{percent}% Spent</span>
+                    </div>
+                    
+                    <div className="progress-inline" style={{ margin: "4px 0" }}>
+                      <div className="progress-track" style={{ background: "#cbd5e1" }}>
+                        <div className={`progress-fill ${barColor}`} style={{ width: `${percent}%` }}></div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Allocation:</span>
+                        <strong>₹{b.allocated.toLocaleString("en-IN")}</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Spent:</span>
+                        <strong>₹{b.spent.toLocaleString("en-IN")}</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed #cbd5e1", paddingTop: "4px", marginTop: "2px" }}>
+                        <span>Remaining:</span>
+                        <strong style={{ color: b.remaining >= 0 ? "#16a34a" : "#ef4444" }}>₹{b.remaining.toLocaleString("en-IN")}</strong>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Searching and filtering */}
         <div className="table-header">
           <input
@@ -259,108 +507,139 @@ function AdminReconciliation() {
           </select>
         </div>
 
-        <div className="table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Period</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Matched Transactions</th>
-                <th>Pending Transactions</th>
-                <th>Failed Transactions</th>
-                <th>Completed Date</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredReconciliations.length > 0 ? (
-                filteredReconciliations.map((r) => (
-                  <tr key={r.id}>
-                    <td style={{ fontWeight: "600" }}>{r.period}</td>
-                    <td>
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          backgroundColor: r.source === "ADMIN" ? "#f3e8ff" : "#e0f2fe",
-                          color: r.source === "ADMIN" ? "#6b21a8" : "#0369a1",
-                        }}
-                      >
-                        {r.source === "ADMIN" ? "Admin Run" : "User Run"}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={`status-badge ${
-                          r.status === "Completed" || r.status === "Approved"
-                            ? "approved"
-                            : r.status === "Rejected"
-                            ? "rejected"
-                            : "pending"
-                        }`}
-                      >
-                        {r.status}
-                      </span>
-                    </td>
-                    <td>{r.matchedTxn}</td>
-                    <td>{r.pendingTxn}</td>
-                    <td>{r.failedTxn}</td>
-                    <td>{r.completedDate}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
-                        <button className="btn-sm" onClick={() => alert(`Report download started for cycle ${r.period}`)}>Report</button>
-                        <button className="btn-sm" onClick={() => openDetails(r)}>Details</button>
-                        {r.source === "USER" && r.status === "In Review" && (
-                          <>
-                            <button
-                              className="btn-sm"
-                              style={{ borderColor: "#16a34a", color: "#16a34a" }}
-                              onClick={() => handleUpdateStatus(r.id, "Completed")}
-                            >
-                              Approve
-                            </button>
-                            <button
-                              className="btn-sm danger"
-                              onClick={() => handleUpdateStatus(r.id, "Rejected")}
-                            >
-                              Reject
-                            </button>
-                            <button
-                              className="btn-sm"
-                              style={{ borderColor: "#d97706", color: "#d97706" }}
-                              onClick={() => handleUpdateStatus(r.id, "Revision Requested")}
-                            >
-                              Revision
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
+        {loading && !error && <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>Loading dynamic reconciliation data...</div>}
+        {error && <div style={{ padding: "20px", textAlign: "center", color: "#ef4444" }}>{error}</div>}
+
+        {!loading && !error && (
+          sourceFilter === "USER" ? (
+            /* USER RECONCILIATIONS TABLE */
+            <div className="table-wrapper">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Transaction ID</th>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="8" className="empty-state">
-                    No reconciliation cycles found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {filteredTransactions.length > 0 ? (
+                    filteredTransactions.map((t) => (
+                      <tr key={t.id}>
+                        <td style={{ fontWeight: "600" }}>{t.id}</td>
+                        <td>{new Date(t.date).toLocaleDateString("en-IN")}</td>
+                        <td>{t.category || t.budget_head || "Miscellaneous"}</td>
+                        <td>{t.description}</td>
+                        <td>₹{(t.amount || 0).toLocaleString("en-IN")}</td>
+                        <td>
+                          <span className={`status-badge ${t.status?.toUpperCase() === "APPROVED" ? "approved" : t.status?.toUpperCase() === "REJECTED" ? "rejected" : "pending"}`}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+                            <button
+                              className="btn-sm"
+                              onClick={() => {
+                                setSelectedTxn(t);
+                                setReviewRemarks(t.admin_remarks || "");
+                                setShowReviewModal(true);
+                              }}
+                            >
+                              Review
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="empty-state">
+                        No user transactions found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            /* CYCLES TABLE */
+            <div className="table-wrapper">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Period</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Matched Transactions</th>
+                    <th>Pending Transactions</th>
+                    <th>Failed Transactions</th>
+                    <th>Completed Date</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReconciliations.length > 0 ? (
+                    filteredReconciliations.map((r) => (
+                      <tr key={r.id}>
+                        <td style={{ fontWeight: "600" }}>{r.period}</td>
+                        <td>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              backgroundColor: r.source === "ADMIN" ? "#f3e8ff" : "#e0f2fe",
+                              color: r.source === "ADMIN" ? "#6b21a8" : "#0369a1",
+                            }}
+                          >
+                            {r.source === "ADMIN" ? "Admin Run" : "User Run"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${r.status === "Completed" ? "approved" : "pending"}`}>
+                            {r.status}
+                          </span>
+                        </td>
+                        <td>{r.matchedTxn}</td>
+                        <td>{r.pendingTxn}</td>
+                        <td>{r.failedTxn}</td>
+                        <td>{r.completedDate || "N/A"}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+                            <button className="btn-sm" onClick={() => exportCycleCsv(r)}>Report</button>
+                            <button className="btn-sm" onClick={() => openDetails(r)}>Details</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="8" className="empty-state">
+                        No reconciliation cycles found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
       </section>
 
-      {/* Details breakdown Modal */}
+      {/* Details Modal */}
       {showDetailModal && selectedRec && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
           <div className="admin-card" style={{ width: "90%", maxWidth: "600px", padding: "24px", border: "1px solid #cbd5e1" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #e2e8f0" }}>
               <h3 style={{ margin: 0, fontSize: "18px", color: "#0f172a" }}>Reconciliation Details - {selectedRec.period} ({selectedRec.source === "ADMIN" ? "Admin Run" : "User Run"})</h3>
-              <button onClick={() => setShowDetailModal(false)} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
+              <button onClick={() => { setShowDetailModal(false); setSelectedRec(null); }} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
             </div>
 
             <div className="detail-grid" style={{ marginBottom: "20px" }}>
@@ -378,65 +657,37 @@ function AdminReconciliation() {
               </div>
               <div className="detail-item">
                 <span>Completion Date</span>
-                <strong>{selectedRec.completedDate}</strong>
-              </div>
-              <div className="detail-item">
-                <span>Submitted By</span>
-                <strong>{selectedRec.source === "USER" ? "rahul@example.com (Fellow)" : "admin@example.com (Admin)"}</strong>
-              </div>
-              <div className="detail-item detail-item-wide">
-                <span>Uploaded Documents</span>
-                <strong>{selectedRec.source === "USER" ? "bank_statement_May2026.pdf, reconciliation_receipts.zip" : "reconciliation_run_admin.xlsx"}</strong>
+                <strong>{selectedRec.completedDate || "N/A"}</strong>
               </div>
             </div>
 
-            <h4 style={{ margin: "15px 0 10px 0", color: "#475569", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Audit Trail</h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "20px" }}>
-              <div style={{ fontSize: "12px", background: "#f8fafc", padding: "8px", borderRadius: "6px", border: "1px solid #e2e8f0" }}>
-                <div><strong>Created & Submitted</strong></div>
-                <div style={{ color: "#64748b" }}>{selectedRec.completedDate || "2026-05-30"} • By {selectedRec.source === "USER" ? "rahul@example.com" : "admin@example.com"}</div>
-              </div>
-              {selectedRec.status === "Completed" && (
-                <div style={{ fontSize: "12px", background: "#f0fdf4", padding: "8px", borderRadius: "6px", border: "1px solid #bbf7d0" }}>
-                  <div><strong>Approved & Finalized</strong></div>
-                  <div style={{ color: "#166534" }}>{selectedRec.completedDate || "2026-05-30"} • By admin@example.com (ADMIN)</div>
-                </div>
-              )}
-              {selectedRec.status === "Rejected" && (
-                <div style={{ fontSize: "12px", background: "#fef2f2", padding: "8px", borderRadius: "6px", border: "1px solid #fecaca" }}>
-                  <div><strong>Rejected</strong></div>
-                  <div style={{ color: "#991b1b" }}>{selectedRec.completedDate || "2026-05-30"} • By admin@example.com (ADMIN)</div>
-                </div>
-              )}
-              {selectedRec.status === "Revision Requested" && (
-                <div style={{ fontSize: "12px", background: "#fffbeb", padding: "8px", borderRadius: "6px", border: "1px solid #fde68a" }}>
-                  <div><strong>Revision Requested</strong></div>
-                  <div style={{ color: "#92400e" }}>{selectedRec.completedDate || "2026-05-30"} • By admin@example.com (ADMIN)</div>
-                </div>
-              )}
-            </div>
-
-            <h4 style={{ margin: "0 0 10px 0", color: "#475569", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Sample Mapped Entries</h4>
+            <h4 style={{ margin: "0 0 10px 0", color: "#475569", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Mapped Entries</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "180px", overflowY: "auto", paddingRight: "4px" }}>
-              {(mockDetailsList[selectedRec.id] || [
-                { type: "Debit", desc: "General Ledger Posting", erpId: "TXN-AUTO", amount: 1500, matchStatus: "Matched (Auto)" },
-                { type: "Debit", desc: "Miscellaneous Bank Item", erpId: "TXN-MAN", amount: 800, matchStatus: "Matched (Manual)" }
-              ]).map((item, idx) => (
-                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", background: "#f8fafc", border: "1px solid #f1f5f9", borderRadius: "8px" }}>
-                  <div>
-                    <span style={{ fontSize: "11px", fontWeight: "600", color: item.type === "Debit" ? "#991b1b" : "#166534", background: item.type === "Debit" ? "#fee2e2" : "#dcfce7", padding: "2px 6px", borderRadius: "4px", marginRight: "6px" }}>
-                      {item.type}
-                    </span>
-                    <strong style={{ fontSize: "13px", color: "#1e293b" }}>{item.desc}</strong>
-                    <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>ERP Link ID: {item.erpId} • Status: {item.matchStatus}</div>
-                  </div>
-                  <strong style={{ fontSize: "13px", color: "#0f172a" }}>₹{item.amount.toLocaleString("en-IN")}</strong>
+              {selectedRec.items && selectedRec.items.length > 0 ? (
+                selectedRec.items.map((item, idx) => {
+                  const isDebit = item.amount < 0 || item.type?.toLowerCase() === "debit" || true;
+                  return (
+                    <div key={item.id || idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", background: "#f8fafc", border: "1px solid #f1f5f9", borderRadius: "8px" }}>
+                      <div>
+                        <span style={{ fontSize: "11px", fontWeight: "600", color: isDebit ? "#991b1b" : "#166534", background: isDebit ? "#fee2e2" : "#dcfce7", padding: "2px 6px", borderRadius: "4px", marginRight: "6px" }}>
+                          {isDebit ? "Debit" : "Credit"}
+                        </span>
+                        <strong style={{ fontSize: "13px", color: "#1e293b" }}>{item.description}</strong>
+                        <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>TXN ID: {item.id} • Category: {item.category || item.budget_head || "N/A"} • Status: {item.status}</div>
+                      </div>
+                      <strong style={{ fontSize: "13px", color: "#0f172a" }}>₹{(item.amount || 0).toLocaleString("en-IN")}</strong>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ padding: "10px", textAlign: "center", color: "#64748b", fontSize: "12px" }}>
+                  No transaction entries in this cycle.
                 </div>
-              ))}
+              )}
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "20px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
-              <button onClick={() => setShowDetailModal(false)} className="btn-primary" style={{ padding: "8px 16px" }}>
+              <button onClick={() => { setShowDetailModal(false); setSelectedRec(null); }} className="btn-primary" style={{ padding: "8px 16px" }}>
                 Close Details
               </button>
             </div>
@@ -444,6 +695,43 @@ function AdminReconciliation() {
         </div>
       )}
 
+      {/* Review Modal */}
+      {showReviewModal && selectedTxn && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
+          <div className="admin-card" style={{ width: "90%", maxWidth: "500px", padding: "24px", border: "1px solid #cbd5e1" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #e2e8f0" }}>
+              <h3 style={{ margin: 0, fontSize: "18px", color: "#0f172a" }}>Review Transaction: {selectedTxn.id}</h3>
+              <button onClick={() => { setShowReviewModal(false); setSelectedTxn(null); }} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px", fontSize: "13px" }}>
+              <div><strong>Description:</strong> {selectedTxn.description}</div>
+              <div><strong>Category:</strong> {selectedTxn.category || selectedTxn.budget_head || "Miscellaneous"}</div>
+              <div><strong>Amount:</strong> ₹{(selectedTxn.amount || 0).toLocaleString("en-IN")}</div>
+              <div><strong>Submitted By:</strong> {selectedTxn.created_by_name || "User"} ({selectedTxn.created_by_email || "N/A"})</div>
+              <div><strong>Current Status:</strong> {selectedTxn.status}</div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Admin Remarks / Notes</label>
+              <textarea
+                value={reviewRemarks}
+                onChange={(e) => setReviewRemarks(e.target.value)}
+                placeholder="Enter feedback or approval notes..."
+                rows={3}
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button onClick={() => { setShowReviewModal(false); setSelectedTxn(null); }} className="btn-sm" style={{ background: "#cbd5e1", color: "#334155" }}>Cancel</button>
+              <button onClick={() => handleReviewTransaction("REQUEST_REVISION")} className="btn-sm" style={{ background: "#fef3c7", color: "#d97706", border: "1px solid #fcd34d" }}>Revision</button>
+              <button onClick={() => handleReviewTransaction("REJECT")} className="btn-sm" style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" }}>Reject</button>
+              <button onClick={() => handleReviewTransaction("APPROVE")} className="btn-sm" style={{ background: "#dcfce7", color: "#16a34a", border: "1px solid #86efac" }}>Approve</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

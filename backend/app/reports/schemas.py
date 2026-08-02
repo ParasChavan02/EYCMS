@@ -1,6 +1,17 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
+class BillTransactionResponse(BaseModel):
+    id: str
+    amount: float
+    description: str
+    category: str
+    status: str
+
+    model_config = {
+        "from_attributes": True
+    }
 
 class ProjectFileResponse(BaseModel):
     id: str
@@ -21,6 +32,7 @@ class ProjectFileResponse(BaseModel):
     createdAt: str = Field(..., alias="created_at")
     updatedAt: str = Field(..., alias="updated_at")
     url: str = ""
+    transactions: Optional[List[BillTransactionResponse]] = []
 
     model_config = {
         "from_attributes": True,

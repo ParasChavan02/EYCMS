@@ -479,7 +479,7 @@ button:hover {
   background: #f8fafc;
 }
 
-.modal-overlay {
+.custom-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
@@ -489,7 +489,7 @@ button:hover {
   z-index: 1000;
 }
 
-.modal {
+.custom-modal {
   width: min(720px, 100%);
   background: white;
   border-radius: 16px;
@@ -497,7 +497,7 @@ button:hover {
   overflow: hidden;
 }
 
-.modal__header {
+.custom-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -506,7 +506,7 @@ button:hover {
   border-bottom: 1px solid var(--border);
 }
 
-.modal__body {
+.custom-modal-body {
   padding: 20px;
 }
 

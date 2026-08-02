@@ -85,8 +85,8 @@ class AccountsService:
             )
         )
 
-        if status_filter and status_filter.upper() != "ALL":
-            query = query.filter(Transaction.status == status_filter.upper())
+        # Only show APPROVED transactions
+        query = query.filter(Transaction.status == APPROVED_STATUS)
 
         if search:
             s = f"%{search}%"

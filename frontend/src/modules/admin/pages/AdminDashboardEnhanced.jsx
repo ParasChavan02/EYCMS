@@ -8,6 +8,7 @@ import { ROUTES } from "../../common/constants/routes";
 import "../components/styles/admin-dashboard-enhanced.css";
 import { transactionService } from "../../../services/transactionService";
 import { ucService } from "../../../services/ucService";
+import { ucAdminService } from "../services/ucAdminService";
 import { userService } from "../../../services/userService";
 import { X } from "lucide-react";
 
@@ -34,7 +35,27 @@ function AdminDashboardEnhanced() {
   const [selectedUserProgress, setSelectedUserProgress] = useState(null);
 
   const txns = useMemo(() => transactionService.getTransactions(), []);
-  const ucs = useMemo(() => ucService.getUCRequests(), []);
+  const [ucs, setUcs] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    const loadSubmittedUCs = async () => {
+      try {
+        const data = await ucAdminService.listSubmittedUCs();
+        if (active) {
+          setUcs(data);
+        }
+      } catch (e) {
+        console.error("Failed to load submitted UCs on dashboard:", e);
+      }
+    };
+    void loadSubmittedUCs();
+    const interval = setInterval(loadSubmittedUCs, 5000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const progressList = useMemo(() => userService.getUserProgress(), [txns, ucs]);
 
@@ -43,7 +64,7 @@ function AdminDashboardEnhanced() {
     const nearDeadline = progressList.filter(u => u.status === "Active" && u.daysRemaining <= 30 && u.daysRemaining >= 0).length;
     const pendingReviews = progressList.reduce((acc, u) => acc + u.pendingReviews, 0);
     const completedReports = progressList.reduce((acc, u) => acc + u.submittedReports, 0);
-    const pendingUcs = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED").length;
+    const pendingUcs = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED" || r.status === "PENDING_REVIEW").length;
 
     return [
       { label: "Total Active Users", value: String(active), color: "#10b981", icon: "👤" },
@@ -82,9 +103,9 @@ function AdminDashboardEnhanced() {
     const pendingTxnsCount = txns.filter(t => t.status === "SUBMITTED" || t.status === "Under Review" || t.status === "UNDER_REVIEW").length;
 
     const totalUcCount = ucs.length;
-    const pendingUcCount = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED").length;
-    const financeVerifiedUcCount = ucs.filter(r => r.status === "FINANCE_VERIFIED").length;
-    const approvedUcCount = ucs.filter(r => r.status === "ADMIN_APPROVED").length;
+    const pendingUcCount = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED" || r.status === "PENDING_REVIEW").length;
+    const financeVerifiedUcCount = ucs.filter(r => r.status === "FINANCE_VERIFIED" || r.status === "VERIFIED").length;
+    const approvedUcCount = ucs.filter(r => r.status === "ADMIN_APPROVED" || r.status === "APPROVED").length;
     const rejectedUcCount = ucs.filter(r => r.status === "REJECTED").length;
 
     return [
@@ -99,12 +120,7 @@ function AdminDashboardEnhanced() {
     ];
   }, [txns, ucs]);
 
-  const operationalAlerts = [
-    { id: "ALT-01", title: "Pending User Approvals", detail: "7 newly registered users are waiting for admin approval.", severity: "warning", actionLabel: "Review users", actionPath: ROUTES.ADMIN_USERS },
-    { id: "ALT-02", title: "Budget Warning", detail: "Equipment and Training heads have crossed 75 percent utilization.", severity: "critical", actionLabel: "View budgets", actionPath: ROUTES.ADMIN_BUDGET_HEADS },
-    { id: "ALT-03", title: "Overdue Reports", detail: "3 monthly submissions were not generated before the compliance cutoff.", severity: "warning", actionLabel: "Open reports", actionPath: ROUTES.ADMIN_REPORTS },
-    { id: "ALT-04", title: "Failed Transactions", detail: "2 settlement attempts failed during yesterday's reconciliation sync.", severity: "critical", actionLabel: "Inspect queue", actionPath: ROUTES.ADMIN_RECONCILIATION },
-  ];
+  const operationalAlerts = [];
 
   const quickActions = [
     { label: "Approve queue", helper: "Clear pending users and reports", path: ROUTES.ADMIN_APPROVALS },
@@ -112,29 +128,19 @@ function AdminDashboardEnhanced() {
     { label: "Run audit checks", helper: "Inspect recent admin activity", path: ROUTES.ADMIN_AUDIT_LOGS },
   ];
 
-  const globalResults = [
-    { category: "Users", label: "Purva Kalkute", path: ROUTES.ADMIN_USERS },
-    { category: "Transactions", label: "TXN002 Equipment purchase", path: ROUTES.ADMIN_TRANSACTIONS },
-    { category: "Events", label: "Startup Workshop", path: ROUTES.ADMIN_EVENTS },
-    { category: "Reports", label: "Budget Analysis", path: ROUTES.ADMIN_REPORTS },
-  ];
+  const globalResults = [];
 
-  const recentActivity = [
-    { id: "ACT-01", actor: "Finance Team", action: "Submitted capital procurement transaction", module: "Transactions", status: "pending", time: "10 mins ago" },
-    { id: "ACT-02", actor: "Priya Singh", action: "Completed onboarding documents", module: "Users", status: "approved", time: "25 mins ago" },
-    { id: "ACT-03", actor: "Operations Desk", action: "Scheduled Startup Workshop event", module: "Events", status: "approved", time: "58 mins ago" },
-    { id: "ACT-04", actor: "Compliance Bot", action: "Flagged missing utilization report", module: "Reports", status: "rejected", time: "1 hour ago" },
-  ];
+  const recentActivity = [];
 
   const systemOverview = useMemo(() => {
     const pendingTxns = txns.filter(t => t.status === "SUBMITTED").length;
     const pendingUcs = ucs.filter(r => r.status === "REQUESTED" || r.status === "UC_SUBMITTED").length;
 
     return [
-      { label: "New Users This Month", value: "28", helper: "11 awaiting approval" },
+      { label: "New Users This Month", value: "0", helper: "0 awaiting approval" },
       { label: "Transactions Today", value: String(txns.length), helper: `${pendingTxns} pending approval` },
-      { label: "Reports Generated", value: "17", helper: "3 overdue" },
-      { label: "Events Scheduled", value: "9", helper: "2 start this week" },
+      { label: "Reports Generated", value: "0", helper: "0 overdue" },
+      { label: "Events Scheduled", value: "0", helper: "0 start this week" },
     ];
   }, [txns, ucs]);
 
@@ -169,26 +175,18 @@ function AdminDashboardEnhanced() {
 
     // Fallback to static if empty so we don't display a completely empty list
     if (items.length === 0) {
-      return [
-        { id: "APR-88", item: "Role change request", owner: "Administration", status: "pending" },
-        { id: "APR-89", item: "Budget release", owner: "Finance", status: "approved" },
-        { id: "APR-90", item: "Monthly operations report", owner: "Compliance", status: "rejected" },
-      ];
+      return [];
     }
     return items.slice(0, 4);
   }, [txns, ucs]);
 
-  const upcomingEvents = [
-    { id: 1, title: "Startup Workshop", date: "2026-06-05", type: "Workshop" },
-    { id: 2, title: "Leadership Training", date: "2026-06-10", type: "Training" },
-    { id: 3, title: "Budget Review", date: "2026-06-15", type: "Review" },
-  ];
+  const upcomingEvents = [];
 
   const approvalsByType = useMemo(
     () => [
-      { name: "Users", value: 11, description: "Onboarding and role upgrades" },
-      { name: "Transactions", value: 19, description: "Payments waiting for sign-off" },
-      { name: "Reports", value: 12, description: "Compliance and MIS submissions" },
+      { name: "Users", value: 0, description: "Onboarding and role upgrades" },
+      { name: "Transactions", value: 0, description: "Payments waiting for sign-off" },
+      { name: "Reports", value: 0, description: "Compliance and MIS submissions" },
     ],
     []
   );
@@ -214,28 +212,28 @@ function AdminDashboardEnhanced() {
       type: "line",
       data: {
         labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        datasets: [{ data: [120, 170, 150, 210, 245, 230], borderColor: "#0f5aff", backgroundColor: "rgba(15, 90, 255, 0.15)", fill: true, tension: 0.35 }],
+        datasets: [{ data: [0, 0, 0, 0, 0, 0], borderColor: "#0f5aff", backgroundColor: "rgba(15, 90, 255, 0.15)", fill: true, tension: 0.35 }],
       },
     },
     budgetUtilization: {
       type: "bar",
       data: {
         labels: ["Travel", "Equipment", "Training", "Supplies"],
-        datasets: [{ data: [50, 82, 76, 40], backgroundColor: ["#3b82f6", "#ef4444", "#f59e0b", "#10b981"] }],
+        datasets: [{ data: [0, 0, 0, 0], backgroundColor: ["#3b82f6", "#ef4444", "#f59e0b", "#10b981"] }],
       },
     },
     reportsStatus: {
       type: "doughnut",
       data: {
         labels: ["Pending", "Approved", "Rejected"],
-        datasets: [{ data: [12, 36, 7], backgroundColor: ["#f59e0b", "#10b981", "#ef4444"] }],
+        datasets: [{ data: [0, 0, 0], backgroundColor: ["#f59e0b", "#10b981", "#ef4444"] }],
       },
     },
     userGrowth: {
       type: "bar",
       data: {
         labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        datasets: [{ data: [12, 17, 22, 25, 28, 31], backgroundColor: "#06b6d4" }],
+        datasets: [{ data: [0, 0, 0, 0, 0, 0], backgroundColor: "#06b6d4" }],
       },
     },
   };
@@ -659,16 +657,20 @@ function AdminDashboardEnhanced() {
               <Link to={ROUTES.ADMIN_APPROVALS}>Open queue</Link>
             </div>
             <div className="list-container">
-              {recentApprovals.map((approval) => (
-                <div key={approval.id} className="list-item">
-                  <div className="list-icon">{approval.id.slice(-2)}</div>
-                  <div className="list-content">
-                    <h4>{approval.item}</h4>
-                    <span className="list-type">{approval.owner}</span>
+              {recentApprovals.length === 0 ? (
+                <div style={{ padding: "16px", color: "#64748b", fontSize: "13px" }}>No recent approvals.</div>
+              ) : (
+                recentApprovals.map((approval) => (
+                  <div key={approval.id} className="list-item">
+                    <div className="list-icon">{approval.id.slice(-2)}</div>
+                    <div className="list-content">
+                      <h4>{approval.item}</h4>
+                      <span className="list-type">{approval.owner}</span>
+                    </div>
+                    <StatusBadge status={approval.status} />
                   </div>
-                  <StatusBadge status={approval.status} />
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -696,16 +698,20 @@ function AdminDashboardEnhanced() {
               <Link to={ROUTES.ADMIN_EVENTS}>View All</Link>
             </div>
             <div className="list-container">
-              {upcomingEvents.map((event) => (
-                <div key={event.id} className="list-item event-item">
-                  <div className="event-date">{event.date.split("-")[2]}</div>
-                  <div className="list-content">
-                    <h4>{event.title}</h4>
-                    <span className="list-type">{event.type}</span>
-                    <span className="list-date">{event.date}</span>
+              {upcomingEvents.length === 0 ? (
+                <div style={{ padding: "16px", color: "#64748b", fontSize: "13px" }}>No upcoming events scheduled.</div>
+              ) : (
+                upcomingEvents.map((event) => (
+                  <div key={event.id} className="list-item event-item">
+                    <div className="event-date">{event.date.split("-")[2]}</div>
+                    <div className="list-content">
+                      <h4>{event.title}</h4>
+                      <span className="list-type">{event.type}</span>
+                      <span className="list-date">{event.date}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -715,20 +721,24 @@ function AdminDashboardEnhanced() {
               <span className="card-meta">Latest system touches</span>
             </div>
             <div className="activity-list">
-              {recentActivity.map((item) => (
-                <div key={item.id} className="activity-item">
-                  <div className="activity-copy">
-                    <h4>{item.action}</h4>
-                    <p>
-                      <strong>{item.actor}</strong> in {item.module}
-                    </p>
+              {recentActivity.length === 0 ? (
+                <div style={{ padding: "16px", color: "#64748b", fontSize: "13px" }}>No system activities recorded.</div>
+              ) : (
+                recentActivity.map((item) => (
+                  <div key={item.id} className="activity-item">
+                    <div className="activity-copy">
+                      <h4>{item.action}</h4>
+                      <p>
+                        <strong>{item.actor}</strong> in {item.module}
+                      </p>
+                    </div>
+                    <div className="activity-meta">
+                      <StatusBadge status={item.status} />
+                      <span>{item.time}</span>
+                    </div>
                   </div>
-                  <div className="activity-meta">
-                    <StatusBadge status={item.status} />
-                    <span>{item.time}</span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

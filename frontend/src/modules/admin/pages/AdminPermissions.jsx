@@ -21,20 +21,7 @@ function AdminPermissions() {
   const [message, setMessage] = useState("");
   const [editingPermissionId, setEditingPermissionId] = useState(null);
 
-  const [permissions, setPermissions] = useState([
-    { id: 1, code: "user:read", name: "Read User Data", category: "User Management", description: "Allows reading user profile details and list.", status: "Active", isSystem: true },
-    { id: 2, code: "user:write", name: "Write User Data", category: "User Management", description: "Allows creating, updating and deleting user accounts.", status: "Active", isSystem: true },
-    { id: 3, code: "user:reset_pass", name: "Reset User Passwords", category: "User Management", description: "Allows initiating administrative password resets.", status: "Active", isSystem: true },
-    { id: 4, code: "finance:read", name: "Read Finance Data", category: "Finance", description: "Allows viewing budget heads and transaction ledgers.", status: "Active", isSystem: true },
-    { id: 5, code: "finance:write", name: "Write Finance Data", category: "Finance", description: "Allows adding budget heads and editing transaction records.", status: "Active", isSystem: true },
-    { id: 6, code: "finance:approve", name: "Approve Transactions", category: "Finance", description: "Allows approving budget releases and reconciliation orders.", status: "Active", isSystem: true },
-    { id: 7, code: "finance:reconcile", name: "Perform Reconciliation", category: "Finance", description: "Allows reconciling bank sheets and digital receipts.", status: "Active", isSystem: false },
-    { id: 8, code: "ops:events", name: "Manage Operations Events", category: "Operations", description: "Allows organizing and modifying university events.", status: "Active", isSystem: true },
-    { id: 9, code: "ops:reports", name: "Generate Reports", category: "Operations", description: "Allows access to export reports and run operations analytics.", status: "Active", isSystem: false },
-    { id: 10, code: "ops:audit", name: "View Audit Logs", category: "Operations", description: "Allows viewing system-wide security audits and activity logs.", status: "Active", isSystem: true },
-    { id: 11, code: "support:manage", name: "Manage Support Tickets", category: "Support", description: "Allows reviewing, assigning, and resolving support issues.", status: "Active", isSystem: false },
-    { id: 12, code: "system:config", name: "Modify System Config", category: "System Config", description: "Allows changing email settings, system integrations, and backup tasks.", status: "Inactive", isSystem: true },
-  ]);
+  const [permissions, setPermissions] = useState([]);
 
   const categories = [
     "User Management",

@@ -46,7 +46,9 @@ class UserService:
                 budget_head=t.expense.budget_head.name,
                 description=t.description,
                 status=t.status,
-                created_at=t.created_at
+                created_at=t.created_at,
+                category=t.category or t.expense.budget_head.name,
+                reconciliation_status=t.reconciliation_status or "PENDING"
             ) for t in txs
         ]
 

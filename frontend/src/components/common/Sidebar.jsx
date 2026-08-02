@@ -19,12 +19,12 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-import { ROUTES, isAdminRole } from "../../constants/routes";
+import { ROUTES } from "../../constants/routes";
 import "./sidebar-enterprise.css";
 
 function Sidebar({ isOpen, onClose, isCollapsed, isAdmin = false }) {
   const { user } = useAuth();
-  const adminMode = isAdmin || isAdminRole(user);
+  const adminMode = isAdmin || user?.role?.toUpperCase() === "ADMIN";
 
   const adminNavItems = [
     {
@@ -50,7 +50,6 @@ function Sidebar({ isOpen, onClose, isCollapsed, isAdmin = false }) {
     {
       section: "Operations",
       items: [
-        { icon: Sparkles, label: "Events", path: ROUTES.ADMIN_EVENTS },
         { icon: ImageIcon, label: "Gallery", path: ROUTES.ADMIN_GALLERY },
         { icon: BarChart3, label: "Reports", path: ROUTES.ADMIN_REPORTS },
         { icon: ClipboardCheck, label: "Approvals", path: ROUTES.ADMIN_APPROVALS },

@@ -13,41 +13,29 @@ class AdminDashboardService:
         logger.info("Aggregating metrics for administrative dashboard")
         # Placeholder dictionary structure mapping relational tables
         return {
-            "total_users": 20,
-            "active_users": 18,
-            "projects": 10,
+            "total_users": 0,
+            "active_users": 0,
+            "projects": 0,
             "reports": {
-                "total": 40,
-                "pending": 6,
-                "approved": 30,
-                "rejected": 4
+                "total": 0,
+                "pending": 0,
+                "approved": 0,
+                "rejected": 0
             },
             "transactions": {
-                "total_count": 85,
-                "pending_count": 12,
-                "approved_count": 65,
-                "rejected_count": 8
+                "total_count": 0,
+                "pending_count": 0,
+                "approved_count": 0,
+                "rejected_count": 0
             },
-            "pending_uc_requests": 4,
-            "approved_ucs": 15,
-            "pending_reports": 6,
+            "pending_uc_requests": 0,
+            "approved_ucs": 0,
+            "pending_reports": 0,
             "budget_summary": {
-                "total_allocated": 500000.00,
-                "total_utilized": 320000.00,
-                "total_remaining": 180000.00
+                "total_allocated": 0.0,
+                "total_utilized": 0.0,
+                "total_remaining": 0.0
             },
-            "recent_activities": [
-                {
-                    "timestamp": "2026-06-29T14:30:00Z",
-                    "user": "John Doe",
-                    "action": "Submitted Q3 report",
-                    "module": "Reports"
-                }
-            ],
-            "upcoming_deadlines": [
-                {
-                    "title": "Quarterly UC compliance check",
-                    "due_date": "2026-07-15"
-                }
-            ]
+            "recent_activities": [],
+            "upcoming_deadlines": []
         }

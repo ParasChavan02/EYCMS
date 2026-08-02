@@ -35,13 +35,22 @@ export const formatDateTime = (dateVal) => {
 
 export const reportService = {
   // Upload a document / image / bill / report / UC
-  uploadFile: async (category, file, eventName = "", onUploadProgress = null) => {
+  uploadFile: async (category, file, eventName = "", extraData = {}, onUploadProgress = null) => {
     const formData = new FormData();
     formData.append("category", category);
-    formData.append("file", file);
+    if (file) {
+      formData.append("file", file);
+    }
     if (eventName) {
       formData.append("event_name", eventName);
     }
+    
+    // Append additional fields (bill splitting details, drafts, status)
+    Object.keys(extraData).forEach((key) => {
+      if (extraData[key] !== undefined && extraData[key] !== null) {
+        formData.append(key, extraData[key]);
+      }
+    });
 
     const response = await api.post("/reports/upload", formData, {
       headers: {

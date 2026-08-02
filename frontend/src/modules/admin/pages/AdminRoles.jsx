@@ -19,12 +19,7 @@ function AdminRoles() {
   const [message, setMessage] = useState("");
   const [editingRoleId, setEditingRoleId] = useState(null);
   
-  const [roles, setRoles] = useState([
-    { id: 1, name: "ADMIN", description: "Full administrative access to all systems, user management, configurations, and logs.", scopes: ["User Management", "Finance", "Operations", "Support", "System Config"], status: "Active", isSystem: true, createdDate: "2026-01-01" },
-    { id: 2, name: "ACCOUNTS", description: "Access to finance, reconciliation, budget heads, and transaction workflows.", scopes: ["Finance", "Operations"], status: "Active", isSystem: false, createdDate: "2026-01-10" },
-    { id: 3, name: "USER", description: "General workspace access for standard actions, profile management, and dashboard widgets.", scopes: ["Operations"], status: "Active", isSystem: true, createdDate: "2026-01-15" },
-    { id: 4, name: "AUDITOR", description: "Read-only access to audit logs, reports, and transactional histories for review.", scopes: ["Operations", "System Config"], status: "Inactive", isSystem: false, createdDate: "2026-02-18" },
-  ]);
+  const [roles, setRoles] = useState([]);
 
   const availableScopes = [
     "User Management",

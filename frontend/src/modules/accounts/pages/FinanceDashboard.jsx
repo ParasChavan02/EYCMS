@@ -10,40 +10,11 @@ function fmtINR(n) {
 // Deadlines below have no backing data model yet (Vendors/Approvals are
 // separate pages explicitly deferred to a later pass), so they remain
 // static placeholders for now rather than fabricated "live" data.
-const notifications = [
-  {
-    msg: "Budget utilization crossed 60% threshold",
-    time: "2 hours ago",
-    color: "#d97706",
-  },
-  {
-    msg: "3 invoices are overdue",
-    time: "4 hours ago",
-    color: "#dc2626",
-  },
-  {
-    msg: "3 approval requests awaiting admin verification",
-    time: "Yesterday",
-    color: "#2563eb",
-  },
-  {
-    msg: "Monthly audit trail updated",
-    time: "2 days ago",
-    color: "#16a34a",
-  },
-];
+const notifications = [];
 
-const expenseHeads = [
-  { label: "Equipment", pct: 82 },
-  { label: "Operations", pct: 74 },
-  { label: "Travel", pct: 55 },
-];
+const expenseHeads = [];
 
-const deadlines = [
-  { title: "UC Submission", date: "15 Jun 2026" },
-  { title: "Audit Review", date: "20 Jun 2026" },
-  { title: "SOE Submission", date: "30 Jun 2026" },
-];
+const deadlines = [];
 
 const statusMap = {
   APPROVED: "badge-success",
@@ -255,22 +226,26 @@ export default function FinanceDashboard() {
                 Recent alerts & updates
               </div>
             </div>
-            <span className="fin-badge badge-primary">4 New</span>
+            <span className="fin-badge badge-primary">0 New</span>
           </div>
 
           <div className="fin-card-body">
-            {notifications.map((n, i) => (
-              <div className="fin-notif-item" key={i}>
-                <div
-                  className="fin-notif-dot"
-                  style={{ background: n.color }}
-                />
-                <div>
-                  <div className="fin-notif-text">{n.msg}</div>
-                  <div className="fin-notif-time">{n.time}</div>
+            {notifications.length === 0 ? (
+              <div className="fin-notif-text">No notifications.</div>
+            ) : (
+              notifications.map((n, i) => (
+                <div className="fin-notif-item" key={i}>
+                  <div
+                    className="fin-notif-dot"
+                    style={{ background: n.color }}
+                  />
+                  <div>
+                    <div className="fin-notif-text">{n.msg}</div>
+                    <div className="fin-notif-time">{n.time}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -331,64 +306,12 @@ export default function FinanceDashboard() {
     </div>
 
     <span className="fin-badge badge-primary">
-      4 Documents
+      0 Documents
     </span>
   </div>
 
   <div className="fin-card-body">
-    <div className="fin-table-wrap">
-      <table className="fin-table">
-        <thead>
-          <tr>
-            <th>Document</th>
-            <th>Type</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr>
-            <td className="bold">Q2 Event Report</td>
-            <td>Report</td>
-            <td>
-              <span className="fin-badge badge-success">
-                Approved
-              </span>
-            </td>
-          </tr>
-
-          <tr>
-            <td className="bold">Audit Documents</td>
-            <td>Supporting Document</td>
-            <td>
-              <span className="fin-badge badge-info">
-                Under Review
-              </span>
-            </td>
-          </tr>
-
-          <tr>
-            <td className="bold">Travel Expense Bill</td>
-            <td>Bill</td>
-            <td>
-              <span className="fin-badge badge-warning">
-                Pending
-              </span>
-            </td>
-          </tr>
-
-          <tr>
-            <td className="bold">Image Gallery Upload</td>
-            <td>Event Images</td>
-            <td>
-              <span className="fin-badge badge-danger">
-                Rejected
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <div className="fin-empty">No documents submitted yet.</div>
   </div>
 </div>
 
@@ -405,56 +328,11 @@ export default function FinanceDashboard() {
           Meetings, workshops & upcoming activities
         </div>
       </div>
-      <span className="fin-badge badge-primary">3 Events</span>
+      <span className="fin-badge badge-primary">0 Events</span>
     </div>
 
     <div className="fin-card-body">
-
-      <div className="fin-notif-item">
-        <div>
-          <div className="fin-notif-text" style={{ fontWeight: 600 }}>
-            Leadership Workshop
-          </div>
-          <div className="fin-notif-time">
-            📍 Conference Hall
-          </div>
-        </div>
-
-        <span className="fin-badge badge-info">
-          Jun 4, 2026
-        </span>
-      </div>
-
-      <div className="fin-notif-item">
-        <div>
-          <div className="fin-notif-text" style={{ fontWeight: 600 }}>
-            Finance Review
-          </div>
-          <div className="fin-notif-time">
-            📍 Board Room
-          </div>
-        </div>
-
-        <span className="fin-badge badge-warning">
-          Jun 10, 2026
-        </span>
-      </div>
-
-      <div className="fin-notif-item">
-        <div>
-          <div className="fin-notif-text" style={{ fontWeight: 600 }}>
-            Team Collaboration Day
-          </div>
-          <div className="fin-notif-time">
-            📍 Training Center
-          </div>
-        </div>
-
-        <span className="fin-badge badge-success">
-          Jun 18, 2026
-        </span>
-      </div>
-
+      <div className="fin-notif-text">No upcoming events scheduled.</div>
     </div>
   </div>
 
@@ -473,22 +351,22 @@ export default function FinanceDashboard() {
 
       <div className="fin-stat-row">
         <span>Total Requests</span>
-        <strong>42</strong>
+        <strong>0</strong>
       </div>
 
       <div className="fin-stat-row">
         <span>Approved</span>
-        <strong style={{ color: "var(--success)" }}>28</strong>
+        <strong style={{ color: "var(--success)" }}>0</strong>
       </div>
 
       <div className="fin-stat-row">
         <span>Pending</span>
-        <strong style={{ color: "var(--warning)" }}>10</strong>
+        <strong style={{ color: "var(--warning)" }}>0</strong>
       </div>
 
       <div className="fin-stat-row">
         <span>Rejected</span>
-        <strong style={{ color: "var(--danger)" }}>4</strong>
+        <strong style={{ color: "var(--danger)" }}>0</strong>
       </div>
 
     </div>
@@ -509,12 +387,16 @@ export default function FinanceDashboard() {
         </div>
 
         <div className="fin-card-body">
-          {deadlines.map((d, i) => (
-            <div key={i} className="fin-insight-row">
-              <span>{d.title}</span>
-              <strong>{d.date}</strong>
-            </div>
-          ))}
+          {deadlines.length === 0 ? (
+            <div className="fin-notif-text">No compliance deadlines.</div>
+          ) : (
+            deadlines.map((d, i) => (
+              <div key={i} className="fin-insight-row">
+                <span>{d.title}</span>
+                <strong>{d.date}</strong>
+              </div>
+            ))
+          )}
         </div>
       </div>
         </>

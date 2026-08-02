@@ -55,7 +55,6 @@ function AdminSidebar({ isOpen, onClose, isCollapsed }) {
         { icon: Sparkles, label: "Events", path: ROUTES.ADMIN_EVENTS },
         { icon: ImageIcon, label: "Gallery", path: ROUTES.ADMIN_GALLERY },
         { icon: BarChart3, label: "Reports", path: ROUTES.ADMIN_REPORTS },
-        { icon: ClipboardCheck, label: "Approvals", path: ROUTES.ADMIN_APPROVALS },
         { icon: ClipboardCheck, label: "Transaction Review", path: ROUTES.ADMIN_TRANSACTION_REVIEW },
         { icon: FileCheck, label: "UC Management", path: ROUTES.ADMIN_UC_MANAGEMENT },
         { icon: FolderArchive, label: "Other Documents", path: ROUTES.ADMIN_OTHER_DOCUMENTS },

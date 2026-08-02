@@ -12,9 +12,19 @@ from app.common.models.report_document import ReportDocument
 from app.common.models.report_image import ReportImage
 from app.common.models.milestone import Milestone
 from app.common.models.event import Event
-from app.common.models.utilization_certificate import UCRequest
+from app.common.models.utilization_certificate import UCRequest, UtilizationCertificate
 from app.common.models.uc_template import UCTemplate
 from app.common.models.uc_submission import UCSubmission
+from app.common.models.uc_management import (
+    UCRecord,
+    UCFinancialSummary,
+    UCStatementOfExpenditureRow,
+    UCCommittedExpenditureRow,
+    UCCapitalAsset,
+    UCManpowerDetail,
+    UCSupportingDocument,
+    UCVersionHistory,
+)
 from app.common.models.support_ticket import SupportTicket
 from app.common.models.support_ticket_message import SupportTicketMessage
 from app.common.models.feature_request import FeatureRequestModel
@@ -42,8 +52,17 @@ __all__ = [
     "Milestone",
     "Event",
     "UCRequest",
+    "UtilizationCertificate",
     "UCTemplate",
     "UCSubmission",
+    "UCRecord",
+    "UCFinancialSummary",
+    "UCStatementOfExpenditureRow",
+    "UCCommittedExpenditureRow",
+    "UCCapitalAsset",
+    "UCManpowerDetail",
+    "UCSupportingDocument",
+    "UCVersionHistory",
     "SupportTicket",
     "SupportTicketMessage",
     "FeatureRequestModel",

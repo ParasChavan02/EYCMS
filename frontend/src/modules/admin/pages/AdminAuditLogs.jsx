@@ -2,16 +2,7 @@ import { useMemo, useState } from "react";
 import "../../../styles/admin-management.css";
 
 function AdminAuditLogs() {
-  const [logs] = useState([
-    { id: 1, timestamp: "2026-05-30 14:30:45", user: "Manas Pandya", action: "User Created", module: "Users", status: "Success" },
-    { id: 2, timestamp: "2026-05-30 13:45:12", user: "Paras Chavan", action: "Transaction Approved", module: "Transactions", status: "Success" },
-    { id: 3, timestamp: "2026-05-30 12:20:33", user: "Purva Kalkute", action: "Report Generated", module: "Reports", status: "Success" },
-    { id: 4, timestamp: "2026-05-30 11:15:22", user: "Lakshay Jain", action: "Role Changed", module: "Users", status: "Success" },
-    { id: 5, timestamp: "2026-05-30 10:05:11", user: "Admin", action: "Login Activity", module: "System", status: "Success" },
-    { id: 6, timestamp: "2026-05-29 16:45:33", user: "Manas Pandya", action: "Configuration Changed", module: "System", status: "Success" },
-    { id: 7, timestamp: "2026-05-29 14:04:01", user: "Finance Bot", action: "Payment Retry Failed", module: "Transactions", status: "Failed" },
-    { id: 8, timestamp: "2026-05-29 09:31:19", user: "Compliance Desk", action: "Report Submission Missed", module: "Reports", status: "Warning" },
-  ]);
+  const [logs] = useState([]);
 
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -120,8 +111,9 @@ function AdminAuditLogs() {
 
         <div className="pagination-bar">
           <span>
-            Showing {(currentPage - 1) * pageSize + 1}-
-            {Math.min(currentPage * pageSize, filteredLogs.length)} of {filteredLogs.length}
+            {filteredLogs.length === 0 
+              ? "Showing 0 of 0" 
+              : `Showing ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, filteredLogs.length)} of ${filteredLogs.length}`}
           </span>
           <div className="action-buttons">
             <button className="btn-sm" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>

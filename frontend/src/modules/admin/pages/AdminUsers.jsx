@@ -17,12 +17,7 @@ function AdminUsers() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [message, setMessage] = useState("");
   const [editingUserId, setEditingUserId] = useState(null);
-  const [users, setUsers] = useState([
-    { id: 1, name: "Manas Pandya", email: "manas@eyuva.com", department: "Administration", role: "ADMIN", active: true, status: "Active", createdDate: "2026-02-03" },
-    { id: 2, name: "Purva Kalkute", email: "purva@eyuva.com", department: "HR", role: "USER", active: true, status: "Pending", createdDate: "2026-05-12" },
-    { id: 3, name: "Paras Chavan", email: "paras@eyuva.com", department: "Finance", role: "USER", active: true, status: "Active", createdDate: "2026-01-25" },
-    { id: 4, name: "Rahul Sharma", email: "rahul@eyuva.com", department: "Operations", role: "USER", active: false, status: "Inactive", createdDate: "2025-12-09" },
-  ]);
+  const [users, setUsers] = useState([]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

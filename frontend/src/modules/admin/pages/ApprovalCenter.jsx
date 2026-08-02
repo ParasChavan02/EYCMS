@@ -5,14 +5,7 @@ function ApprovalCenter() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("User");
   const [selectedApprovalId, setSelectedApprovalId] = useState("APR001");
-  const [approvals, setApprovals] = useState([
-    { id: "APR001", type: "User", title: "New user onboarding for Amit Kumar", requestedBy: "HR Team", date: "2026-05-30", status: "Pending", priority: "High", module: "Users" },
-    { id: "APR002", type: "Transaction", title: "Budget allocation request for Rs 100,000", requestedBy: "Finance", date: "2026-05-29", status: "Pending", priority: "Critical", module: "Transactions" },
-    { id: "APR003", type: "Event", title: "Startup workshop venue approval", requestedBy: "Operations", date: "2026-05-28", status: "Pending", priority: "Medium", module: "Events" },
-    { id: "APR004", type: "Report", title: "May utilization report release", requestedBy: "Compliance", date: "2026-05-28", status: "Pending", priority: "Medium", module: "Reports" },
-    { id: "APR005", type: "User", title: "Role change request for Priya Singh", requestedBy: "Administration", date: "2026-05-27", status: "Approved", priority: "Low", module: "Users" },
-    { id: "APR006", type: "Transaction", title: "Vendor settlement exception", requestedBy: "Finance", date: "2026-05-27", status: "Rejected", priority: "High", module: "Transactions" },
-  ]);
+  const [approvals, setApprovals] = useState([]);
 
   const tabs = ["User", "Transaction", "Event", "Report"];
 

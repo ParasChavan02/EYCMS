@@ -7,7 +7,6 @@ import FinanceBudget from "./pages/FinanceBudget";
 import FinanceBills from "./pages/FinanceBills";
 import FinanceReports from "./pages/FinanceReports";
 import FinanceFellowUtilization from "./pages/FinanceFellowUtilization";
-import FinanceEvents from "./pages/FinanceEvents";
 import FinanceApprovals from "./pages/FinanceApprovals";
 import FinanceReconciliation from "./pages/FinanceReconciliation";
 import FinanceContactSupport from "./pages/FinanceContactSupport";
@@ -52,11 +51,6 @@ export const accountsRoutes = (
 
 
 <Route path="/finance/reconciliation" element={<FinanceReconciliation />} />
-
-<Route path="/finance/Events" element={<FinanceEvents />} />
-
-
-    
     <Route
       path="/finance/fellow-utilization"
       element={<FinanceFellowUtilization />}

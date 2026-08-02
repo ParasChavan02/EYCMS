@@ -20,3 +20,5 @@ class FellowTransactionItem(BaseModel):
     description: str
     status: str
     created_at: datetime
+    category: Optional[str] = None
+    reconciliation_status: Optional[str] = "PENDING"

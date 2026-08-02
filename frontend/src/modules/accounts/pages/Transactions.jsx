@@ -9,44 +9,7 @@ import "../styles/finance.css";
 
 function Transactions({ viewOnly = false }) {
   const [search, setSearch] = useState("");
-  const [transactions, setTransactions] = useState([
-    {
-      id: 1,
-      date: "2026-06-01",
-      voucher: "VCH1780125233230",
-      type: "Grant Release",
-      budgetHead: "Fellowship Grant",
-      debit: "Bank Account",
-      credit: "Government Grant",
-      amount: 50000,
-      status: "Completed",
-      remarks: "Grant credited",
-    },
-    {
-      id: 2,
-      date: "2026-06-03",
-      voucher: "VCH1780125233309",
-      type: "Expense",
-      budgetHead: "Training Expense",
-      debit: "Expense Account",
-      credit: "Bank Account",
-      amount: 12000,
-      status: "Pending",
-      remarks: "Training workshop",
-    },
-    {
-      id: 3,
-      date: "2026-06-05",
-      voucher: "VCH1780125233305",
-      type: "Bill Payment",
-      budgetHead: "Operations",
-      debit: "Vendor Account",
-      credit: "Cash Account",
-      amount: 8000,
-      status: "Completed",
-      remarks: "Vendor settlement",
-    },
-  ]);
+  const [transactions, setTransactions] = useState([]);
 
   const addTransaction = (data) => {
     const newTransaction = {

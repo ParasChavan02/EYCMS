@@ -81,6 +81,10 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
     checker = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.ADMIN])
     return checker(current_user)
 
+def require_admin_only(current_user: User = Depends(get_current_user)) -> User:
+    checker = RoleChecker([RoleEnum.ADMIN])
+    return checker(current_user)
+
 def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
     checker = RoleChecker([RoleEnum.SUPER_ADMIN])
     return checker(current_user)
@@ -95,6 +99,7 @@ def require_accounts(current_user: User = Depends(get_current_user)) -> User:
 
 # Keep legacy variables to preserve compatibility across modules
 verify_admin = require_admin
+verify_admin_only = require_admin_only
 verify_accounts = require_accounts
 verify_user = require_user
 verify_admin_or_accounts = RoleChecker([RoleEnum.SUPER_ADMIN, RoleEnum.ADMIN, RoleEnum.ACCOUNTS])

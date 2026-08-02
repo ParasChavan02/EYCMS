@@ -8,7 +8,6 @@ import {
   ClipboardList,
   ScrollText,
   FileSpreadsheet,
-  CalendarDays,
   LifeBuoy,
 } from "lucide-react";
 
@@ -80,11 +79,6 @@ function AccountsSidebar({ isOpen, onClose, isCollapsed }) {
         icon: ScrollText,
         label: "Approvals",
         path: "/finance/approvals",
-      },
-      {
-        icon: CalendarDays, // Import CalendarDays from lucide-react
-        label: "Events",
-        path: "/finance/events",
       },
     ],
   },
