@@ -158,6 +158,7 @@ class AdminService:
             raise ValueError("Transaction not found")
 
         action = review_data.action.upper().strip()
+<<<<<<< HEAD
         is_recon = getattr(review_data, "is_reconciliation", False)
 
         if is_recon:
@@ -180,11 +181,23 @@ class AdminService:
                 transaction.status = TransactionStatusEnum.REVISION_REQUESTED.value
             else:
                 raise ValueError("Invalid review action")
+=======
+        if action == "APPROVE":
+            transaction.status = TransactionStatusEnum.APPROVED.value
+            transaction.approved_by_id = admin.id
+        elif action == "REJECT":
+            transaction.status = TransactionStatusEnum.REJECTED.value
+        elif action == "REQUEST_REVISION":
+            transaction.status = TransactionStatusEnum.REVISION_REQUESTED.value
+        else:
+            raise ValueError("Invalid review action")
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
 
         transaction.admin_remarks = review_data.remarks
         transaction.updated_at = datetime.now(timezone.utc)
 
         db.add(transaction)
+<<<<<<< HEAD
 
         # Send dynamic notification to the creator/uploader
         target_user_id = transaction.uploaded_by_id or transaction.created_by_id
@@ -213,6 +226,8 @@ class AdminService:
                 action_label=label_msg
               )
 
+=======
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
         db.add(
             AuditLog(
                 user_id=admin.id,
@@ -221,7 +236,10 @@ class AdminService:
                 remarks=(
                     f"Transaction: {review_data.transaction_id}\n"
                     f"Action: {action}\n"
+<<<<<<< HEAD
                     f"Reconciliation Review: {is_recon}\n"
+=======
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
                     f"Remarks: {review_data.remarks or '-'}\n"
                     f"Timestamp: {datetime.now(timezone.utc).isoformat()}"
                 ),

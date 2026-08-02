@@ -175,7 +175,10 @@ class AdminTransactionCsvService:
                     imported_by_name=txn.imported_by.name if txn.imported_by else None,
                     imported_by_email=txn.imported_by.email if txn.imported_by else None,
                     import_batch_id=txn.import_batch_id,
+<<<<<<< HEAD
                     reconciliation_status=txn.reconciliation_status or "PENDING",
+=======
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
                 )
             )
 

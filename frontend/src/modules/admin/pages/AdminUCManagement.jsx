@@ -27,6 +27,7 @@ import {
   Send,
   AlertTriangle,
   FileSearch,
+<<<<<<< HEAD
   ZoomIn,
   ZoomOut,
   RotateCw,
@@ -40,6 +41,13 @@ import { useQuery } from "react-query";
 import { reportService, getFileUrl, formatDateTime } from "../../../services/reportService";
 import { ucAdminService } from "../services/ucAdminService";
 import { adminTransactionService } from "../../../services/adminTransactionService";
+=======
+} from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { reportService, getFileUrl, formatDateTime } from "../../../services/reportService";
+import { ucAdminService } from "../services/ucAdminService";
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
 import { useNotification } from "../../common/hooks/useNotification";
 import "../../../styles/admin-management.css";
 
@@ -153,12 +161,15 @@ const toDisplayDate = (value) => {
   return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString();
 };
 
+<<<<<<< HEAD
 const formatCurrency = (value) => {
   const n = Number(value);
   if (Number.isNaN(n)) return "₹0.00";
   return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+=======
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
 const mapApiRecordToDraft = (record) => {
   if (!record) return blankDraft();
   return {
@@ -216,6 +227,7 @@ export default function AdminUCManagement() {
   const [previewFile, setPreviewFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [versionModal, setVersionModal] = useState(null);
+<<<<<<< HEAD
   const [remarks, setRemarks] = useState("");
   
   // Left Preview State for full review panel
@@ -235,12 +247,19 @@ export default function AdminUCManagement() {
     { staleTime: 10000 }
   );
 
+=======
+
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
   const loadData = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
       const [official, submitted] = await Promise.all([
         ucAdminService.listRecords(),
+<<<<<<< HEAD
         ucAdminService.listSubmittedUCs(),
+=======
+        reportService.getAdminFiles("uc"),
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
       ]);
       setOfficialRecords(Array.isArray(official) ? official : []);
       setSubmittedFiles(Array.isArray(submitted) ? submitted : []);
@@ -255,6 +274,7 @@ export default function AdminUCManagement() {
   }, [addNotification]);
 
   useEffect(() => {
+<<<<<<< HEAD
     void loadData();
     const interval = setInterval(() => {
       void loadData();
@@ -271,6 +291,22 @@ export default function AdminUCManagement() {
   const safeOfficialRecords = useMemo(() => (Array.isArray(officialRecords) ? officialRecords : []), [officialRecords]);
   const safeSubmittedFiles = useMemo(() => (Array.isArray(submittedFiles) ? submittedFiles : []), [submittedFiles]);
 
+=======
+    void (async () => {
+      await loadData();
+    })();
+  }, [loadData]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const safeOfficialRecords = useMemo(() => (Array.isArray(officialRecords) ? officialRecords : []), [officialRecords]);
+  const safeSubmittedFiles = useMemo(() => (Array.isArray(submittedFiles) ? submittedFiles : []), [submittedFiles]);
+
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
   const filteredOfficialRecords = useMemo(() => {
     const s = search.trim().toLowerCase();
     return safeOfficialRecords.filter((item) => {
@@ -576,6 +612,7 @@ export default function AdminUCManagement() {
 
   const handleSaveDraft = async () => {
     setSaving(true);
+<<<<<<< HEAD
     try {
       const saved = await persistDraft();
       addNotification(`UC draft ${saved.reference_no || ""} saved successfully.`, "success", 1800, false);
@@ -731,6 +768,134 @@ export default function AdminUCManagement() {
       addNotification(`Utilization Certificate '${fileName}' status updated to ${newStatus}.`, "success", 1800, false);
       setRemarks("");
       setPreviewFile(null);
+=======
+    try {
+      const saved = await persistDraft();
+      addNotification(`UC draft ${saved.reference_no || ""} saved successfully.`, "success", 1800, false);
+    } catch (error) {
+      console.error(error);
+      addNotification(error?.response?.data?.detail?.message || error?.response?.data?.detail || "Failed to save UC draft.", "error", 2200, false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleGeneratePdf = async (shouldDownload = false) => {
+    setSaving(true);
+    try {
+      const saved = await persistDraft();
+      const blob = await buildPdfBlob(saved);
+      pushPreviewBlob(blob);
+      const fileName = `${(saved.reference_no || "official_uc").replace(/\s+/g, "_")}.pdf`;
+      await ucAdminService.uploadGeneratedPdf(saved.id, blob, fileName);
+      await loadData();
+      addNotification("Official UC PDF generated and stored securely.", "success", 2200, false);
+      if (shouldDownload) {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      }
+    } catch (error) {
+      console.error(error);
+      addNotification(error?.response?.data?.detail || "Failed to generate UC PDF.", "error", 2400, false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    try {
+      const blob = await buildPdfBlob(draft.id ? draft : { ...draft, version: 1, status: "DRAFT" });
+      const url = pushPreviewBlob(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      console.error(error);
+      addNotification("Could not open preview.", "error", 1800, false);
+    }
+  };
+
+  const handlePrint = async () => {
+    try {
+      const blob = await buildPdfBlob(draft);
+      const url = pushPreviewBlob(blob);
+      const win = window.open(url, "_blank", "noopener,noreferrer");
+      if (win) {
+        win.addEventListener("load", () => win.print(), { once: true });
+      }
+    } catch (error) {
+      console.error(error);
+      addNotification("Could not start print flow.", "error", 1800, false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      const saved = await persistDraft();
+      const submitted = await ucAdminService.submitRecord(saved.id);
+      setDraft(mapApiRecordToDraft(submitted));
+      await loadData();
+      setActiveTab("my");
+      addNotification("UC submitted successfully for official record keeping.", "success", 2200, false);
+    } catch (error) {
+      console.error(error);
+      addNotification(error?.response?.data?.detail?.message || error?.response?.data?.detail || "Submission failed. Check required fields and generated PDF first.", "error", 2500, false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUploadSupportingDocuments = async (fileList, documentType) => {
+    if (!draft.id) {
+      addNotification("Save the draft first before uploading supporting documents.", "warning", 2200, false);
+      return;
+    }
+
+    try {
+      const uploads = Array.from(fileList || []);
+      for (const file of uploads) {
+        await ucAdminService.uploadSupportingDocument(draft.id, file, documentType);
+      }
+      const refreshed = await ucAdminService.getRecord(draft.id);
+      setDraft(mapApiRecordToDraft(refreshed));
+      await loadData();
+      addNotification("Supporting documents uploaded.", "success", 1800, false);
+    } catch (error) {
+      console.error(error);
+      addNotification("Failed to upload supporting documents.", "error", 2000, false);
+    }
+  };
+
+  const startEditRecord = (record) => {
+    setDraft(mapApiRecordToDraft(record));
+    setActiveTab("create");
+  };
+
+  const loadRecordVersions = async (recordId) => {
+    try {
+      const versions = await ucAdminService.listVersions(recordId);
+      setVersionModal({ recordId, versions });
+    } catch (error) {
+      console.error(error);
+      addNotification("Could not load version history.", "error", 1800, false);
+    }
+  };
+
+  const downloadStoredPdf = (record) => {
+    if (record.generated_pdf_path) {
+      window.open(getFileUrl(record.generated_pdf_path), "_blank", "noopener,noreferrer");
+      return;
+    }
+    addNotification("No stored PDF is available for download yet.", "warning", 1800, false);
+  };
+
+  const updateSubmittedStatus = async (fileId, newStatus, fileName) => {
+    try {
+      await reportService.updateFileStatus(fileId, newStatus);
+      addNotification(`Utilization Certificate '${fileName}' marked as ${newStatus}.`, "success", 1800, false);
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
       await loadData();
     } catch (error) {
       console.error(error);
@@ -755,6 +920,7 @@ export default function AdminUCManagement() {
     }
   };
 
+<<<<<<< HEAD
   // Computes the versions list for the currently reviewed UC project
   const currentProjectUcVersions = useMemo(() => {
     if (!previewFile) return [];
@@ -775,6 +941,8 @@ export default function AdminUCManagement() {
     return allTransactions.filter(t => t.project_id === projId || t.project === projId);
   }, [previewFile, allTransactions]);
 
+=======
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
   const renderSectionCard = (title, icon, children, accent = "#0f766e") => {
     const Icon = icon;
     return (
@@ -1241,6 +1409,7 @@ export default function AdminUCManagement() {
           </div>
         </>
       )}
+<<<<<<< HEAD
 
       {activeTab === "submitted" && (
         <>
@@ -1321,6 +1490,103 @@ export default function AdminUCManagement() {
       )}
 
       {/* DETAILED TWO-COLUMN UC REVIEW PANEL */}
+=======
+
+      {activeTab === "submitted" && (
+        <>
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, padding: 18, marginBottom: 18, display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 260, position: "relative" }}>
+              <input value={submittedSearch} onChange={(e) => setSubmittedSearch(e.target.value)} placeholder="Search by UC name, uploader, project/team..." style={{ width: "100%", height: 42, borderRadius: 10, border: "1px solid #cbd5e1", paddingLeft: 40 }} />
+              <Search size={16} style={{ position: "absolute", left: 14, top: 13, color: "#94a3b8" }} />
+            </div>
+            <div style={{ background: "#f3e8ff", color: "#7e22ce", padding: "8px 12px", borderRadius: 10, fontWeight: 700 }}>
+              Submitted UCs: {filteredSubmittedFiles.length}
+            </div>
+          </div>
+
+          <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 16, overflow: "hidden" }}>
+            {loading ? (
+              <div style={{ padding: 60, display: "flex", justifyContent: "center" }}>
+                <RefreshCw className="animate-spin" size={34} color="#0f766e" />
+              </div>
+            ) : filteredSubmittedFiles.length ? (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc", textAlign: "left" }}>
+                      <th style={{ padding: 14 }}>UC File</th>
+                      <th style={{ padding: 14 }}>Uploader</th>
+                      <th style={{ padding: 14 }}>Project / Team</th>
+                      <th style={{ padding: 14 }}>Status</th>
+                      <th style={{ padding: 14 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredSubmittedFiles.map((uc) => {
+                      const fileDirectUrl = getFileUrl(uc.filePath || uc.file_path || uc.url);
+                      const displayName = uc.originalFileName || uc.original_file_name || uc.fileName || uc.file_name || "Utilization Certificate";
+                      const uploaderName = uc.uploadedByName || uc.uploaded_by_name || "Team Member";
+                      const uploaderEmail = uc.uploadedByEmail || uc.uploaded_by_email || "";
+                      const projectIdVal = uc.projectId || uc.project_id || "N/A";
+                      const teamIdVal = uc.teamId || uc.team_id || "N/A";
+                      const createdAtVal = uc.createdAt || uc.created_at;
+                      const dateStr = formatDateTime(createdAtVal);
+
+                      return (
+                        <tr key={uc.id} style={{ borderTop: "1px solid #e2e8f0" }}>
+                          <td style={{ padding: 14, fontWeight: 700 }}>{displayName}</td>
+                          <td style={{ padding: 14 }}>
+                            <div>{uploaderName}</div>
+                            {uploaderEmail && <div style={{ fontSize: 12, color: "#64748b" }}>{uploaderEmail}</div>}
+                            <div style={{ fontSize: 12, color: "#64748b" }}>{dateStr}</div>
+                          </td>
+                          <td style={{ padding: 14 }}>
+                            <div>Proj: {projectIdVal}</div>
+                            <div style={{ fontSize: 12, color: "#64748b" }}>Team: {teamIdVal}</div>
+                          </td>
+                          <td style={{ padding: 14 }}>{getStatusBadge(uc.status)}</td>
+                          <td style={{ padding: 14 }}>
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              <button type="button" className="sp-btn sp-btn-secondary" onClick={() => setPreviewFile(uc)}>
+                                <Eye size={14} />
+                                View
+                              </button>
+                              <a href={fileDirectUrl} download={displayName} target="_blank" rel="noreferrer" className="sp-btn sp-btn-secondary" style={{ textDecoration: "none" }}>
+                                <Download size={14} />
+                                Download
+                              </a>
+                              <button type="button" className="sp-btn sp-btn-secondary" onClick={() => updateSubmittedStatus(uc.id, "VERIFIED", displayName)}>
+                                <ShieldCheck size={14} />
+                                Verify
+                              </button>
+                              <button type="button" className="sp-btn sp-btn-primary" onClick={() => updateSubmittedStatus(uc.id, "APPROVED", displayName)}>
+                                <CheckCircle2 size={14} />
+                                Approve
+                              </button>
+                              <button type="button" className="sp-btn sp-btn-danger" onClick={() => updateSubmittedStatus(uc.id, "REJECTED", displayName)}>
+                                <XCircle size={14} />
+                                Reject
+                              </button>
+                              <button type="button" className="sp-btn sp-btn-secondary" onClick={() => updateSubmittedStatus(uc.id, "REVISION_REQUESTED", displayName)}>
+                                <AlertTriangle size={14} />
+                                Request Changes
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: 44, textAlign: "center", color: "#64748b" }}>No submitted UC files found.</div>
+            )}
+          </div>
+        </>
+      )}
+
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
       {previewFile && (() => {
         const fileName = previewFile.originalFileName || previewFile.original_file_name || previewFile.fileName || previewFile.file_name || "Utilization Certificate";
         const uploaderName = previewFile.uploadedByName || previewFile.uploaded_by_name || "Team Member";
@@ -1344,6 +1610,7 @@ export default function AdminUCManagement() {
             onClick={() => setPreviewFile(null)}
           >
             <div
+<<<<<<< HEAD
               style={{ background: "#ffffff", borderRadius: 16, width: "100%", maxWidth: "1280px", height: "92vh", display: "grid", gridTemplateColumns: "1fr 1fr", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)", border: "1px solid #e2e8f0" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -1384,6 +1651,39 @@ export default function AdminUCManagement() {
                   <div>
                     <strong style={{ fontSize: "14px", color: "#0f172a", display: "block" }}>{fileName}</strong>
                     <span style={{ fontSize: "11px", color: "#64748b" }}>Uploaded by {uploaderName} on {dateStr}</span>
+=======
+              style={{ background: "#ffffff", borderRadius: 16, width: "100%", maxWidth: 900, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)", display: "flex", flexDirection: "column", border: "1px solid #e2e8f0" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ padding: "16px 20px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc" }}>
+                <div>
+                  <strong style={{ fontSize: "1rem", color: "#0f172a" }}>{fileName}</strong>
+                  <span style={{ fontSize: "0.78rem", color: "#64748b", display: "block", marginTop: "2px" }}>
+                    Uploaded by {uploaderName} on {dateStr}
+                  </span>
+                </div>
+                <button type="button" onClick={() => setPreviewFile(null)} className="sp-btn sp-btn-secondary">
+                  Close
+                </button>
+              </div>
+
+              <div style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 350, background: "#f8fafc" }}>
+                {isImage ? (
+                  <img src={fileDirectUrl} alt={fileName} style={{ maxWidth: "100%", maxHeight: 550, borderRadius: 10, objectFit: "contain" }} />
+                ) : isPdf ? (
+                  <iframe src={fileDirectUrl} title={fileName} style={{ width: "100%", height: 550, border: "none", borderRadius: 10, background: "#ffffff" }} />
+                ) : (
+                  <div style={{ textAlign: "center", padding: "40px 20px", background: "#ffffff", borderRadius: 12, border: "1px solid #e2e8f0", width: "100%", maxWidth: 520 }}>
+                    <FileText size={52} color="#0f766e" style={{ marginBottom: 14 }} />
+                    <h3 style={{ margin: "0 0 6px", color: "#1e293b" }}>Document Preview</h3>
+                    <p style={{ margin: "0 0 20px", color: "#64748b", fontSize: "0.88rem" }}>
+                      File: <strong>{fileName}</strong>
+                    </p>
+                    <a href={fileDirectUrl} download={fileName} target="_blank" rel="noopener noreferrer" className="sp-btn sp-btn-primary" style={{ textDecoration: "none" }}>
+                      <Download size={16} />
+                      Download File to View
+                    </a>
+>>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
                   </div>
                   <button type="button" onClick={() => setPreviewFile(null)} className="icon-close-button"><X size={18} /></button>
                 </div>
