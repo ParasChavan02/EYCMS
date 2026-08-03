@@ -95,16 +95,6 @@ export default function FinanceBills() {
     [safeBills]
   );
 
-  const handleStatusUpdate = async (fileId, newStatus, fileName) => {
-    try {
-      await reportService.updateFileStatus(fileId, newStatus);
-      addNotification(`Bill '${fileName}' marked as ${newStatus}.`, "success", 1800, false);
-      await fetchBills();
-    } catch (err) {
-      console.error(err);
-      addNotification("Failed to update bill status.", "error", 1800, false);
-    }
-  };
 
   const formatFileSize = (bytes) => {
     if (!bytes || bytes === 0) return "0 KB";
@@ -302,26 +292,6 @@ export default function FinanceBills() {
                               <Download size={14} />
                               Download
                             </a>
-
-                            {b.status !== "APPROVED" && (
-                              <button
-                                type="button"
-                                onClick={() => handleStatusUpdate(b.id, "APPROVED", displayName)}
-                                style={{ padding: "6px 12px", borderRadius: "8px", border: "none", background: "#dcfce7", color: "#166534", fontWeight: "600", fontSize: "0.78rem", cursor: "pointer" }}
-                              >
-                                Approve
-                              </button>
-                            )}
-
-                            {b.status !== "REJECTED" && (
-                              <button
-                                type="button"
-                                onClick={() => handleStatusUpdate(b.id, "REJECTED", displayName)}
-                                style={{ padding: "6px 12px", borderRadius: "8px", border: "none", background: "#fee2e2", color: "#991b1b", fontWeight: "600", fontSize: "0.78rem", cursor: "pointer" }}
-                              >
-                                Reject
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>

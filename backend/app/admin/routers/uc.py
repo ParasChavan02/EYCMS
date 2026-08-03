@@ -11,19 +11,15 @@ from app.admin.services.uc_management import UCManagementService
 from app.core.dependencies import get_db, require_admin_only
 from app.common.models.user import User
 from app.shared.responses import ResponseEnvelope, make_success_response
-<<<<<<< HEAD
 from pydantic import BaseModel
 
 class SubmittedUCStatusUpdate(BaseModel):
     status: str
     admin_notes: str | None = None
-=======
->>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
 
 router = APIRouter(prefix="/admin/uc", tags=["Admin UC Management"], dependencies=[Depends(require_admin_only)])
 
 
-<<<<<<< HEAD
 @router.get("/submitted", response_model=ResponseEnvelope[List[dict]])
 def list_submitted_ucs(db: Session = Depends(get_db), current_admin: User = Depends(require_admin_only)):
     try:
@@ -55,10 +51,6 @@ def update_submitted_uc_status(
         raise
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
-
-
-=======
->>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
 @router.get("", response_model=ResponseEnvelope[List[dict]])
 def list_uc_records(db: Session = Depends(get_db), current_admin: User = Depends(require_admin_only)):
     try:

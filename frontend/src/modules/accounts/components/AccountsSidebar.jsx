@@ -73,17 +73,6 @@ function AccountsSidebar({ isOpen, onClose, isCollapsed }) {
   },
 
   {
-    section: "Workflow",
-    items: [
-      {
-        icon: ScrollText,
-        label: "Approvals",
-        path: "/finance/approvals",
-      },
-    ],
-  },
-
-  {
     section: "Support",
     items: [
       {

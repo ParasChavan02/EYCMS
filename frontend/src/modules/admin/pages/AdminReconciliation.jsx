@@ -13,18 +13,6 @@ function AdminReconciliation() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // User-created runs (merged with live ones)
-  const [createdRuns, setCreatedRuns] = useState([]);
-
-  // Form State
-  const [form, setForm] = useState({
-    period: "",
-    status: "Completed",
-    matchedTxn: "",
-    pendingTxn: "",
-    failedTxn: "",
-  });
-  const [message, setMessage] = useState("");
 
   // Filters State
   const [search, setSearch] = useState("");
@@ -66,43 +54,7 @@ function AdminReconciliation() {
     fetchTransactions();
   }, []);
 
-  // Form Change Handler
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
 
-  // Create New Reconciliation Handler (stores run locally, merged into the list)
-  const handleCreateReconciliation = () => {
-    setMessage("");
-    if (!form.period || form.matchedTxn === "" || form.pendingTxn === "" || form.failedTxn === "") {
-      setMessage("❌ Please fill all required fields");
-      return;
-    }
-
-    const newRec = {
-      id: `REC_MAN_${Date.now()}`,
-      period: form.period,
-      status: form.status,
-      matchedTxn: parseInt(form.matchedTxn, 10),
-      pendingTxn: parseInt(form.pendingTxn, 10),
-      failedTxn: parseInt(form.failedTxn, 10),
-      completedDate: new Date().toISOString().slice(0, 10),
-      source: "ADMIN",
-      sortDate: new Date(),
-      items: []
-    };
-
-    setCreatedRuns((prev) => [newRec, ...prev]);
-    setForm({
-      period: "",
-      status: "Completed",
-      matchedTxn: "",
-      pendingTxn: "",
-      failedTxn: "",
-    });
-    setMessage("✅ Reconciliation cycle created successfully");
-  };
 
   // Reconciliation cycles grouping
   const reconciliations = useMemo(() => {
@@ -164,15 +116,13 @@ function AdminReconciliation() {
       };
     });
 
-    const combined = [...createdRuns, ...liveRuns];
-
-    return combined.sort((a, b) => {
+    return liveRuns.sort((a, b) => {
       const dateA = a.sortDate ? new Date(a.sortDate).getTime() : 0;
       const dateB = b.sortDate ? new Date(b.sortDate).getTime() : 0;
       if (dateB !== dateA) return dateB - dateA;
       return a.source.localeCompare(b.source);
     });
-  }, [transactions, createdRuns]);
+  }, [transactions]);
 
   // Filtered reconciliation cycles
   const filteredReconciliations = useMemo(() => {
@@ -345,65 +295,7 @@ function AdminReconciliation() {
         <p>Compare bank statements against general ledger transactions. Review user runs and construct admin cycles.</p>
       </section>
 
-      {/* CREATE RECONCILIATION */}
-      <section className="admin-card">
-        <h2>Create New Reconciliation Cycle</h2>
-        <div className="form-grid">
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Reconciliation Period</span>
-            <input
-              name="period"
-              value={form.period}
-              onChange={handleChange}
-              placeholder="e.g. June 2026"
-            />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Matched Transactions</span>
-            <input
-              name="matchedTxn"
-              type="number"
-              value={form.matchedTxn}
-              onChange={handleChange}
-              placeholder="Count (e.g. 120)"
-            />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Pending Transactions</span>
-            <input
-              name="pendingTxn"
-              type="number"
-              value={form.pendingTxn}
-              onChange={handleChange}
-              placeholder="Count (e.g. 5)"
-            />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Failed Transactions</span>
-            <input
-              name="failedTxn"
-              type="number"
-              value={form.failedTxn}
-              onChange={handleChange}
-              placeholder="Count (e.g. 2)"
-            />
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Initial Status</span>
-            <select name="status" value={form.status} onChange={handleChange} className="filter-select" style={{ minWidth: "auto", height: "46px" }}>
-              <option value="Completed">Completed</option>
-              <option value="In Review">In Review</option>
-              <option value="Pending">Pending</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-actions">
-          <button onClick={handleCreateReconciliation} className="btn-primary">
-            + Create Reconciliation Run
-          </button>
-        </div>
-        {message && <div className={`form-message ${message.includes("✅") ? "success" : "error"}`}>{message}</div>}
-      </section>
+
 
       {/* STATS GRID / SUMMARY CARDS */}
       <section className="stats-grid">

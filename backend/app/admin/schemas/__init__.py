@@ -53,10 +53,7 @@ class AdminTransactionReview(BaseModel):
     transaction_id: str
     action: str  # APPROVE, REJECT, REQUEST_REVISION
     remarks: Optional[str] = None
-<<<<<<< HEAD
     is_reconciliation: Optional[bool] = False
-=======
->>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
 
 
 class AdminTransactionItem(BaseModel):
@@ -74,10 +71,7 @@ class AdminTransactionItem(BaseModel):
     imported_by_name: Optional[str] = None
     imported_by_email: Optional[str] = None
     import_batch_id: Optional[str] = None
-<<<<<<< HEAD
     reconciliation_status: Optional[str] = "PENDING"
-=======
->>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
 
 
 class AdminTransactionImportError(BaseModel):

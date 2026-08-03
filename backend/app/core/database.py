@@ -43,92 +43,6 @@ def init_db():
         cols = inspector.get_columns(table_name)
         return any(c["name"].lower() == col_name.lower() for c in cols)
 
-<<<<<<< HEAD
-        # 3. Update 'transactions' table
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN transaction_date TIMESTAMP"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN source VARCHAR(50)"))
-            conn.execute(text("UPDATE transactions SET source = 'MANUAL' WHERE source IS NULL"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN imported_at TIMESTAMP"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN imported_by_id CHAR(36) REFERENCES users(id)"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN import_batch_id VARCHAR(128)"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("UPDATE transactions SET transaction_date = created_at WHERE transaction_date IS NULL"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN project_id CHAR(36) REFERENCES projects(id)"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN team_id CHAR(36) REFERENCES teams(id)"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN bill_id CHAR(36) REFERENCES project_files(id)"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN uploaded_by_id CHAR(36) REFERENCES users(id)"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN category VARCHAR(100)"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE transactions ADD COLUMN reconciliation_status VARCHAR(50) DEFAULT 'PENDING'"))
-        except Exception:
-            pass
-
-        # 4. Update 'events' table for the redesigned Events module
-        for stmt in [
-            "ALTER TABLE events ADD COLUMN event_id VARCHAR(50)",
-            "ALTER TABLE events ADD COLUMN type VARCHAR(100)",
-            "ALTER TABLE events ADD COLUMN date DATE",
-            "ALTER TABLE events ADD COLUMN time TIME",
-            "ALTER TABLE events ADD COLUMN venue VARCHAR(150)",
-            "ALTER TABLE events ADD COLUMN coordinator VARCHAR(150)",
-            "ALTER TABLE events ADD COLUMN created_by CHAR(36) REFERENCES users(id)",
-            "ALTER TABLE events ADD COLUMN updated_at TIMESTAMP",
-            "ALTER TABLE events ADD COLUMN cancelled_by CHAR(36) REFERENCES users(id)",
-            "ALTER TABLE events ADD COLUMN cancelled_at TIMESTAMP",
-            "ALTER TABLE events ADD COLUMN cancel_reason TEXT",
-        ]:
-            try:
-                conn.execute(text(stmt))
-            except Exception:
-                pass
-
-        try:
-            conn.execute(text("UPDATE events SET status = 'UPCOMING' WHERE status IS NULL OR TRIM(status) = ''"))
-        except Exception:
-            pass
-
-        # 5. Update 'users' table
-        try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN team_configured BOOLEAN DEFAULT FALSE"))
-        except Exception:
-            pass
-        try:
-            conn.execute(text("ALTER TABLE users ADD COLUMN team_id CHAR(36) REFERENCES teams(id)"))
-        except Exception:
-            pass
-=======
     # Helper to execute alter statement if column doesn't exist
     def add_column_if_missing(table, column, col_type_and_constraints):
         if not column_exists(table, column):
@@ -159,6 +73,12 @@ def init_db():
     add_column_if_missing("transactions", "imported_at", "TIMESTAMP")
     add_column_if_missing("transactions", "imported_by_id", f"{uuid_type} REFERENCES users(id)")
     add_column_if_missing("transactions", "import_batch_id", "VARCHAR(128)")
+    add_column_if_missing("transactions", "project_id", f"{uuid_type} REFERENCES projects(id)")
+    add_column_if_missing("transactions", "team_id", f"{uuid_type} REFERENCES teams(id)")
+    add_column_if_missing("transactions", "bill_id", f"{uuid_type} REFERENCES project_files(id)")
+    add_column_if_missing("transactions", "uploaded_by_id", f"{uuid_type} REFERENCES users(id)")
+    add_column_if_missing("transactions", "category", "VARCHAR(100)")
+    add_column_if_missing("transactions", "reconciliation_status", "VARCHAR(50) DEFAULT 'PENDING'")
 
     try:
         with engine.begin() as conn:
@@ -193,4 +113,4 @@ def init_db():
     # 5. Update 'users' table
     add_column_if_missing("users", "team_configured", "BOOLEAN DEFAULT FALSE")
     add_column_if_missing("users", "team_id", f"{uuid_type} REFERENCES teams(id)")
->>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
+

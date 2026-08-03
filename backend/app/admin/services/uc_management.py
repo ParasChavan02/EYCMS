@@ -515,8 +515,6 @@ class UCManagementService:
         record = UCManagementService._get_record(db, record_id)
         return [_version_to_dict(version) for version in record.versions]
 
-    @staticmethod
-<<<<<<< HEAD
     def list_submitted_ucs(db: Session, current_user: User) -> List[dict]:
         _ensure_admin_only(current_user)
         import uuid
@@ -608,8 +606,6 @@ class UCManagementService:
         }
 
     @staticmethod
-=======
->>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
     def _get_record(db: Session, record_id: str) -> UCRecord:
         try:
             record_uuid = uuid.UUID(record_id)

@@ -65,8 +65,6 @@ export const ucAdminService = {
     });
     return unwrap(response);
   },
-<<<<<<< HEAD
-
   async listSubmittedUCs() {
     const response = await api.get("/admin/uc/submitted");
     return Array.isArray(unwrap(response)) ? unwrap(response) : [];
@@ -79,6 +77,4 @@ export const ucAdminService = {
     });
     return unwrap(response);
   },
-=======
->>>>>>> 529928889db3e04ebd354e4e18f79b71321a45df
 };
