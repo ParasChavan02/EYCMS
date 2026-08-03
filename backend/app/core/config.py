@@ -54,6 +54,13 @@ class Settings(BaseSettings):
             return [i.strip() for i in v_stripped.split(",") if i.strip()]
         return v
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def format_database_url(cls, v: str) -> str:
+        if isinstance(v, str) and v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql://", 1)
+        return v
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
