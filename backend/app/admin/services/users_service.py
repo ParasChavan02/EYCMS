@@ -22,7 +22,7 @@ class AdminUsersService:
         total = db.query(User).count()
         active = db.query(User).filter(User.status == "Active").count()
         pending = db.query(Invitation).filter(Invitation.status == "PENDING_APPROVAL").count()
-        inactive = db.query(User).filter(User.status == "Inactive").count()
+        inactive = db.query(User).filter(User.is_active == False).count()
 
         return {
             "total": total,
@@ -375,7 +375,7 @@ class AdminUsersService:
             raise HTTPException(status_code=404, detail="User not found")
 
         user.is_active = not user.is_active
-        user.status = "Active" if user.is_active else "Inactive"
+        user.status = "Active" if user.is_active else "Deactivated"
         db.add(user)
 
         audit = AuditLog(
@@ -395,19 +395,16 @@ class AdminUsersService:
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Disable credentials, clear project/team membership but retain record
+        # Disable credentials, mark as Blocked, but retain record and membership for reference/reactivation
         user.is_active = False
-        user.status = "Inactive"
-        user.project_id = None
-        user.team_id = None
-        user.team_configured = False
+        user.status = "Blocked"
         db.add(user)
 
         audit = AuditLog(
             user_id=uuid.UUID(admin_id),
             action="Remove Access",
             entity="User",
-            remarks=f"Revoked credentials & cleared project membership for {user.email}."
+            remarks=f"Revoked credentials & blocked access for user {user.email}."
         )
         db.add(audit)
         db.commit()
@@ -735,3 +732,43 @@ class AdminUsersService:
             "title": new_proj.title,
             "status": new_proj.status
         }
+
+    @staticmethod
+    def toggle_project_status(db: Session, project_uuid: str, admin_id: str) -> dict:
+        project = db.query(Project).filter(Project.id == uuid.UUID(project_uuid)).first()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        project.status = "SUSPENDED" if project.status == "ACTIVE" else "ACTIVE"
+        db.add(project)
+
+        audit = AuditLog(
+            user_id=uuid.UUID(admin_id),
+            action="Toggle Project Status",
+            entity="Project",
+            remarks=f"Toggled project {project.project_id} status to {project.status}."
+        )
+        db.add(audit)
+        db.commit()
+
+        return {"project_uuid": str(project.id), "status": project.status}
+
+    @staticmethod
+    def remove_project(db: Session, project_uuid: str, admin_id: str) -> dict:
+        project = db.query(Project).filter(Project.id == uuid.UUID(project_uuid)).first()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        project.status = "DELETED"
+        db.add(project)
+
+        audit = AuditLog(
+            user_id=uuid.UUID(admin_id),
+            action="Delete Project",
+            entity="Project",
+            remarks=f"Set project {project.project_id} status to DELETED."
+        )
+        db.add(audit)
+        db.commit()
+
+        return {"project_uuid": str(project.id), "status": project.status, "message": "Project set to deleted successfully"}

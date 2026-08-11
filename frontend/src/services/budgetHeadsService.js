@@ -79,7 +79,37 @@ export const budgetHeadsService = {
    * DELETE /admin/budget-heads/spending/{spendingId}
    */
   async deleteSpendingCategory(spendingId) {
-    const response = await api.delete(`/admin/budget-heads/spending/${spendingId}`);
+    const response = await api.delete(`/admin/spending/${spendingId}`);
+    return extractResponseData(response);
+  },
+
+  async allocateEycBudget(payload) {
+    const response = await api.post("/admin/budget-heads/allocate", payload);
+    return extractResponseData(response);
+  },
+
+  async addCommonBudgetEntry(payload) {
+    const response = await api.post("/admin/budget-heads/common-budget", payload);
+    return extractResponseData(response);
+  },
+
+  async getSuperOverview() {
+    const response = await api.get("/admin/budget-heads/super-overview");
+    return extractResponseData(response);
+  },
+
+  async superAllocate(payload) {
+    const response = await api.post("/admin/budget-heads/super-allocate", payload);
+    return extractResponseData(response);
+  },
+
+  async addCustomCategory(payload) {
+    const response = await api.post("/admin/budget-heads/custom-category", payload);
+    return extractResponseData(response);
+  },
+
+  async allocateFellowBudget(payload) {
+    const response = await api.post("/admin/budget-heads/fellow-allocate", payload);
     return extractResponseData(response);
   },
 };

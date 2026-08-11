@@ -1,0 +1,8 @@
+Exception: cannot access local variable 'joinedload' where it is not associated with a value
+Traceback (most recent call last):
+  File "D:\Projects\EYCMS Main\EYCMS_2\backend\app\admin\routers\budget_heads.py", line 27, in get_budget_heads_overview
+    data = BudgetHeadsService.get_overview(db)
+  File "D:\Projects\EYCMS Main\EYCMS_2\backend\app\admin\services\budget_heads_service.py", line 431, in get_overview
+    transactions = db.query(Transaction).options(joinedload(Transaction.creator)).filter(
+                                                 ^^^^^^^^^^
+UnboundLocalError: cannot access local variable 'joinedload' where it is not associated with a value

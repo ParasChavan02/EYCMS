@@ -37,6 +37,7 @@ export const ROUTES = {
   SUPER_ADMIN_TOKEN_DETAILS: "/super-admin/token/:id",
   SUPER_ADMIN_PROFILE: "/super-admin/profile",
   SUPER_ADMIN_SETTINGS: "/super-admin/settings",
+  SUPER_ADMIN_BUDGET_ALLOCATION: "/super-admin/budget-allocation",
 };
 
 export function isAdminRole(account) {

@@ -534,3 +534,31 @@ def create_project(
         raise he
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/projects/{project_uuid}/toggle-status")
+def toggle_project_status(
+    project_uuid: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.toggle_project_status(db, project_uuid, str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.delete("/projects/{project_uuid}/remove")
+def remove_project(
+    project_uuid: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.remove_project(db, project_uuid, str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

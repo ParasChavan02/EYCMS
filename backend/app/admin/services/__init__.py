@@ -172,6 +172,33 @@ class AdminService:
                 raise ValueError("Invalid review action")
         else:
             if action == "APPROVE":
+                if transaction.project_id:
+                    from app.common.models.eyc_budget import EYCBudgetAllocation
+                    from sqlalchemy import func
+                    category_name = transaction.category or "Miscellaneous"
+                    cat_alloc = db.query(EYCBudgetAllocation).filter(
+                        EYCBudgetAllocation.section == "FELLOWS_CAT",
+                        EYCBudgetAllocation.project_id == transaction.project_id,
+                        func.lower(EYCBudgetAllocation.budget_head) == category_name.lower()
+                    ).first()
+                    
+                    if not cat_alloc:
+                        raise ValueError(f"Insufficient category balance. Category '{category_name}' has not been allocated any budget for this project.")
+                    
+                    # Calculate utilized (approved excluding this one)
+                    utilized = db.query(func.sum(Transaction.amount)).filter(
+                        Transaction.project_id == transaction.project_id,
+                        Transaction.category == transaction.category,
+                        Transaction.status == "APPROVED",
+                        Transaction.id != transaction.id
+                    ).scalar() or 0.0
+                    
+                    allocated = float(cat_alloc.allocated_amount)
+                    remaining = allocated - float(utilized)
+                    
+                    if float(transaction.amount) > remaining:
+                        raise ValueError(f"Insufficient category balance. Category '{category_name}' has only Rs {remaining:,.2f} remaining, but transaction requires Rs {float(transaction.amount):,.2f}.")
+
                 transaction.status = TransactionStatusEnum.APPROVED.value
                 transaction.approved_by_id = admin.id
             elif action == "REJECT":

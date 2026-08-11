@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import axios from "axios";
 import {
   Landmark,
   FileSpreadsheet,
@@ -41,18 +42,27 @@ export default function BankReconciliation() {
 
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [projectCategories, setProjectCategories] = useState([]);
+
+  const loadProjectCategories = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+      const res = await axios.get(`${API_BASE_URL}/user/categories`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProjectCategories(res.data?.data || []);
+    } catch (err) {
+      console.error("Failed to load project categories:", err);
+    }
+  };
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
       const res = await transactionService.getBackendTransactions();
       const mapped = (res || []).map(t => {
-        let categoryName = "Equipment & Misc";
-        const catLower = (t.category || t.budget_head || "").toLowerCase();
-        if (catLower.includes("venue")) categoryName = "Venue";
-        else if (catLower.includes("food") || catLower.includes("refreshment")) categoryName = "Food";
-        else if (catLower.includes("marketing")) categoryName = "Marketing";
-        else if (catLower.includes("travel")) categoryName = "Travel";
+        const categoryName = t.category || t.budget_head || "Miscellaneous";
         
         return {
           id: t.id.substring(0, 8).toUpperCase(),
@@ -74,34 +84,63 @@ export default function BankReconciliation() {
 
   useEffect(() => {
     fetchTransactions();
+    loadProjectCategories();
   }, []);
 
-  const allocations = [100000, 50000, 40000, 50000, 60000];
+  const allocations = useMemo(() => {
+    return projectCategories.length > 0
+      ? projectCategories.map(c => c.allocated)
+      : [100000, 50000, 40000, 50000, 60000];
+  }, [projectCategories]);
+
   const spentAmounts = useMemo(() => {
-    const spents = {
-      "Venue": 0,
-      "Food": 0,
-      "Marketing": 0,
-      "Travel": 0,
-      "Equipment & Misc": 0
-    };
+    const spents = {};
+    projectCategories.forEach(c => {
+      spents[c.category] = 0;
+    });
+
     transactions.forEach(t => {
       if (t.rawStatus === "APPROVED") {
         if (spents[t.category] !== undefined) {
           spents[t.category] += t.amount;
         } else {
-          spents["Equipment & Misc"] += t.amount;
+          if (!spents["Miscellaneous"]) {
+            spents["Miscellaneous"] = 0;
+          }
+          spents["Miscellaneous"] += t.amount;
         }
       }
     });
-    return [
-      spents["Venue"],
-      spents["Food"],
-      spents["Marketing"],
-      spents["Travel"],
-      spents["Equipment & Misc"]
-    ];
-  }, [transactions]);
+
+    if (projectCategories.length === 0) {
+      // Default fallback
+      const defaultSpents = { "Venue": 0, "Food": 0, "Marketing": 0, "Travel": 0, "Equipment & Misc": 0 };
+      transactions.forEach(t => {
+        if (t.rawStatus === "APPROVED") {
+          if (defaultSpents[t.category] !== undefined) {
+            defaultSpents[t.category] += t.amount;
+          } else {
+            defaultSpents["Equipment & Misc"] += t.amount;
+          }
+        }
+      });
+      return [
+        defaultSpents["Venue"],
+        defaultSpents["Food"],
+        defaultSpents["Marketing"],
+        defaultSpents["Travel"],
+        defaultSpents["Equipment & Misc"]
+      ];
+    }
+
+    return projectCategories.map(c => spents[c.category] || 0);
+  }, [projectCategories, transactions]);
+
+  const chartLabels = useMemo(() => {
+    return projectCategories.length > 0
+      ? projectCategories.map(c => c.category)
+      : ["Venue", "Food", "Marketing", "Travel", "Equipment & Misc"];
+  }, [projectCategories]);
 
   // Filtered transactions for verification panel
   const filteredTransactions = useMemo(() => {
@@ -138,7 +177,7 @@ export default function BankReconciliation() {
 
   // Chart Data Configurations
   const barData = {
-    labels: ["Venue", "Food", "Marketing", "Travel", "Equipment & Misc"],
+    labels: chartLabels,
     datasets: [
       {
         label: "Budget Allocated (Rs)",
@@ -184,7 +223,7 @@ export default function BankReconciliation() {
   };
 
   const donutData = {
-    labels: ["Venue", "Food", "Marketing", "Travel", "Equipment & Misc"],
+    labels: chartLabels,
     datasets: [
       {
         data: spentAmounts,

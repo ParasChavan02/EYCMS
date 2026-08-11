@@ -37,6 +37,7 @@ import SuperAdminDashboard from "./modules/super-admin/pages/SuperAdminDashboard
 import GenerateToken from "./modules/super-admin/pages/GenerateToken";
 import GeneratedTokens from "./modules/super-admin/pages/GeneratedTokens";
 import TokenDetails from "./modules/super-admin/pages/TokenDetails";
+import SuperAdminBudgetAllocation from "./modules/super-admin/pages/SuperAdminBudgetAllocation";
 
 // Modular Route Configurations
 import { authRoutes } from "./modules/auth/routes";
@@ -123,6 +124,7 @@ function App() {
                 <Route path={ROUTES.SUPER_ADMIN_GENERATE_TOKEN} element={<GenerateToken />} />
                 <Route path={ROUTES.SUPER_ADMIN_TOKENS} element={<GeneratedTokens />} />
                 <Route path={ROUTES.SUPER_ADMIN_TOKEN_DETAILS} element={<TokenDetails />} />
+                <Route path={ROUTES.SUPER_ADMIN_BUDGET_ALLOCATION} element={<SuperAdminBudgetAllocation />} />
                 <Route path={ROUTES.SUPER_ADMIN_PROFILE} element={<Profile />} />
                 <Route path={ROUTES.SUPER_ADMIN_SETTINGS} element={<Navigate to={ROUTES.SUPER_ADMIN_PROFILE} replace />} />
               </Route>

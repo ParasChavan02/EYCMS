@@ -376,6 +376,32 @@ function AdminUsers() {
     }
   };
 
+  const handleToggleProjectStatus = async (projectUuid) => {
+    try {
+      await adminUserService.toggleProjectStatus(projectUuid);
+      setMessage("Project status updated successfully");
+      setIsError(false);
+      fetchInitialData();
+    } catch (e) {
+      setMessage(e.message || "Failed to toggle project status");
+      setIsError(true);
+    }
+  };
+
+  const handleDeleteProject = async (projectUuid) => {
+    if (window.confirm("Are you sure you want to delete this project? Historical ERP data will remain fully intact.")) {
+      try {
+        await adminUserService.deleteProject(projectUuid);
+        setMessage("Project set to DELETED. Associated users blocked.");
+        setIsError(false);
+        fetchInitialData();
+      } catch (e) {
+        setMessage(e.message || "Failed to delete project");
+        setIsError(true);
+      }
+    }
+  };
+
   const handleApproveOnboarding = async (reqUuid) => {
     try {
       await adminUserService.approveOnboarding(reqUuid);
@@ -440,7 +466,8 @@ function AdminUsers() {
     return users.filter((user) => {
       const matchesSearch = [user.name, user.email, user.department].join(" ").toLowerCase().includes(search.toLowerCase());
       const matchesRole = roleFilter === "ALL" || user.role === roleFilter;
-      const matchesStatus = statusFilter === "ALL" || user.status === statusFilter;
+      const matchesStatus = statusFilter === "ALL" || 
+        (statusFilter === "Inactive" ? !user.is_active : user.status === statusFilter);
       const matchesProj = projFilter === "ALL" || user.project_uuid === projFilter || user.project_id === projFilter;
       const matchesTeam = teamFilter === "ALL" || user.team === teamFilter || user.team_id === teamFilter;
       return matchesSearch && matchesRole && matchesStatus && matchesProj && matchesTeam;
@@ -515,6 +542,18 @@ function AdminUsers() {
         .status-badge.suspended {
           background: #ffedd5;
           color: #c2410c;
+        }
+        .status-badge.deactivated {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+        .status-badge.blocked {
+          background: #fecaca;
+          color: #991b1b;
+        }
+        .status-badge.deleted {
+          background: #fee2e2;
+          color: #ef4444;
         }
         .actions-dropdown-container {
           position: relative;
@@ -720,9 +759,15 @@ function AdminUsers() {
                       className={`quick-filter-btn ${projFilter === "ALL" ? "active" : ""}`}
                       onClick={() => setProjFilter("ALL")}
                     >
+                      All Users
+                    </button>
+                    <button
+                      className={`quick-filter-btn ${projFilter === "ALL_PROJECTS" ? "active" : ""}`}
+                      onClick={() => setProjFilter("ALL_PROJECTS")}
+                    >
                       All Projects
                     </button>
-                    {projects.map((p) => (
+                    {projects.filter(p => p.status !== "SUSPENDED" && p.status !== "DELETED").map((p) => (
                       <button
                         key={p.project_uuid}
                         className={`quick-filter-btn ${projFilter === p.project_uuid || projFilter === p.project_id ? "active" : ""}`}
@@ -735,130 +780,279 @@ function AdminUsers() {
                 </div>
 
                 {/* Horizontal Filters Alignment */}
-                <div className="table-header" style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  flexWrap: "wrap",
-                  gap: "10px",
-                  alignItems: "center"
-                }}>
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    className="search-input"
-                    style={{ flex: "1 1 200px", minWidth: "180px" }}
-                  />
-                  <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="filter-select" style={{ flex: "1 1 120px" }}>
-                    <option value="ALL">All Roles</option>
-                    <option value="ADMIN">ADMIN</option>
-                    <option value="USER">USER</option>
-                    <option value="ACCOUNTS">ACCOUNTS</option>
-                  </select>
-                  <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="filter-select" style={{ flex: "1 1 120px" }}>
-                    <option value="ALL">All Statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Suspended">Suspended</option>
-                  </select>
-                  <select value={projFilter} onChange={(event) => setProjFilter(event.target.value)} className="filter-select" style={{ flex: "1 1 120px" }}>
-                    <option value="ALL">All Projects</option>
-                    {projects.map((p) => (
-                      <option key={p.project_uuid} value={p.project_uuid}>{p.project_id}</option>
-                    ))}
-                  </select>
-                  <select value={teamFilter} onChange={(event) => setTeamFilter(event.target.value)} className="filter-select" style={{ flex: "1 1 120px" }}>
-                    <option value="ALL">All Teams</option>
-                    {uniqueTeams.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                  <button onClick={clearAllFilters} className="btn-secondary" style={{ padding: "10px 16px", borderRadius: "8px", fontWeight: "600", fontSize: "13px" }}>
-                    Clear
-                  </button>
-                </div>
+                {projFilter !== "ALL_PROJECTS" && (
+                  <div className="table-header" style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: "10px",
+                    alignItems: "center"
+                  }}>
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      className="search-input"
+                      style={{ flex: "1 1 200px", minWidth: "180px" }}
+                    />
+                    <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="filter-select" style={{ flex: "1 1 120px" }}>
+                      <option value="ALL">All Roles</option>
+                      <option value="ADMIN">ADMIN</option>
+                      <option value="USER">USER</option>
+                      <option value="ACCOUNTS">ACCOUNTS</option>
+                    </select>
+                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="filter-select" style={{ flex: "1 1 120px" }}>
+                      <option value="ALL">All Statuses</option>
+                      <option value="Active">Active</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Suspended">Suspended</option>
+                      <option value="Deactivated">Deactivated</option>
+                      <option value="Blocked">Blocked</option>
+                    </select>
+                    <select value={projFilter} onChange={(event) => setProjFilter(event.target.value)} className="filter-select" style={{ flex: "1 1 120px" }}>
+                      <option value="ALL">All Projects</option>
+                      {projects.map((p) => (
+                        <option key={p.project_uuid} value={p.project_uuid}>{p.project_id}</option>
+                      ))}
+                    </select>
+                    <select value={teamFilter} onChange={(event) => setTeamFilter(event.target.value)} className="filter-select" style={{ flex: "1 1 120px" }}>
+                      <option value="ALL">All Teams</option>
+                      {uniqueTeams.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                    <button onClick={clearAllFilters} className="btn-secondary" style={{ padding: "10px 16px", borderRadius: "8px", fontWeight: "600", fontSize: "13px" }}>
+                      Clear
+                    </button>
+                  </div>
+                )}
 
-                {/* Users Roster Table */}
-                <div className="table-wrapper">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Project ID</th>
-                        <th>Team</th>
-                        <th>Status</th>
-                        <th style={{ textAlign: "right" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.length > 0 ? (
-                        filteredUsers.map((user) => (
-                          <tr key={user.id}>
-                            <td style={{ fontWeight: 600 }}>{user.name}</td>
-                            <td>{user.email}</td>
-                            <td>
-                              <span className={`role-badge ${user.role.toLowerCase()}`}>{user.role}</span>
-                            </td>
-                            <td>{user.project_id}</td>
-                            <td>{user.team}</td>
-                            <td>
-                              <span className={`status-badge ${user.status.toLowerCase()}`}>{user.status}</span>
-                            </td>
-                            <td style={{ textAlign: "right" }}>
-                              <div className="actions-dropdown-container">
-                                <button
-                                  className="btn-sm"
-                                  onClick={() => setActiveDropdownUserId(activeDropdownUserId === user.id ? null : user.id)}
-                                  style={{ padding: "6px 12px", border: "1px solid #cbd5e1" }}
-                                >
-                                  Actions ▾
-                                </button>
-                                {activeDropdownUserId === user.id && (
-                                  <div className="actions-dropdown-menu">
-                                    <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); setProfileTargetUser(user); }}>
-                                      View Profile
-                                    </button>
-                                    <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); editUser(user); }}>
-                                      Edit User
-                                    </button>
-                                    <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); triggerResetPassword(user); }}>
-                                      Change Password
-                                    </button>
-                                    <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); triggerChangeProjectTeam(user); }}>
-                                      Change Project/Team
-                                    </button>
-                                    <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); toggleStatus(user.id); }}>
-                                      {user.is_active ? "Deactivate" : "Activate"}
-                                    </button>
-                                    <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); suspendUser(user); }}>
-                                      Suspend Account
-                                    </button>
-                                    <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); viewUserActivity(user); }}>
-                                      View Activity
-                                    </button>
-                                    <div style={{ height: "1px", background: "#e2e8f0", margin: "4px 0" }}></div>
-                                    <button className="actions-dropdown-item" style={{ color: "#ef4444" }} onClick={() => { setActiveDropdownUserId(null); deleteUser(user.id); }}>
-                                      Remove Access
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                {projFilter === "ALL_PROJECTS" ? (
+                  /* Projects Table */
+                  <div className="table-wrapper">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Project ID</th>
+                          <th>Project Name</th>
+                          <th>Team Leader</th>
+                          <th>Status</th>
+                          <th style={{ textAlign: "right" }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {projects.filter(p => p.status !== "DELETED").length > 0 ? (
+                          projects.filter(p => p.status !== "DELETED").map((proj) => (
+                            <tr key={proj.project_uuid}>
+                              <td style={{ fontWeight: 600 }}>{proj.project_id}</td>
+                              <td>{proj.project_name}</td>
+                              <td>{proj.team_leader_name || "None"}</td>
+                              <td>
+                                <span className={`status-badge ${proj.status.toLowerCase()}`}>{proj.status}</span>
+                              </td>
+                              <td style={{ textAlign: "right" }}>
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button
+                                    className="btn-sm"
+                                    onClick={() => handleToggleProjectStatus(proj.project_uuid)}
+                                    style={{ padding: "6px 12px" }}
+                                  >
+                                    {proj.status === "SUSPENDED" ? "Activate" : "Suspend"}
+                                  </button>
+                                  <button
+                                    className="btn-sm danger"
+                                    onClick={() => handleDeleteProject(proj.project_uuid)}
+                                    style={{ padding: "6px 12px", background: "#ef4444", color: "white", borderColor: "#ef4444" }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="5" className="empty-state">No projects found</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  /* Users Roster Table */
+                  <div className="table-wrapper">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Role</th>
+                          <th>Project ID</th>
+                          <th>Team</th>
+                          <th>Status</th>
+                          <th style={{ textAlign: "right" }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredUsers.length > 0 ? (
+                          filteredUsers.map((user) => (
+                            <tr key={user.id}>
+                              <td style={{ fontWeight: 600 }}>{user.name}</td>
+                              <td>{user.email}</td>
+                              <td>
+                                <span className={`role-badge ${user.role.toLowerCase()}`}>{user.role}</span>
+                              </td>
+                              <td>{user.project_id}</td>
+                              <td>{user.team}</td>
+                              <td>
+                                <span className={`status-badge ${user.status.toLowerCase()}`}>{user.status}</span>
+                              </td>
+                              <td style={{ textAlign: "right" }}>
+                                <div className="actions-dropdown-container">
+                                  <button
+                                    className="btn-sm"
+                                    onClick={() => setActiveDropdownUserId(activeDropdownUserId === user.id ? null : user.id)}
+                                    style={{ padding: "6px 12px", border: "1px solid #cbd5e1" }}
+                                  >
+                                    Actions ▾
+                                  </button>
+                                  {activeDropdownUserId === user.id && (
+                                    <div className="actions-dropdown-menu">
+                                      <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); setProfileTargetUser(user); }}>
+                                        View Profile
+                                      </button>
+                                      <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); editUser(user); }}>
+                                        Edit User
+                                      </button>
+                                      <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); triggerResetPassword(user); }}>
+                                        Change Password
+                                      </button>
+                                      <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); triggerChangeProjectTeam(user); }}>
+                                        Change Project/Team
+                                      </button>
+                                      <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); toggleStatus(user.id); }}>
+                                        {user.is_active ? "Deactivate" : "Activate"}
+                                      </button>
+                                      <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); suspendUser(user); }}>
+                                        Suspend Account
+                                      </button>
+                                      <button className="actions-dropdown-item" onClick={() => { setActiveDropdownUserId(null); viewUserActivity(user); }}>
+                                        View Activity
+                                      </button>
+                                      <div style={{ height: "1px", background: "#e2e8f0", margin: "4px 0" }}></div>
+                                      <button className="actions-dropdown-item" style={{ color: "#ef4444" }} onClick={() => { setActiveDropdownUserId(null); deleteUser(user.id); }}>
+                                        Remove Access
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="7" className="empty-state">
+                              No users found
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="7" className="empty-state">
-                            No users found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* History / Suspended Records */}
+                <div style={{ marginTop: "32px", borderTop: "1px solid #e2e8f0", paddingTop: "24px" }}>
+                  <h3 style={{ margin: "0 0 10px 0", fontSize: "16px", fontWeight: "700", color: "#0f172a" }}>
+                    History / Suspended Records
+                  </h3>
+                  <p style={{ color: "#64748b", fontSize: "13px", marginTop: "-5px", marginBottom: "16px" }}>
+                    Suspended or deleted Project IDs and their associated users.
+                  </p>
+                  
+                  {projects.filter(p => p.status === "SUSPENDED" || p.status === "DELETED").length > 0 ? (
+                    <div style={{ display: "grid", gap: "16px" }}>
+                      {projects.filter(p => p.status === "SUSPENDED" || p.status === "DELETED").map((proj) => {
+                        const associatedUsers = users.filter(u => u.project_uuid === proj.project_uuid || u.project_id === proj.project_id);
+                        return (
+                          <div key={proj.project_uuid} style={{
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "10px",
+                            padding: "16px",
+                            background: "#f8fafc"
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                              <div>
+                                <span className={`status-badge ${proj.status.toLowerCase()}`} style={{ marginRight: "8px" }}>
+                                  {proj.status}
+                                </span>
+                                <strong style={{ color: "#0f172a", fontSize: "14px" }}>{proj.project_id} - {proj.project_name}</strong>
+                              </div>
+                              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>
+                                  Leader: <strong>{proj.team_leader_name || "None"}</strong>
+                                </div>
+                                <button
+                                  className="btn-sm"
+                                  onClick={() => handleToggleProjectStatus(proj.project_uuid)}
+                                  style={{ padding: "4px 10px", fontSize: "11px" }}
+                                >
+                                  {proj.status === "SUSPENDED" ? "Activate" : "Suspend"}
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div style={{ marginTop: "10px" }}>
+                              <div style={{ fontSize: "12px", fontWeight: "700", color: "#475569", marginBottom: "6px" }}>Associated Users:</div>
+                              {associatedUsers.length > 0 ? (
+                                <div style={{ display: "grid", gap: "8px" }}>
+                                  {associatedUsers.map(u => (
+                                    <div key={u.id} style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      fontSize: "12px",
+                                      padding: "8px 12px",
+                                      background: "white",
+                                      border: "1px solid #f1f5f9",
+                                      borderRadius: "6px",
+                                      flexWrap: "wrap",
+                                      gap: "8px"
+                                    }}>
+                                      <div>
+                                        <strong style={{ color: "#1e293b" }}>{u.name}</strong> <span style={{ color: "#64748b" }}>({u.email})</span>
+                                      </div>
+                                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                        <span className={`role-badge ${u.role.toLowerCase()}`} style={{ fontSize: "10px", padding: "2px 6px" }}>{u.role}</span>
+                                        <span className={`status-badge ${u.status.toLowerCase()}`} style={{ fontSize: "10px", padding: "2px 6px" }}>{u.status}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: "12px", color: "#94a3b8", fontStyle: "italic" }}>
+                                  No users associated with this project.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: "16px",
+                      background: "#f1f5f9",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      color: "#64748b",
+                      textAlign: "center"
+                    }}>
+                      No suspended or deleted projects found.
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
@@ -1067,6 +1261,8 @@ function AdminUsers() {
                 <option value="Pending">Pending</option>
                 <option value="Inactive">Inactive</option>
                 <option value="Suspended">Suspended</option>
+                <option value="Deactivated">Deactivated</option>
+                <option value="Blocked">Blocked</option>
               </select>
 
               <input
