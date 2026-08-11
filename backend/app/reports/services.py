@@ -278,6 +278,46 @@ class ReportService:
             except Exception as e:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid transactions JSON: {str(e)}")
 
+            # If user is submitting (not draft), validate category balances
+            is_submitting = (status_val and status_val.upper() != "DRAFT") or (project_file and project_file.status != "DRAFT")
+            if is_submitting and project_id:
+                from app.common.models.eyc_budget import EYCBudgetAllocation
+                category_spent_temp = {}
+                for row in tx_rows:
+                    cat_name = row.get("category", "Miscellaneous").strip()
+                    amt = float(row.get("amount", 0))
+                    
+                    cat_alloc = db.query(EYCBudgetAllocation).filter(
+                        EYCBudgetAllocation.section == "FELLOWS_CAT",
+                        EYCBudgetAllocation.project_id == project_id,
+                        func.lower(EYCBudgetAllocation.budget_head) == cat_name.lower()
+                    ).first()
+                    
+                    if not cat_alloc:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Insufficient category balance. Category '{cat_name}' has not been allocated any budget for this project."
+                        )
+                    
+                    # Calculate utilized by other approved transactions
+                    utilized = db.query(func.sum(Transaction.amount)).filter(
+                        Transaction.project_id == project_id,
+                        Transaction.category == cat_name,
+                        Transaction.status == "APPROVED"
+                    ).scalar() or 0.0
+                    
+                    allocated = float(cat_alloc.allocated_amount)
+                    temp_spent = category_spent_temp.get(cat_name.lower(), 0.0)
+                    
+                    remaining = allocated - float(utilized) - temp_spent
+                    if amt > remaining:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Insufficient category balance. Category '{cat_name}' has only Rs {remaining:,.2f} remaining, but you requested Rs {amt:,.2f}."
+                        )
+                    
+                    category_spent_temp[cat_name.lower()] = temp_spent + amt
+
             # Delete old draft transactions if updating
             db.query(Transaction).filter(Transaction.bill_id == project_file.id).delete()
 
@@ -472,7 +512,47 @@ class ReportService:
         # Sync associated transactions status
         if file_obj.category == "bill":
             from app.common.models.transaction import Transaction
+            from app.common.models.eyc_budget import EYCBudgetAllocation
+            from sqlalchemy import func
+            
             txs = db.query(Transaction).filter(Transaction.bill_id == file_obj.id).all()
+            if status_val.upper() == "APPROVED":
+                category_spent_temp = {}
+                for t in txs:
+                    if t.project_id:
+                        category_name = t.category or "Miscellaneous"
+                        cat_alloc = db.query(EYCBudgetAllocation).filter(
+                            EYCBudgetAllocation.section == "FELLOWS_CAT",
+                            EYCBudgetAllocation.project_id == t.project_id,
+                            func.lower(EYCBudgetAllocation.budget_head) == category_name.lower()
+                        ).first()
+                        
+                        if not cat_alloc:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Insufficient category balance. Category '{category_name}' has not been allocated any budget for this project."
+                            )
+                        
+                        # Already utilized excluding this batch
+                        utilized = db.query(func.sum(Transaction.amount)).filter(
+                            Transaction.project_id == t.project_id,
+                            Transaction.category == t.category,
+                            Transaction.status == "APPROVED",
+                            Transaction.id != t.id
+                        ).scalar() or 0.0
+                        
+                        allocated = float(cat_alloc.allocated_amount)
+                        temp_spent = category_spent_temp.get((t.project_id, category_name.lower()), 0.0)
+                        
+                        remaining = allocated - float(utilized) - temp_spent
+                        if float(t.amount) > remaining:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Insufficient category balance. Category '{category_name}' has only Rs {remaining:,.2f} remaining, but transaction requires Rs {float(t.amount):,.2f}."
+                            )
+                        
+                        category_spent_temp[(t.project_id, category_name.lower())] = temp_spent + float(t.amount)
+
             for t in txs:
                 if status_val.upper() == "APPROVED":
                     t.status = "APPROVED"

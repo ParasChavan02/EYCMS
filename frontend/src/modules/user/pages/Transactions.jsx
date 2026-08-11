@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import axios from "axios";
 import { ArrowRightLeft, CreditCard, DollarSign, Download, FileSpreadsheet, FileText, CheckCircle2, Clock, XCircle, Activity, Info, IndianRupee, Send, FileCheck2, UploadCloud } from "lucide-react";
 import Chart from "chart.js/auto";
 import { useNotification } from "../../common/hooks/useNotification";
@@ -49,6 +50,20 @@ function Transactions() {
   };
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [projectCategories, setProjectCategories] = useState([]);
+
+  const loadProjectCategories = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+      const res = await axios.get(`${API_BASE_URL}/user/categories`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProjectCategories(res.data?.data || []);
+    } catch (err) {
+      console.error("Failed to load project categories:", err);
+    }
+  };
 
   const fetchTransactions = async () => {
     try {
@@ -56,12 +71,7 @@ function Transactions() {
       const res = await transactionService.getBackendTransactions();
       const mapped = (res || []).map(t => {
         const tone = t.status === "APPROVED" ? "approved" : t.status === "REJECTED" ? "rejected" : "pending";
-        let categoryName = "Miscellaneous";
-        const catLower = (t.category || t.budget_head || "").toLowerCase();
-        if (catLower.includes("venue")) categoryName = "Venue";
-        else if (catLower.includes("food") || catLower.includes("refreshment")) categoryName = "Food & Refreshments";
-        else if (catLower.includes("marketing")) categoryName = "Marketing";
-        else if (catLower.includes("travel")) categoryName = "Travel";
+        const categoryName = t.category || t.budget_head || "Miscellaneous";
         
         return {
           id: t.id.substring(0, 8).toUpperCase(),
@@ -84,9 +94,10 @@ function Transactions() {
 
   useEffect(() => {
     fetchTransactions();
+    loadProjectCategories();
   }, []);
 
-  const sanctionedTotal = 300000;
+  const sanctionedTotal = projectCategories.reduce((sum, c) => sum + c.allocated, 0) || 300000;
   const spentTotal = transactions.filter(t => t.rawStatus === "APPROVED").reduce((sum, t) => sum + t.amount, 0);
   const remainingTotal = sanctionedTotal - spentTotal;
   const pendingTotal = transactions.filter(t => t.rawStatus === "PENDING").reduce((sum, t) => sum + t.amount, 0);
@@ -99,38 +110,45 @@ function Transactions() {
   ];
 
   const categories = useMemo(() => {
-    const allocations = {
-      "Venue": 100000,
-      "Food & Refreshments": 50000,
-      "Marketing": 40000,
-      "Travel": 50000,
-      "Miscellaneous": 60000
-    };
-    const spents = {
-      "Venue": 0,
-      "Food & Refreshments": 0,
-      "Marketing": 0,
-      "Travel": 0,
-      "Miscellaneous": 0
-    };
+    const allocations = {};
+    const spents = {};
+
+    projectCategories.forEach(c => {
+      allocations[c.category] = c.allocated;
+      spents[c.category] = 0;
+    });
+
     transactions.forEach(t => {
       if (t.rawStatus === "APPROVED") {
         if (spents[t.category] !== undefined) {
           spents[t.category] += t.amount;
         } else {
+          if (!spents["Miscellaneous"]) {
+            spents["Miscellaneous"] = 0;
+            allocations["Miscellaneous"] = 0;
+          }
           spents["Miscellaneous"] += t.amount;
         }
       }
     });
 
-    return [
-      { name: "Venue", allocated: allocations["Venue"], spent: spents["Venue"] },
-      { name: "Food & Refreshments", allocated: allocations["Food & Refreshments"], spent: spents["Food & Refreshments"] },
-      { name: "Marketing", allocated: allocations["Marketing"], spent: spents["Marketing"] },
-      { name: "Travel", allocated: allocations["Travel"], spent: spents["Travel"] },
-      { name: "Miscellaneous", allocated: allocations["Miscellaneous"], spent: spents["Miscellaneous"] }
-    ];
-  }, [transactions]);
+    const catKeys = Object.keys(allocations);
+    if (catKeys.length === 0) {
+      return [
+        { name: "Venue", allocated: 100000, spent: 0 },
+        { name: "Food & Refreshments", allocated: 50000, spent: 0 },
+        { name: "Marketing", allocated: 40000, spent: 0 },
+        { name: "Travel", allocated: 50000, spent: 0 },
+        { name: "Miscellaneous", allocated: 60000, spent: 0 }
+      ];
+    }
+
+    return catKeys.map(k => ({
+      name: k,
+      allocated: allocations[k],
+      spent: spents[k] || 0
+    }));
+  }, [projectCategories, transactions]);
 
   const events = [];
   const financialActivity = transactions.slice(0, 5).map(t => ({

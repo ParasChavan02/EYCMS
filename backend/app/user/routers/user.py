@@ -177,3 +177,40 @@ def trigger_action(
         return make_success_response({"message": "Action notification generated successfully"})
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("/categories", response_model=ResponseEnvelope[List[dict]])
+def get_user_project_categories(db: Session = Depends(get_db), current_user: User = Depends(verify_user)):
+    try:
+        if not current_user.project_id:
+            return make_success_response([])
+        
+        from app.common.models.eyc_budget import EYCBudgetAllocation
+        from app.common.models.transaction import Transaction
+        from sqlalchemy import func
+        
+        allocs = db.query(EYCBudgetAllocation).filter(
+            EYCBudgetAllocation.section == "FELLOWS_CAT",
+            EYCBudgetAllocation.project_id == current_user.project_id
+        ).all()
+        
+        results = []
+        for a in allocs:
+            utilized = db.query(func.sum(Transaction.amount)).filter(
+                Transaction.project_id == current_user.project_id,
+                Transaction.category == a.budget_head,
+                Transaction.status == "APPROVED"
+            ).scalar() or 0.0
+            
+            allocated = float(a.allocated_amount)
+            remaining = round(allocated - float(utilized), 2)
+            
+            results.append({
+                "category": a.budget_head,
+                "allocated": allocated,
+                "utilized": float(utilized),
+                "remaining": remaining
+            })
+            
+        return make_success_response(results)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

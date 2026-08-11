@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
+import axios from "axios";
 import {
   Download,
   FileCheck2,
@@ -32,6 +33,20 @@ function Reports() {
   // Real team files loaded from backend DB
   const [teamFiles, setTeamFiles] = useState([]);
   const [loadingFiles, setLoadingFiles] = useState(true);
+  const [projectCategories, setProjectCategories] = useState([]);
+
+  const loadProjectCategories = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+      const res = await axios.get(`${API_BASE_URL}/user/categories`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProjectCategories(res.data?.data || []);
+    } catch (err) {
+      console.error("Failed to load project categories:", err);
+    }
+  };
 
   // Per-category state for selected files, event names, drag states, and upload progress
   const [selectedFiles, setSelectedFiles] = useState({
@@ -130,6 +145,7 @@ function Reports() {
 
   useEffect(() => {
     loadFiles();
+    loadProjectCategories();
   }, []);
 
   // Safe team files array guard
@@ -292,6 +308,23 @@ function Reports() {
         description: t.description.trim(),
         amount: parseFloat(t.amount) || 0
       }));
+    }
+
+    // Check category balances on submit
+    if (statusType !== "DRAFT" && projectCategories.length > 0) {
+      for (const tx of txsArray) {
+        const catAlloc = projectCategories.find(c => c.category.toLowerCase() === tx.category.toLowerCase());
+        if (!catAlloc) {
+          addNotification(`Insufficient category balance. Category '${tx.category}' has not been allocated any budget.`, "error", 4000, false);
+          return;
+        }
+
+        const currentSplitTotal = txsArray.filter(t => t.category.toLowerCase() === tx.category.toLowerCase()).reduce((sum, t) => sum + t.amount, 0);
+        if (currentSplitTotal > catAlloc.remaining) {
+          addNotification(`Insufficient category balance. Category '${tx.category}' has only Rs ${catAlloc.remaining.toLocaleString("en-IN")} remaining, but you requested Rs ${currentSplitTotal.toLocaleString("en-IN")}.`, "error", 4000, false);
+          return;
+        }
+      }
     }
 
     setIsUploading((prev) => ({ ...prev, bill: true }));
@@ -1031,7 +1064,7 @@ function Reports() {
 
       {/* BILL TRANSACTION SPLITTING CONFIG MODAL */}
       {isBillModalOpen && (() => {
-        const CATEGORIES = ["Travel", "Food", "Venue", "Marketing", "Printing", "Equipment", "Miscellaneous"];
+        const CATEGORIES = projectCategories.length > 0 ? projectCategories.map(c => c.category) : ["Travel", "Food", "Venue", "Marketing", "Printing", "Equipment", "Miscellaneous"];
         const totalBillNum = parseFloat(billTotalAmount) || 0;
         const sumEntered = transactionMode === "single"
           ? totalBillNum

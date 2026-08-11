@@ -35,6 +35,7 @@ from app.common.models.audit_log import AuditLog
 from app.common.models.team import Team
 from app.common.models.invitation import Invitation
 from app.common.models.user_budget import UserBudgetAllocation, UserBudgetSpending
+from app.common.models.eyc_budget import EYCBudgetAllocation
 
 __all__ = [
     "Base",
@@ -75,4 +76,5 @@ __all__ = [
     "Invitation",
     "UserBudgetAllocation",
     "UserBudgetSpending",
+    "EYCBudgetAllocation",
 ]

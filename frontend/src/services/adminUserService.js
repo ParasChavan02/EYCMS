@@ -96,4 +96,14 @@ export const adminUserService = {
     const response = await api.post("/admin/projects/create", payload);
     return extractResponseData(response);
   },
+  
+  async toggleProjectStatus(projectUuid) {
+    const response = await api.post(`/admin/projects/${projectUuid}/toggle-status`);
+    return extractResponseData(response);
+  },
+
+  async deleteProject(projectUuid) {
+    const response = await api.delete(`/admin/projects/${projectUuid}/remove`);
+    return extractResponseData(response);
+  },
 };

@@ -19,6 +19,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
+      const detail = error.response.data?.detail || "";
+      if (detail.toLowerCase().includes("blocked") || detail.toLowerCase().includes("deactivated")) {
+        localStorage.setItem("login_error_message", "Your account has been blocked by the Admin. Please contact the Admin to regain access to the portal.");
+      }
       localStorage.removeItem("token");
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("current_user");

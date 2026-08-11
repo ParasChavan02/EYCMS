@@ -29,6 +29,15 @@ function Login() {
     }
   }, [user, redirectPending, navigate]);
 
+  // Retrieve any stored login error (e.g. from blocked account redirection)
+  useEffect(() => {
+    const errorMsg = localStorage.getItem("login_error_message");
+    if (errorMsg) {
+      setMessage(errorMsg);
+      localStorage.removeItem("login_error_message");
+    }
+  }, []);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
@@ -134,7 +143,24 @@ function Login() {
               showPasswordToggle
             />
 
-            {message && <div className="form-note">{message}</div>}
+            {message && (
+              <div 
+                className="form-note"
+                style={{
+                  color: "#ef4444",
+                  background: "#fef2f2",
+                  border: "1px solid #fee2e2",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  lineHeight: "1.5",
+                  marginBottom: "16px",
+                  textAlign: "left"
+                }}
+              >
+                {message}
+              </div>
+            )}
 
             <div className="auth-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <Button type="submit" disabled={isLoading}>

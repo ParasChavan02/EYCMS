@@ -5,6 +5,7 @@ import {
   KeyRound,
   List,
   LogOut,
+  WalletCards,
 } from "lucide-react";
 import { useAuth } from "../../common/hooks/useAuth";
 import { useNotification } from "../../common/hooks/useNotification";
@@ -21,6 +22,7 @@ function SuperAdminSidebar({ isOpen, onClose, isCollapsed }) {
       section: "SYSTEM",
       items: [
         { icon: LayoutDashboard, label: "Dashboard", path: "/super-admin/dashboard" },
+        { icon: WalletCards, label: "Budget Allocation", path: "/super-admin/budget-allocation" },
         { icon: KeyRound, label: "Generate Token", path: "/super-admin/generate-token" },
         { icon: List, label: "Generated Tokens", path: "/super-admin/tokens" },
       ],

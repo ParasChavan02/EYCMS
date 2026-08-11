@@ -68,11 +68,20 @@ def get_current_user(
             detail="User not found",
         )
         
-    if not user.is_active:
+    if not user.is_active or user.status in ["Blocked", "Deactivated", "Inactive", "Suspended", "BLOCKED", "DEACTIVATED"]:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user account",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Your account has been blocked by the Admin. Please contact the Admin to regain access to the portal.",
         )
+
+    if user.project_id:
+        from app.common.models.project import Project
+        project = db.query(Project).filter(Project.id == user.project_id).first()
+        if project and project.status in ["SUSPENDED", "DELETED", "Suspended", "Deleted"]:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Your associated project has been suspended. Please contact the Admin to regain access to the portal.",
+            )
         
     return user
 

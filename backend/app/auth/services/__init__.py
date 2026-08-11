@@ -30,8 +30,14 @@ class AuthService:
         if not user:
             raise Exception("Invalid email or password")
             
-        if not user.is_active:
-            raise Exception("Inactive user account")
+        if not user.is_active or user.status in ["Blocked", "Deactivated", "Inactive", "Suspended", "BLOCKED", "DEACTIVATED"]:
+            raise Exception("Your account has been blocked by the Admin. Please contact the Admin to regain access to the portal.")
+            
+        if user.project_id:
+            from app.common.models.project import Project
+            project = db.query(Project).filter(Project.id == user.project_id).first()
+            if project and project.status in ["SUSPENDED", "DELETED", "Suspended", "Deleted"]:
+                raise Exception("Your associated project has been suspended. Please contact the Admin to regain access to the portal.")
             
         if not verify_password(credentials.password, user.password_hash):
             raise Exception("Invalid email or password")
