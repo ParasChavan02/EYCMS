@@ -32,11 +32,12 @@ function AccountsSidebar({ isOpen, onClose, isCollapsed }) {
   {
     section: "Financial Operations",
     items: [
+      
       {
-        icon: WalletCards,
-        label: "Budget Overview",
-        path: "/finance/budget",
-      },
+  icon: WalletCards,
+  label: "Team Budgets",
+  path: "/finance/team-budgets",
+},
       {
         icon: ReceiptIndianRupee,
         label: "Transactions",

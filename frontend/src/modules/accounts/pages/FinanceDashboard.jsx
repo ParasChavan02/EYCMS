@@ -6,13 +6,10 @@ function fmtINR(n) {
   return "₹" + Math.round(n || 0).toLocaleString("en-IN");
 }
 
-// NOTE: Notifications, Vendor Snapshot, Approvals Snapshot and Compliance
-// Deadlines below have no backing data model yet (Vendors/Approvals are
-// separate pages explicitly deferred to a later pass), so they remain
-// static placeholders for now rather than fabricated "live" data.
+// NOTE: Notifications and Compliance Deadlines below have no backing data
+// model yet, so they remain static placeholders for now rather than
+// fabricated "live" data.
 const notifications = [];
-
-const expenseHeads = [];
 
 const deadlines = [];
 
@@ -218,37 +215,37 @@ export default function FinanceDashboard() {
             </div>
 
             {/* Notifications */}
-        <div className="fin-card">
-          <div className="fin-card-header">
-            <div>
-              <div className="fin-card-title">Notifications</div>
-              <div className="fin-card-subtitle">
-                Recent alerts & updates
-              </div>
-            </div>
-            <span className="fin-badge badge-primary">0 New</span>
-          </div>
-
-          <div className="fin-card-body">
-            {notifications.length === 0 ? (
-              <div className="fin-notif-text">No notifications.</div>
-            ) : (
-              notifications.map((n, i) => (
-                <div className="fin-notif-item" key={i}>
-                  <div
-                    className="fin-notif-dot"
-                    style={{ background: n.color }}
-                  />
-                  <div>
-                    <div className="fin-notif-text">{n.msg}</div>
-                    <div className="fin-notif-time">{n.time}</div>
+            <div className="fin-card">
+              <div className="fin-card-header">
+                <div>
+                  <div className="fin-card-title">Notifications</div>
+                  <div className="fin-card-subtitle">
+                    Recent alerts & updates
                   </div>
                 </div>
-              ))
-            )}
+                <span className="fin-badge badge-primary">0 New</span>
+              </div>
+
+              <div className="fin-card-body">
+                {notifications.length === 0 ? (
+                  <div className="fin-notif-text">No notifications.</div>
+                ) : (
+                  notifications.map((n, i) => (
+                    <div className="fin-notif-item" key={i}>
+                      <div
+                        className="fin-notif-dot"
+                        style={{ background: n.color }}
+                      />
+                      <div>
+                        <div className="fin-notif-text">{n.msg}</div>
+                        <div className="fin-notif-time">{n.time}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
           {/* Recent Transactions */}
           <div className="fin-card fin-section">
@@ -295,110 +292,53 @@ export default function FinanceDashboard() {
               )}
             </div>
           </div>
+
           {/* Submission Status */}
-<div className="fin-card fin-section">
-  <div className="fin-card-header">
-    <div>
-      <div className="fin-card-title">Submission Status</div>
-      <div className="fin-card-subtitle">
-        Track submitted reports and supporting documents
-      </div>
-    </div>
+          <div className="fin-card fin-section">
+            <div className="fin-card-header">
+              <div>
+                <div className="fin-card-title">Submission Status</div>
+                <div className="fin-card-subtitle">
+                  Track submitted reports and supporting documents
+                </div>
+              </div>
 
-    <span className="fin-badge badge-primary">
-      0 Documents
-    </span>
-  </div>
-
-  <div className="fin-card-body">
-    <div className="fin-empty">No documents submitted yet.</div>
-  </div>
-</div>
-
-          {/* Bottom Grid */}
-      {/* Bottom Grid */}
-<div className="fin-two-col">
-
-  {/* Upcoming Events */}
-  <div className="fin-card">
-    <div className="fin-card-header">
-      <div>
-        <div className="fin-card-title">Upcoming Events</div>
-        <div className="fin-card-subtitle">
-          Meetings, workshops & upcoming activities
-        </div>
-      </div>
-      <span className="fin-badge badge-primary">0 Events</span>
-    </div>
-
-    <div className="fin-card-body">
-      <div className="fin-notif-text">No upcoming events scheduled.</div>
-    </div>
-  </div>
-
-  {/* Approvals Snapshot */}
-  <div className="fin-card">
-    <div className="fin-card-header">
-      <div>
-        <div className="fin-card-title">Approvals Snapshot</div>
-        <div className="fin-card-subtitle">
-          Current approval statistics
-        </div>
-      </div>
-    </div>
-
-    <div className="fin-card-body">
-
-      <div className="fin-stat-row">
-        <span>Total Requests</span>
-        <strong>0</strong>
-      </div>
-
-      <div className="fin-stat-row">
-        <span>Approved</span>
-        <strong style={{ color: "var(--success)" }}>0</strong>
-      </div>
-
-      <div className="fin-stat-row">
-        <span>Pending</span>
-        <strong style={{ color: "var(--warning)" }}>0</strong>
-      </div>
-
-      <div className="fin-stat-row">
-        <span>Rejected</span>
-        <strong style={{ color: "var(--danger)" }}>0</strong>
-      </div>
-
-    </div>
-  </div>
-
-</div>
-      {/* Compliance Deadlines */}
-      <div className="fin-card fin-section">
-        <div className="fin-card-header">
-          <div>
-            <div className="fin-card-title">
-              Upcoming Compliance Deadlines
+              <span className="fin-badge badge-primary">
+                0 Documents
+              </span>
             </div>
-            <div className="fin-card-subtitle">
-              Audit and finance submissions
+
+            <div className="fin-card-body">
+              <div className="fin-empty">No documents submitted yet.</div>
             </div>
           </div>
-        </div>
 
-        <div className="fin-card-body">
-          {deadlines.length === 0 ? (
-            <div className="fin-notif-text">No compliance deadlines.</div>
-          ) : (
-            deadlines.map((d, i) => (
-              <div key={i} className="fin-insight-row">
-                <span>{d.title}</span>
-                <strong>{d.date}</strong>
+          {/* Compliance Deadlines */}
+          <div className="fin-card fin-section">
+            <div className="fin-card-header">
+              <div>
+                <div className="fin-card-title">
+                  Upcoming Compliance Deadlines
+                </div>
+                <div className="fin-card-subtitle">
+                  Audit and finance submissions
+                </div>
               </div>
-            ))
-          )}
-        </div>
-      </div>
+            </div>
+
+            <div className="fin-card-body">
+              {deadlines.length === 0 ? (
+                <div className="fin-notif-text">No compliance deadlines.</div>
+              ) : (
+                deadlines.map((d, i) => (
+                  <div key={i} className="fin-insight-row">
+                    <span>{d.title}</span>
+                    <strong>{d.date}</strong>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </>
       )}
     </div>

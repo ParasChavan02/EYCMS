@@ -27,18 +27,6 @@ const STATUS_LABEL = {
   EXCEEDED: "Exceeded",
 };
 
-const emptyAllocateForm = {
-  allocated_amount: "",
-  financial_year: "",
-  remarks: "",
-};
-
-const emptyCategoryForm = {
-  category_name: "",
-  amount: "",
-  remarks: "",
-};
-
 function formatCurrency(value) {
   const n = Number(value || 0);
   return `Rs ${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
@@ -52,62 +40,36 @@ function formatPercent(value) {
 
 function progressClass(percent) {
   const n = Number(percent || 0);
-  if (n > 100) return "critical";
   if (n > 80) return "critical";
   if (n > 60) return "warning";
   return "healthy";
 }
 
-function currentFinancialYear() {
-  const now = new Date();
-  const y = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-  return `${y}-${String(y + 1).slice(-2)}`;
-}
-
-function AdminBudgetHeads() {
+/**
+ * View-only mirror of Admin -> Finance -> Budget Heads, for the Accounts /
+ * Finance role. Reuses the same budgetHeadsService (GET endpoints only —
+ * the backend permits Accounts on reads via verify_admin_or_accounts, and
+ * blocks it on every write endpoint). No allocate, edit, add, or delete
+ * actions are rendered anywhere on this page.
+ */
+function FinanceBudgetHeads() {
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  const [toast, setToast] = useState(null); // { type: 'success' | 'error', message }
-
-  // Filters
   const [search, setSearch] = useState("");
   const [teamFilter, setTeamFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [expandedTeams, setExpandedTeams] = useState(() => new Set());
 
-  // Allocate modal
-  const [allocateTarget, setAllocateTarget] = useState(null); // user summary object
-  const [allocateForm, setAllocateForm] = useState(emptyAllocateForm);
-  const [allocateSaving, setAllocateSaving] = useState(false);
-  const [allocateError, setAllocateError] = useState("");
-
-  // Detail drawer
   const [detailUserId, setDetailUserId] = useState(null);
   const [detailData, setDetailData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
 
-  // Category modal (opened on top of detail drawer)
-  const [categoryModal, setCategoryModal] = useState(null); // { mode: 'add' | 'edit', item? }
-  const [categoryForm, setCategoryForm] = useState(emptyCategoryForm);
-  const [categorySaving, setCategorySaving] = useState(false);
-  const [categoryError, setCategoryError] = useState("");
-
-  // Delete confirmation
-  const [deleteTarget, setDeleteTarget] = useState(null); // spending item
-  const [deleting, setDeleting] = useState(false);
-
   useEffect(() => {
     fetchOverview();
   }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   async function fetchOverview() {
     try {
@@ -115,7 +77,6 @@ function AdminBudgetHeads() {
       setLoadError("");
       const data = await budgetHeadsService.getOverview();
       setOverview(data);
-      // auto-expand all teams the first time data loads
       setExpandedTeams((prev) => {
         if (prev.size > 0) return prev;
         const ids = (data?.teams || []).map((t) => t.team_id || t.team_name);
@@ -135,8 +96,6 @@ function AdminBudgetHeads() {
     total_utilized: 0,
     total_remaining: 0,
     utilization_percent: 0,
-    total_users: 0,
-    total_teams: 0,
   };
 
   const teamOptions = useMemo(
@@ -172,74 +131,13 @@ function AdminBudgetHeads() {
     });
   }
 
-  // ---------- Allocate budget ----------
-
-  function openAllocateModal(user) {
-    setAllocateTarget(user);
-    setAllocateError("");
-    setAllocateForm({
-      allocated_amount: user.allocated_amount ? String(user.allocated_amount) : "",
-      financial_year: user.financial_year || currentFinancialYear(),
-      remarks: "",
-    });
-  }
-
-  function closeAllocateModal() {
-    setAllocateTarget(null);
-    setAllocateForm(emptyAllocateForm);
-    setAllocateError("");
-  }
-
-  async function submitAllocate(e) {
-    e.preventDefault();
-    if (!allocateTarget) return;
-
-    const amount = Number(allocateForm.allocated_amount);
-    if (allocateForm.allocated_amount === "" || isNaN(amount) || amount < 0) {
-      setAllocateError("Enter a valid budget amount (0 or more).");
-      return;
-    }
-    if (!allocateForm.financial_year.trim()) {
-      setAllocateError("Financial year / budget period is required.");
-      return;
-    }
-
-    try {
-      setAllocateSaving(true);
-      setAllocateError("");
-      const payload = {
-        allocated_amount: amount,
-        financial_year: allocateForm.financial_year.trim(),
-        remarks: allocateForm.remarks.trim() || null,
-      };
-
-      if (allocateTarget.allocation_id) {
-        await budgetHeadsService.updateAllocation(allocateTarget.allocation_id, payload);
-      } else {
-        await budgetHeadsService.allocateBudget(allocateTarget.user_id, payload);
-      }
-
-      setToast({ type: "success", message: `Budget saved for ${allocateTarget.user_name}.` });
-      closeAllocateModal();
-      await fetchOverview();
-      if (detailUserId === allocateTarget.user_id) {
-        await loadDetail(allocateTarget.user_id);
-      }
-    } catch (e) {
-      console.error("Failed to save allocation:", e);
-      setAllocateError(e?.response?.data?.error || "Failed to save the budget allocation.");
-    } finally {
-      setAllocateSaving(false);
-    }
-  }
-
-  // ---------- Detail drawer ----------
-
-  async function loadDetail(userId) {
+  async function openDetail(user) {
+    setDetailUserId(user.user_id);
+    setDetailData(null);
+    setDetailError("");
     try {
       setDetailLoading(true);
-      setDetailError("");
-      const data = await budgetHeadsService.getUserDetail(userId);
+      const data = await budgetHeadsService.getUserDetail(user.user_id);
       setDetailData(data);
     } catch (e) {
       console.error("Failed to load user budget detail:", e);
@@ -249,118 +147,25 @@ function AdminBudgetHeads() {
     }
   }
 
-  function openDetail(user) {
-    setDetailUserId(user.user_id);
-    setDetailData(null);
-    loadDetail(user.user_id);
-  }
-
   function closeDetail() {
     setDetailUserId(null);
     setDetailData(null);
     setDetailError("");
   }
 
-  // ---------- Spending categories ----------
-
-  function openAddCategory() {
-    setCategoryModal({ mode: "add" });
-    setCategoryForm(emptyCategoryForm);
-    setCategoryError("");
-  }
-
-  function openEditCategory(item) {
-    setCategoryModal({ mode: "edit", item });
-    setCategoryForm({
-      category_name: item.category_name,
-      amount: String(item.amount),
-      remarks: item.remarks || "",
-    });
-    setCategoryError("");
-  }
-
-  function closeCategoryModal() {
-    setCategoryModal(null);
-    setCategoryForm(emptyCategoryForm);
-    setCategoryError("");
-  }
-
-  async function submitCategory(e) {
-    e.preventDefault();
-    if (!categoryModal || !detailData) return;
-
-    const amount = Number(categoryForm.amount);
-    if (!categoryForm.category_name.trim()) {
-      setCategoryError("Category name is required.");
-      return;
-    }
-    if (categoryForm.amount === "" || isNaN(amount) || amount < 0) {
-      setCategoryError("Enter a valid amount (0 or more).");
-      return;
-    }
-
-    try {
-      setCategorySaving(true);
-      setCategoryError("");
-      const payload = {
-        category_name: categoryForm.category_name.trim(),
-        amount,
-        remarks: categoryForm.remarks.trim() || null,
-      };
-
-      if (categoryModal.mode === "edit") {
-        await budgetHeadsService.updateSpendingCategory(categoryModal.item.id, payload);
-      } else {
-        await budgetHeadsService.addSpendingCategory(detailData.user_id, payload);
-      }
-
-      setToast({ type: "success", message: "Spending category saved." });
-      closeCategoryModal();
-      await loadDetail(detailData.user_id);
-      await fetchOverview();
-    } catch (e) {
-      console.error("Failed to save spending category:", e);
-      setCategoryError(e?.response?.data?.error || "Failed to save the spending category.");
-    } finally {
-      setCategorySaving(false);
-    }
-  }
-
-  function confirmDelete(item) {
-    setDeleteTarget(item);
-  }
-
-  async function performDelete() {
-    if (!deleteTarget || !detailData) return;
-    try {
-      setDeleting(true);
-      await budgetHeadsService.deleteSpendingCategory(deleteTarget.id);
-      setToast({ type: "success", message: "Spending category deleted." });
-      setDeleteTarget(null);
-      await loadDetail(detailData.user_id);
-      await fetchOverview();
-    } catch (e) {
-      console.error("Failed to delete spending category:", e);
-      setToast({ type: "error", message: "Failed to delete the spending category." });
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  // ---------- Render ----------
-
   return (
     <main className="admin-page">
       <section className="admin-header">
-        <h1>Budget Heads Management</h1>
-        <p>Manage budgets allocated to users and track category-wise utilization across teams.</p>
-      </section>
-
-      {toast && (
-        <div className={`form-message ${toast.type === "error" ? "error" : "success"}`} style={{ marginBottom: "12px" }}>
-          {toast.message}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+          <div>
+            <h1>Budget Heads Management</h1>
+            <p>Track budgets allocated to users and category-wise utilization across teams.</p>
+          </div>
+          <span className="status-badge inactive" style={{ whiteSpace: "nowrap" }}>
+            Read Only Access
+          </span>
         </div>
-      )}
+      </section>
 
       <section className="stats-grid">
         <div className="stat-card">
@@ -493,7 +298,7 @@ function AdminBudgetHeads() {
                           <th>Remaining</th>
                           <th>Utilization</th>
                           <th>Categories</th>
-                          <th>Actions</th>
+                          <th>Details</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -531,9 +336,6 @@ function AdminBudgetHeads() {
                                 <button className="btn-sm" onClick={() => openDetail(m)}>
                                   View Details
                                 </button>
-                                <button className="btn-sm" onClick={() => openAllocateModal(m)}>
-                                  {m.allocation_id ? "Reallocate" : "Allocate Budget"}
-                                </button>
                               </div>
                             </td>
                           </tr>
@@ -547,74 +349,7 @@ function AdminBudgetHeads() {
           })}
       </section>
 
-      {/* ---------- Allocate / Reallocate budget modal ---------- */}
-      {allocateTarget && (
-        <div className="custom-modal-overlay" onClick={closeAllocateModal}>
-          <div className="custom-modal" style={{ maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="custom-modal-header">
-              <div>
-                <h2 style={{ margin: 0, fontSize: "16px" }}>
-                  {allocateTarget.allocation_id ? "Reallocate Budget" : "Allocate Budget"}
-                </h2>
-                <span style={{ fontSize: "13px", color: "#64748b" }}>
-                  {allocateTarget.user_name} · {allocateTarget.user_id}
-                </span>
-              </div>
-              <button className="icon-close-button" onClick={closeAllocateModal}>
-                ×
-              </button>
-            </div>
-            <div className="custom-modal-body">
-              <form onSubmit={submitAllocate}>
-                {allocateError && <div className="form-message error">{allocateError}</div>}
-                <div className="form-grid" style={{ gridTemplateColumns: "1fr" }}>
-                  <label>
-                    Budget Amount (Rs)
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={allocateForm.allocated_amount}
-                      onChange={(e) => setAllocateForm((f) => ({ ...f, allocated_amount: e.target.value }))}
-                      placeholder="e.g. 50000"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Financial Year / Budget Period
-                    <input
-                      type="text"
-                      value={allocateForm.financial_year}
-                      onChange={(e) => setAllocateForm((f) => ({ ...f, financial_year: e.target.value }))}
-                      placeholder="e.g. 2025-26"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Remarks (optional)
-                    <input
-                      type="text"
-                      value={allocateForm.remarks}
-                      onChange={(e) => setAllocateForm((f) => ({ ...f, remarks: e.target.value }))}
-                      placeholder="Notes for this allocation"
-                    />
-                  </label>
-                </div>
-                <div className="form-actions">
-                  <button type="button" className="btn-secondary" onClick={closeAllocateModal}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn-primary" disabled={allocateSaving}>
-                    {allocateSaving ? "Saving..." : "Save Allocation"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ---------- User detail drawer ---------- */}
+      {/* ---------- User detail (read-only) ---------- */}
       {detailUserId && (
         <div className="custom-modal-overlay" onClick={closeDetail}>
           <div className="custom-modal" style={{ maxWidth: "760px" }} onClick={(e) => e.stopPropagation()}>
@@ -673,15 +408,6 @@ function AdminBudgetHeads() {
                     </div>
                   </div>
 
-                  <div className="form-actions" style={{ justifyContent: "flex-start", marginTop: "12px" }}>
-                    <button className="btn-secondary" onClick={() => openAllocateModal(detailData)}>
-                      {detailData.allocation_id ? "Edit Budget" : "Allocate Budget"}
-                    </button>
-                    <button className="btn-primary" onClick={openAddCategory}>
-                      + Add Spending Category
-                    </button>
-                  </div>
-
                   <h2 style={{ fontSize: "14px", marginTop: "20px" }}>Spending Categories</h2>
                   <div className="table-wrapper">
                     <table className="admin-table">
@@ -690,13 +416,12 @@ function AdminBudgetHeads() {
                           <th>Category</th>
                           <th>Amount</th>
                           <th>Remarks</th>
-                          <th>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(detailData.spending || []).length === 0 && (
                           <tr>
-                            <td colSpan={4} style={{ textAlign: "center", color: "#94a3b8" }}>
+                            <td colSpan={3} style={{ textAlign: "center", color: "#94a3b8" }}>
                               No spending categories yet.
                             </td>
                           </tr>
@@ -706,16 +431,6 @@ function AdminBudgetHeads() {
                             <td>{item.category_name}</td>
                             <td>{formatCurrency(item.amount)}</td>
                             <td>{item.remarks || "—"}</td>
-                            <td>
-                              <div className="action-buttons">
-                                <button className="btn-sm" onClick={() => openEditCategory(item)}>
-                                  Edit
-                                </button>
-                                <button className="btn-sm danger" onClick={() => confirmDelete(item)}>
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -728,7 +443,7 @@ function AdminBudgetHeads() {
                             <td>
                               <strong>{formatCurrency(detailData.utilized_amount)}</strong>
                             </td>
-                            <td colSpan={2}></td>
+                            <td></td>
                           </tr>
                         </tfoot>
                       )}
@@ -768,98 +483,8 @@ function AdminBudgetHeads() {
           </div>
         </div>
       )}
-
-      {/* ---------- Add / Edit spending category modal ---------- */}
-      {categoryModal && (
-        <div className="custom-modal-overlay" style={{ zIndex: 1001 }} onClick={closeCategoryModal}>
-          <div className="custom-modal" style={{ maxWidth: "440px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="custom-modal-header">
-              <h2 style={{ margin: 0, fontSize: "16px" }}>
-                {categoryModal.mode === "edit" ? "Edit Spending Category" : "Add Spending Category"}
-              </h2>
-              <button className="icon-close-button" onClick={closeCategoryModal}>
-                ×
-              </button>
-            </div>
-            <div className="custom-modal-body">
-              <form onSubmit={submitCategory}>
-                {categoryError && <div className="form-message error">{categoryError}</div>}
-                <div className="form-grid" style={{ gridTemplateColumns: "1fr" }}>
-                  <label>
-                    Category Name
-                    <input
-                      type="text"
-                      value={categoryForm.category_name}
-                      onChange={(e) => setCategoryForm((f) => ({ ...f, category_name: e.target.value }))}
-                      placeholder="e.g. Travel"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Amount Utilized (Rs)
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={categoryForm.amount}
-                      onChange={(e) => setCategoryForm((f) => ({ ...f, amount: e.target.value }))}
-                      placeholder="e.g. 5000"
-                      required
-                    />
-                  </label>
-                  <label>
-                    Remarks (optional)
-                    <input
-                      type="text"
-                      value={categoryForm.remarks}
-                      onChange={(e) => setCategoryForm((f) => ({ ...f, remarks: e.target.value }))}
-                      placeholder="e.g. Client visit"
-                    />
-                  </label>
-                </div>
-                <div className="form-actions">
-                  <button type="button" className="btn-secondary" onClick={closeCategoryModal}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn-primary" disabled={categorySaving}>
-                    {categorySaving ? "Saving..." : "Save Category"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ---------- Delete confirmation ---------- */}
-      {deleteTarget && (
-        <div className="custom-modal-overlay" style={{ zIndex: 1002 }} onClick={() => setDeleteTarget(null)}>
-          <div className="custom-modal" style={{ maxWidth: "400px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="custom-modal-header">
-              <h2 style={{ margin: 0, fontSize: "16px" }}>Delete Category?</h2>
-              <button className="icon-close-button" onClick={() => setDeleteTarget(null)}>
-                ×
-              </button>
-            </div>
-            <div className="custom-modal-body">
-              <p style={{ marginTop: 0 }}>
-                This will permanently delete the "{deleteTarget.category_name}" spending entry (
-                {formatCurrency(deleteTarget.amount)}). This action cannot be undone.
-              </p>
-              <div className="form-actions">
-                <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
-                  Cancel
-                </button>
-                <button className="btn-sm danger" onClick={performDelete} disabled={deleting}>
-                  {deleting ? "Deleting..." : "Delete"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
 
-export default AdminBudgetHeads;
+export default FinanceBudgetHeads;
