@@ -3,13 +3,13 @@ import { Route, Navigate } from "react-router-dom";
 
 import FinanceDashboard from "./pages/FinanceDashboard";
 import FinanceTransactions from "./pages/FinanceTransactions";
-import FinanceBudget from "./pages/FinanceBudget";
 import FinanceBills from "./pages/FinanceBills";
 import FinanceReports from "./pages/FinanceReports";
 import FinanceFellowUtilization from "./pages/FinanceFellowUtilization";
 import FinanceApprovals from "./pages/FinanceApprovals";
 import FinanceReconciliation from "./pages/FinanceReconciliation";
 import FinanceContactSupport from "./pages/FinanceContactSupport";
+import FinanceBudgetHeads from "./pages/FinanceBudgetHeads";
 
 export const accountsRoutes = (
   <>
@@ -28,10 +28,7 @@ export const accountsRoutes = (
       element={<FinanceTransactions />}
     />
 
-    <Route
-      path="/finance/budget"
-      element={<FinanceBudget />}
-    />
+    <Route path="/finance/team-budgets" element={<FinanceBudgetHeads />} />
 
     <Route
       path="/finance/bills"

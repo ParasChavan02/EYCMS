@@ -37,8 +37,8 @@ function AdminSidebar({ isOpen, onClose, isCollapsed }) {
       section: "User Management",
       items: [
         { icon: Users, label: "Users", path: ROUTES.ADMIN_USERS },
-        { icon: ShieldCheck, label: "Roles", path: ROUTES.ADMIN_ROLES },
-        { icon: LockKeyhole, label: "Permissions", path: ROUTES.ADMIN_PERMISSIONS },
+        /* { icon: ShieldCheck, label: "Roles", path: ROUTES.ADMIN_ROLES },
+         { icon: LockKeyhole, label: "Permissions", path: ROUTES.ADMIN_PERMISSIONS },*/
       ],
     },
     {

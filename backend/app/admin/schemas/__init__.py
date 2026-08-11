@@ -14,6 +14,20 @@ from app.admin.schemas.uc import (
     UCVersionHistoryResponse,
 )
 
+from app.admin.schemas.budget_heads import (
+    BudgetSpendingCreate,
+    BudgetSpendingUpdate,
+    BudgetSpendingItem,
+    BudgetAllocationCreate,
+    BudgetAllocationUpdate,
+    BudgetAllocationHistoryItem,
+    UserBudgetSummary,
+    UserBudgetDetail,
+    TeamBudgetSummary,
+    BudgetHeadsOverallSummary,
+    BudgetHeadsOverview,
+)
+
 class AdminDashboardKPIs(BaseModel):
     total_active_users: int
     users_near_deadline: int
@@ -105,4 +119,15 @@ __all__ = [
     "UCRecordUpdate",
     "UCSupportingDocumentUploadResponse",
     "UCVersionHistoryResponse",
+    "BudgetSpendingCreate",
+    "BudgetSpendingUpdate",
+    "BudgetSpendingItem",
+    "BudgetAllocationCreate",
+    "BudgetAllocationUpdate",
+    "BudgetAllocationHistoryItem",
+    "UserBudgetSummary",
+    "UserBudgetDetail",
+    "TeamBudgetSummary",
+    "BudgetHeadsOverallSummary",
+    "BudgetHeadsOverview",
 ]

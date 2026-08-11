@@ -113,4 +113,8 @@ def init_db():
     # 5. Update 'users' table
     add_column_if_missing("users", "team_configured", "BOOLEAN DEFAULT FALSE")
     add_column_if_missing("users", "team_id", f"{uuid_type} REFERENCES teams(id)")
+    add_column_if_missing("users", "department", "VARCHAR(100)")
+    add_column_if_missing("users", "status", "VARCHAR(50) DEFAULT 'Active'")
+    add_column_if_missing("users", "joining_date", "DATE")
+    add_column_if_missing("users", "contact_number", "VARCHAR(50)")
 

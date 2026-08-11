@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING, List
-from datetime import datetime
+from datetime import datetime, date
 import uuid
 from sqlalchemy import String, Integer, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from app.common.models.audit_log import AuditLog
     from app.common.models.notification import Notification
     from app.common.models.team import Team
+    from app.common.models.user_budget import UserBudgetAllocation
 
 class User(Base):
     __tablename__ = "users"
@@ -31,6 +32,10 @@ class User(Base):
     role_id: Mapped[int] = mapped_column(Integer, ForeignKey("roles.id"), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     team_configured: Mapped[bool] = mapped_column(Boolean, default=False)
+    department: Mapped[str] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="Active")
+    joining_date: Mapped[date] = mapped_column(nullable=True)
+    contact_number: Mapped[str] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -68,3 +73,8 @@ class User(Base):
     )
     audit_logs: Mapped[List["AuditLog"]] = relationship(back_populates="user")
     notifications: Mapped[List["Notification"]] = relationship(back_populates="user")
+
+    # Individual budget allocations (Admin → Finance → Budget Heads)
+    budget_allocations: Mapped[List["UserBudgetAllocation"]] = relationship(
+        back_populates="user", foreign_keys="[UserBudgetAllocation.user_id]", cascade="all, delete-orphan"
+    )

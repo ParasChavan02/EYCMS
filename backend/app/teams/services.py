@@ -110,7 +110,7 @@ class TeamService:
                 team_id=team.id,
                 role_id=user_role.id,
                 created_by_id=current_user.id,
-                status="PENDING",
+                status="PENDING_APPROVAL",
                 expires_at=datetime.now(timezone.utc) + timedelta(days=7)
             )
             db.add(invitation)
@@ -186,7 +186,7 @@ class TeamService:
             team_id=current_user.team_id,
             role_id=user_role.id,
             created_by_id=current_user.id,
-            status="PENDING",
+            status="PENDING_APPROVAL",
             expires_at=datetime.now(timezone.utc) + timedelta(days=7)
         )
         db.add(invitation)

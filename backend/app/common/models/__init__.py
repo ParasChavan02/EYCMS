@@ -34,6 +34,7 @@ from app.common.models.notification import Notification
 from app.common.models.audit_log import AuditLog
 from app.common.models.team import Team
 from app.common.models.invitation import Invitation
+from app.common.models.user_budget import UserBudgetAllocation, UserBudgetSpending
 
 __all__ = [
     "Base",
@@ -71,5 +72,7 @@ __all__ = [
     "Notification",
     "AuditLog",
     "Team",
-    "Invitation"
+    "Invitation",
+    "UserBudgetAllocation",
+    "UserBudgetSpending",
 ]

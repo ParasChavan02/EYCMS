@@ -55,13 +55,6 @@ def get_users_progress(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.get("/users/{user_id}", response_model=ResponseEnvelope[UserProgressDetail])
-def get_user_progress_detail(user_id: str, db: Session = Depends(get_db)):
-    try:
-        detail = AdminService.get_user_progress_detail(db, user_id)
-        return make_success_response(detail)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.post("/transactions", response_model=ResponseEnvelope[dict])
 def admin_create_transaction(
@@ -310,5 +303,234 @@ def broadcast_announcement(
             action_label=payload.action_label
         )
         return make_success_response({"message": "Announcement broadcasted successfully to all target users"})
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# ============ ADMIN USERS & ONBOARDING OPERATIONS ============
+from pydantic import BaseModel
+from app.admin.services.users_service import AdminUsersService
+
+class AdminProjectCreate(BaseModel):
+    project_id: str
+    title: str
+
+class AdminUserCreate(BaseModel):
+    name: str
+    email: str
+    role: str
+    department: Optional[str] = None
+    project_id: Optional[str] = None
+    team_id: Optional[str] = None
+    status: Optional[str] = "Active"
+    joining_date: Optional[str] = None
+    password: Optional[str] = None
+    contact_number: Optional[str] = None
+
+class AdminUserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    department: Optional[str] = None
+    project_id: Optional[str] = None
+    team_id: Optional[str] = None
+    status: Optional[str] = None
+    joining_date: Optional[str] = None
+    contact_number: Optional[str] = None
+
+class AdminUserResetPassword(BaseModel):
+    password: Optional[str] = None
+
+@router.get("/users/stats")
+def get_users_stats(db: Session = Depends(get_db)):
+    try:
+        stats = AdminUsersService.get_users_stats(db)
+        return make_success_response(stats)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("/users/list")
+def get_users_list(
+    search: Optional[str] = Query(None),
+    role: Optional[str] = Query(None),
+    status_filter: Optional[str] = Query(None, alias="status"),
+    department: Optional[str] = Query(None),
+    project_id: Optional[str] = Query(None),
+    team_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    try:
+        users = AdminUsersService.get_users_list(
+            db=db,
+            search=search,
+            role=role,
+            status_filter=status_filter,
+            department=department,
+            project_id=project_id,
+            team_id=team_id
+        )
+        return make_success_response(users)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("/users/{user_id}", response_model=ResponseEnvelope[UserProgressDetail])
+def get_user_progress_detail(user_id: str, db: Session = Depends(get_db)):
+    try:
+        detail = AdminService.get_user_progress_detail(db, user_id)
+        return make_success_response(detail)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/users/create")
+def create_user(
+    payload: AdminUserCreate,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.create_user(db, payload.dict(), str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.put("/users/{user_id}/update")
+def update_user(
+    user_id: str,
+    payload: AdminUserUpdate,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.update_user(db, user_id, payload.dict(exclude_unset=True), str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/users/{user_id}/reset-password")
+def reset_password(
+    user_id: str,
+    payload: AdminUserResetPassword,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.reset_password(db, user_id, payload.password, str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/users/{user_id}/toggle-status")
+def toggle_user_status(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.toggle_user_status(db, user_id, str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.delete("/users/{user_id}/remove-access")
+def remove_user_access(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.remove_user_access(db, user_id, str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("/projects/list")
+def get_projects_list(db: Session = Depends(get_db)):
+    try:
+        projects = AdminUsersService.get_projects_list(db)
+        return make_success_response(projects)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("/projects/{project_uuid}/detail")
+def get_project_detail(project_uuid: str, db: Session = Depends(get_db)):
+    try:
+        details = AdminUsersService.get_project_detail(db, project_uuid)
+        return make_success_response(details)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("/onboarding-requests/list")
+def get_onboarding_requests(db: Session = Depends(get_db)):
+    try:
+        requests = AdminUsersService.get_onboarding_requests(db)
+        return make_success_response(requests)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/onboarding-requests/{request_uuid}/approve")
+def approve_onboarding_request(
+    request_uuid: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.approve_onboarding_request(db, request_uuid, str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/onboarding-requests/{request_uuid}/reject")
+def reject_onboarding_request(
+    request_uuid: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.reject_onboarding_request(db, request_uuid, str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.get("/users/{user_id}/activity")
+def get_user_activity(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.get_user_activity(db, user_id)
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/projects/create")
+def create_project(
+    payload: AdminProjectCreate,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminUsersService.create_project(db, payload.dict(), str(current_admin.id))
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
