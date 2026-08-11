@@ -41,6 +41,10 @@ function SuperAdminBudgetAllocation() {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(() => {
+      fetchDataQuietly();
+    }, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -60,6 +64,15 @@ function SuperAdminBudgetAllocation() {
       setLoadError("Failed to load budget allocation metrics.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchDataQuietly() {
+    try {
+      const data = await budgetHeadsService.getSuperOverview();
+      setOverview(data);
+    } catch (e) {
+      console.error("Quiet fetch failed:", e);
     }
   }
 

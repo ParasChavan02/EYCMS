@@ -122,6 +122,10 @@ function AdminBudgetHeads() {
 
   useEffect(() => {
     fetchInitialData();
+    const interval = setInterval(() => {
+      fetchInitialDataQuietly();
+    }, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -175,6 +179,18 @@ function AdminBudgetHeads() {
       setLoadError("Failed to fetch budget metrics from the server.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchInitialDataQuietly() {
+    try {
+      const ovData = await budgetHeadsService.getOverview();
+      setOverview(ovData);
+      if (ovData?.fellows_budget?.projects?.length > 0) {
+        setSelectedProjectUuid(prev => prev || ovData.fellows_budget.projects[0].project_uuid);
+      }
+    } catch (e) {
+      console.error("Quiet fetch failed:", e);
     }
   }
 
