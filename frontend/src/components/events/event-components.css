@@ -1,0 +1,265 @@
+.event-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.event-status-badge.upcoming {
+  background: #eff6ff;
+  color: #1d5cff;
+}
+
+.event-status-badge.ongoing {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.event-status-badge.completed {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.event-status-badge.cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.event-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.08);
+}
+
+.event-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.event-card__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.event-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.event-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(29, 92, 255, 0.1);
+  color: #1d5cff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.event-table-row {
+  height: 68px;
+}
+
+.event-table-row td {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.event-table-row td.event-table-cell-wrap {
+  white-space: normal;
+}
+
+.event-table-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.event-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #dbe2ea;
+  background: #fff;
+  color: #0f5aff;
+  transition: all 0.18s ease;
+}
+
+.event-icon-button:hover {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+}
+
+.event-icon-button.danger {
+  color: #b91c1c;
+}
+
+.event-icon-button.danger:hover {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.event-form-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.event-form-readonly {
+  background: #f8fafc;
+}
+
+.event-details {
+  display: grid;
+  gap: 16px;
+}
+
+.event-details__hero {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15, 90, 255, 0.08), rgba(255, 255, 255, 0.94));
+  border: 1px solid rgba(29, 92, 255, 0.12);
+}
+
+.event-details__title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.event-details__date {
+  font-size: 1rem;
+  color: #475569;
+  font-weight: 700;
+}
+
+.event-details__sections {
+  display: grid;
+  gap: 14px;
+}
+
+.event-details__section {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.event-details__section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.event-details__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.event-details__field {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.event-details__field-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.event-details__field-value {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.event-details__description {
+  padding: 18px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.event-details__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.event-confirmation {
+  display: grid;
+  gap: 14px;
+}
+
+.event-confirmation__body {
+  color: #475569;
+  line-height: 1.6;
+}
+
+.event-confirmation__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.event-modal-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.event-empty-state {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+}

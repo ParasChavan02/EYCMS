@@ -1,0 +1,80 @@
+export const ROUTES = {
+  ROOT: "/",
+  LOGIN: "/login",
+  USER_DASHBOARD: "/dashboard",
+  USER_PROFILE: "/profile",
+  USER_EVENTS: "/events",
+  USER_REPORTS: "/reports",
+  USER_SETTINGS: "/settings",
+  ADMIN_ROOT: "/admin",
+  ADMIN_DASHBOARD: "/admin/dashboard",
+  ADMIN_PROFILE: "/admin/profile",
+  ADMIN_USERS: "/admin/users",
+  ADMIN_ROLES: "/admin/roles",
+  ADMIN_PERMISSIONS: "/admin/permissions",
+  ADMIN_TRANSACTIONS: "/admin/transactions",
+  ADMIN_BUDGET_HEADS: "/admin/budget-heads",
+  ADMIN_RECONCILIATION: "/admin/reconciliation",
+  ADMIN_EVENTS: "/admin/events",
+  ADMIN_REPORTS: "/admin/reports",
+  ADMIN_APPROVALS: "/admin/approvals",
+  ADMIN_AUDIT_LOGS: "/admin/audit-logs",
+  ADMIN_SETTINGS: "/admin/settings",
+  ADMIN_TRANSACTION_REVIEW: "/admin/transaction-review",
+  ADMIN_UC_MANAGEMENT: "/admin/uc",
+  ADMIN_GALLERY: "/admin/gallery",
+  ADMIN_OTHER_DOCUMENTS: "/admin/other-documents",
+  ADMIN_SUPPORT_ALL: "/admin/support/all",
+  ADMIN_SUPPORT_OPEN: "/admin/support/open",
+  ADMIN_SUPPORT_CRITICAL: "/admin/support/critical",
+  ADMIN_SUPPORT_FEATURES: "/admin/support/features",
+  ADMIN_SUPPORT_ANALYTICS: "/admin/support/analytics",
+  ADMIN_SUPPORT_STATUS: "/admin/support/status",
+  ADMIN_SUPPORT_TICKET_DETAILS: "/admin/support/ticket/:ticketId",
+  SUPER_ADMIN_DASHBOARD: "/super-admin/dashboard",
+  SUPER_ADMIN_GENERATE_TOKEN: "/super-admin/generate-token",
+  SUPER_ADMIN_TOKENS: "/super-admin/tokens",
+  SUPER_ADMIN_TOKEN_DETAILS: "/super-admin/token/:id",
+  SUPER_ADMIN_PROFILE: "/super-admin/profile",
+  SUPER_ADMIN_SETTINGS: "/super-admin/settings",
+  SUPER_ADMIN_BUDGET_ALLOCATION: "/super-admin/budget-allocation",
+};
+
+export function isAdminRole(account) {
+  const role = account?.role?.toUpperCase();
+  return role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
+export function getHomeRoute(account) {
+  const role = account?.role?.toUpperCase();
+
+  if (role === "ADMIN") {
+    return ROUTES.ADMIN_DASHBOARD;
+  }
+
+  if (role === "SUPER_ADMIN") {
+    return ROUTES.SUPER_ADMIN_DASHBOARD;
+  }
+
+  if (role === "ACCOUNTS") {
+    return "/finance/dashboard";
+  }
+
+  return ROUTES.USER_DASHBOARD;
+}
+
+export function getProfileRoute(account) {
+  const role = account?.role?.toUpperCase();
+  if (role === "SUPER_ADMIN") {
+    return ROUTES.SUPER_ADMIN_PROFILE;
+  }
+  return isAdminRole(account) ? ROUTES.ADMIN_PROFILE : ROUTES.USER_PROFILE;
+}
+
+export function getSettingsRoute(account) {
+  const role = account?.role?.toUpperCase();
+  if (role === "SUPER_ADMIN") {
+    return ROUTES.SUPER_ADMIN_SETTINGS;
+  }
+  return isAdminRole(account) ? ROUTES.ADMIN_SETTINGS : ROUTES.USER_SETTINGS;
+}

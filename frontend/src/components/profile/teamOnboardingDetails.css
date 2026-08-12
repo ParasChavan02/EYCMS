@@ -1,0 +1,286 @@
+.team-details-card {
+  margin-top: 8px;
+}
+
+.flex-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-invite-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary, #0f5aff);
+  color: #ffffff !important;
+  border-color: var(--primary, #0f5aff) !important;
+  font-size: 0.82rem;
+  padding: 6px 12px;
+}
+
+.btn-invite-toggle:hover {
+  background: var(--primary-dark, #0d47d1);
+}
+
+.project-id-badge-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-muted, #f9fafb);
+  border: 1px solid var(--border, #e5e7eb);
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+html[data-theme="dark"] .project-id-badge-container {
+  background: #111827;
+  border-color: #374151;
+}
+
+.project-id-label {
+  font-size: 0.85rem;
+  color: var(--text-light, #9ca3af);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.project-id-value {
+  font-size: 1.05rem;
+  color: var(--primary, #0f5aff);
+  font-family: monospace;
+}
+
+html[data-theme="dark"] .project-id-value {
+  color: var(--primary, #3b82f6);
+}
+
+.invite-inline-form {
+  background: var(--surface-muted, #f9fafb);
+  border: 1px solid var(--border, #e5e7eb);
+  padding: 18px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+html[data-theme="dark"] .invite-inline-form {
+  background: #111827;
+  border-color: #374151;
+}
+
+.invite-form-title {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-muted, #1f2937);
+}
+
+.invite-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fee2e2;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+html[data-theme="dark"] .invite-error {
+  background: rgba(153, 27, 27, 0.2);
+  border-color: rgba(153, 27, 27, 0.3);
+  color: #fca5a5;
+}
+
+.invite-fields-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.invite-field {
+  flex: 1;
+  min-width: 180px;
+}
+
+.invite-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  border-radius: 6px;
+}
+
+.teammates-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-muted, #1f2937);
+}
+
+.solo-project-alert {
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  color: #1e40af;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+html[data-theme="dark"] .solo-project-alert {
+  background: rgba(30, 64, 175, 0.15);
+  border-color: rgba(30, 64, 175, 0.25);
+  color: #93c5fd;
+}
+
+.solo-project-alert p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.teammates-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.teammates-table th {
+  padding: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-light, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.teammates-table td {
+  padding: 14px 12px;
+  font-size: 0.9rem;
+  color: var(--text-muted, #1f2937);
+  border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.teammate-row:hover {
+  background: var(--surface-muted, #f9fafb);
+}
+
+html[data-theme="dark"] .teammate-row:hover {
+  background: #111827;
+}
+
+.teammate-info-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.teammate-avatar-mini {
+  width: 32px;
+  height: 32px;
+  background: rgba(15, 90, 255, 0.1);
+  color: var(--primary, #0f5aff);
+  font-weight: 700;
+  font-size: 0.88rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+html[data-theme="dark"] .teammate-avatar-mini {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--primary, #3b82f6);
+}
+
+.teammate-name {
+  font-weight: 500;
+}
+
+.teammate-email-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-light, #9ca3af);
+  font-size: 0.88rem;
+}
+
+.status-badge-teammate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.status-badge-teammate.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+html[data-theme="dark"] .status-badge-teammate.pending {
+  background: rgba(217, 119, 6, 0.15);
+  color: #fbbf24;
+}
+
+.status-badge-teammate.joined {
+  background: #d1fae5;
+  color: #059669;
+}
+
+html[data-theme="dark"] .status-badge-teammate.joined {
+  background: rgba(5, 150, 105, 0.15);
+  color: #34d399;
+}
+
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.badge-icon {
+  width: 12px;
+  height: 12px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease forwards;
+}
+
+@media (max-width: 768px) {
+  .invite-fields-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .invite-field {
+    width: 100%;
+  }
+  
+  .invite-actions {
+    justify-content: flex-end;
+  }
+}

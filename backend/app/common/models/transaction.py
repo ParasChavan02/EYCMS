@@ -1,0 +1,98 @@
+from typing import TYPE_CHECKING, List, Optional
+from datetime import datetime
+import uuid
+from decimal import Decimal
+from sqlalchemy import String, ForeignKey, DateTime, Numeric, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.common.models.user import User
+    from app.common.models.expense import Expense
+    from app.common.models.project import Project
+    from app.common.models.team import Team
+    from app.common.models.project_file import ProjectFile
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    expense_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("expenses.id", ondelete="CASCADE"), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    transaction_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=True
+    )
+    created_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(50), default="DRAFT", index=True)
+    source: Mapped[str] = mapped_column(String(50), default="MANUAL", index=True)
+    imported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    imported_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=True)
+    import_batch_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    verified_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=True)
+    approved_by_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=True)
+    finance_remarks: Mapped[str] = mapped_column(Text, nullable=True)
+    admin_remarks: Mapped[str] = mapped_column(Text, nullable=True)
+    
+    # New columns for Bill integration and multi-role audit trail
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    team_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("teams.id", ondelete="SET NULL"), nullable=True)
+    bill_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("project_files.id", ondelete="CASCADE"), nullable=True)
+    uploaded_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    reconciliation_status: Mapped[Optional[str]] = mapped_column(String(50), default="NOT_READY", index=True, nullable=True)
+    vendor: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    grant_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    reference_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    is_historical: Mapped[bool] = mapped_column(default=False)
+    bank_transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("bank_transactions.id", ondelete="SET NULL"), nullable=True)
+    reconciled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    match_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    expense: Mapped["Expense"] = relationship(back_populates="transactions")
+    project: Mapped[Optional["Project"]] = relationship("Project", foreign_keys=[project_id])
+    grant: Mapped[Optional["Project"]] = relationship("Project", foreign_keys=[grant_id])
+    team: Mapped[Optional["Team"]] = relationship("Team")
+    bill: Mapped[Optional["ProjectFile"]] = relationship("ProjectFile")
+    uploader: Mapped[Optional["User"]] = relationship("User", foreign_keys=[uploaded_by_id])
+    
+    creator: Mapped["User"] = relationship(
+        foreign_keys=[created_by_id], back_populates="created_transactions"
+    )
+    imported_by: Mapped["User"] = relationship(foreign_keys=[imported_by_id])
+    verifier: Mapped["User"] = relationship(
+        foreign_keys=[verified_by_id], back_populates="verified_transactions"
+    )
+    approver: Mapped["User"] = relationship(
+        foreign_keys=[approved_by_id], back_populates="approved_transactions"
+    )
+    
+    attachments: Mapped[List["TransactionAttachment"]] = relationship(
+        back_populates="transaction", cascade="all, delete-orphan"
+    )
+
+
+class TransactionAttachment(Base):
+    __tablename__ = "transaction_attachments"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    transaction_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("transactions.id", ondelete="CASCADE"), nullable=False
+    )
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Relationships
+    transaction: Mapped["Transaction"] = relationship(back_populates="attachments")

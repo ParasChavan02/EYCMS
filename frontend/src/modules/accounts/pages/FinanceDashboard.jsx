@@ -1,0 +1,346 @@
+import { useEffect, useState } from "react";
+import { accountsService } from "../services/accountsService";
+import "../styles/finance.css";
+
+function fmtINR(n) {
+  return "₹" + Math.round(n || 0).toLocaleString("en-IN");
+}
+
+// NOTE: Notifications and Compliance Deadlines below have no backing data
+// model yet, so they remain static placeholders for now rather than
+// fabricated "live" data.
+const notifications = [];
+
+const deadlines = [];
+
+const statusMap = {
+  APPROVED: "badge-success",
+  VERIFIED: "badge-success",
+  PENDING: "badge-warning",
+  DRAFT: "badge-warning",
+  REVISION_REQUESTED: "badge-warning",
+  REJECTED: "badge-danger",
+};
+
+export default function FinanceDashboard() {
+  const [kpiData, setKpiData] = useState(null);
+  const [budgetHeads, setBudgetHeads] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDashboard() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [kpis, budgets, transactions] = await Promise.all([
+          accountsService.getDashboardKPIs(),
+          accountsService.getBudgetOverview(),
+          accountsService.getTransactions(),
+        ]);
+
+        if (!isMounted) return;
+
+        setKpiData(kpis);
+
+        // Flatten budget heads across all projects, take the top 5 by utilization
+        const allHeads = (budgets || []).flatMap((b) => b.budget_heads || []);
+        allHeads.sort((a, b) => b.utilization_percent - a.utilization_percent);
+        setBudgetHeads(allHeads.slice(0, 5));
+
+        setRecentTransactions((transactions || []).slice(0, 5));
+      } catch (err) {
+        if (isMounted) setError(err?.response?.data?.error || "Unable to load dashboard data.");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadDashboard();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const utilization = Math.round(kpiData?.budget_utilized_percent ?? 0);
+  const utilizationColor =
+    utilization > 80 ? "danger" : utilization > 60 ? "warning" : "success";
+
+  const kpis = kpiData
+    ? [
+        {
+          label: "Total Budget",
+          value: fmtINR(kpiData.total_allocated_funds),
+          icon: "💰",
+          iconBg: "#eff6ff",
+          accent: "#2563eb",
+          trend: `${kpiData.active_budgets} active budget(s)`,
+          trendUp: null,
+        },
+        {
+          label: "Total Expenses",
+          value: fmtINR(kpiData.total_spent_funds),
+          icon: "📊",
+          iconBg: "#fdf4ff",
+          accent: "#9333ea",
+          trend: `${utilization}% of budget`,
+          trendUp: null,
+        },
+        {
+          label: "Remaining Budget",
+          value: fmtINR(kpiData.remaining_funds),
+          icon: "🏦",
+          iconBg: "#f0fdf4",
+          accent: "#16a34a",
+          trend: `${100 - utilization}% remaining`,
+          trendUp: true,
+        },
+        {
+          label: "Pending Transactions",
+          value: String(kpiData.pending_transactions),
+          icon: "🧾",
+          iconBg: "#fffbeb",
+          accent: "#d97706",
+          trend: "Awaiting verification/approval",
+          trendUp: false,
+        },
+      ]
+    : [];
+
+  return (
+    <div className="fin-page">
+      <div className="fin-header">
+        <div className="fin-header-top">
+          <div>
+            <h1>Finance Dashboard</h1>
+            <p className="subtitle">
+              Financial overview, compliance tracking and audit readiness.
+            </p>
+          </div>
+          <span className="fin-badge-role">Read Only Access</span>
+        </div>
+      </div>
+
+      {error && <div className="fin-empty">{error}</div>}
+      {loading && !error && <div className="fin-empty">Loading dashboard…</div>}
+
+      {!loading && !error && (
+        <>
+          {/* KPI Cards */}
+          <div className="fin-kpi-grid">
+            {kpis.map((k, i) => (
+              <div
+                key={i}
+                className="fin-kpi-card"
+                style={{
+                  "--accent": k.accent,
+                  "--icon-bg": k.iconBg,
+                }}
+              >
+                <div className="fin-kpi-icon">{k.icon}</div>
+                <div className="fin-kpi-label">{k.label}</div>
+                <div className="fin-kpi-value">{k.value}</div>
+                <div className="fin-kpi-trend">
+                  {k.trendUp === true && <span className="trend-up">↑</span>}
+                  {k.trendUp === false && <span className="trend-down">↓</span>}
+                  {k.trend}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Main Grid */}
+          <div className="fin-two-col">
+            {/* Budget Health */}
+            <div className="fin-card">
+              <div className="fin-card-header">
+                <div>
+                  <div className="fin-card-title">Budget Health Gauge</div>
+                  <div className="fin-card-subtitle">
+                    Overall financial utilization
+                  </div>
+                </div>
+                <span className="fin-badge badge-warning">{utilization}% Used</span>
+              </div>
+
+              <div className="fin-card-body">
+                <div className="fin-progress-wrap">
+                  <div className="fin-progress-meta">
+                    <span className="fin-progress-label">Overall Budget</span>
+                    <span className="fin-progress-pct">{utilization}%</span>
+                  </div>
+
+                  <div className="fin-progress-track">
+                    <div
+                      className={`fin-progress-fill ${utilizationColor}`}
+                      style={{ width: `${utilization}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 24 }}>
+                  {budgetHeads.length === 0 && (
+                    <div className="fin-notif-text">No budget heads recorded yet.</div>
+                  )}
+                  {budgetHeads.map((h) => (
+                    <div
+                      key={h.id}
+                      className="fin-progress-wrap"
+                      style={{ marginBottom: 18 }}
+                    >
+                      <div className="fin-progress-meta">
+                        <span>{h.name}</span>
+                        <span>{Math.round(h.utilization_percent)}%</span>
+                      </div>
+
+                      <div className="fin-progress-track">
+                        <div
+                          className={`fin-progress-fill ${
+                            h.utilization_percent > 80
+                              ? "danger"
+                              : h.utilization_percent > 60
+                              ? "warning"
+                              : "success"
+                          }`}
+                          style={{ width: `${Math.min(100, h.utilization_percent)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Notifications */}
+            <div className="fin-card">
+              <div className="fin-card-header">
+                <div>
+                  <div className="fin-card-title">Notifications</div>
+                  <div className="fin-card-subtitle">
+                    Recent alerts & updates
+                  </div>
+                </div>
+                <span className="fin-badge badge-primary">0 New</span>
+              </div>
+
+              <div className="fin-card-body">
+                {notifications.length === 0 ? (
+                  <div className="fin-notif-text">No notifications.</div>
+                ) : (
+                  notifications.map((n, i) => (
+                    <div className="fin-notif-item" key={i}>
+                      <div
+                        className="fin-notif-dot"
+                        style={{ background: n.color }}
+                      />
+                      <div>
+                        <div className="fin-notif-text">{n.msg}</div>
+                        <div className="fin-notif-time">{n.time}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Transactions */}
+          <div className="fin-card fin-section">
+            <div className="fin-card-header">
+              <div>
+                <div className="fin-card-title">Recent Transactions</div>
+                <div className="fin-card-subtitle">Last 5 transactions</div>
+              </div>
+            </div>
+
+            <div className="fin-card-body">
+              {recentTransactions.length === 0 ? (
+                <div className="fin-empty">No transactions recorded yet.</div>
+              ) : (
+                <div className="fin-table-wrap">
+                  <table className="fin-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {recentTransactions.map((t) => (
+                        <tr key={t.id}>
+                          <td className="mono">
+                            {new Date(t.date).toLocaleDateString("en-IN")}
+                          </td>
+                          <td className="bold">{t.description}</td>
+                          <td className="mono bold">{fmtINR(t.amount)}</td>
+                          <td>
+                            <span className={`fin-badge ${statusMap[t.status] || "badge-info"}`}>
+                              {t.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Submission Status */}
+          <div className="fin-card fin-section">
+            <div className="fin-card-header">
+              <div>
+                <div className="fin-card-title">Submission Status</div>
+                <div className="fin-card-subtitle">
+                  Track submitted reports and supporting documents
+                </div>
+              </div>
+
+              <span className="fin-badge badge-primary">
+                0 Documents
+              </span>
+            </div>
+
+            <div className="fin-card-body">
+              <div className="fin-empty">No documents submitted yet.</div>
+            </div>
+          </div>
+
+          {/* Compliance Deadlines */}
+          <div className="fin-card fin-section">
+            <div className="fin-card-header">
+              <div>
+                <div className="fin-card-title">
+                  Upcoming Compliance Deadlines
+                </div>
+                <div className="fin-card-subtitle">
+                  Audit and finance submissions
+                </div>
+              </div>
+            </div>
+
+            <div className="fin-card-body">
+              {deadlines.length === 0 ? (
+                <div className="fin-notif-text">No compliance deadlines.</div>
+              ) : (
+                deadlines.map((d, i) => (
+                  <div key={i} className="fin-insight-row">
+                    <span>{d.title}</span>
+                    <strong>{d.date}</strong>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
