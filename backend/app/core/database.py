@@ -78,14 +78,7 @@ def init_db():
     add_column_if_missing("transactions", "bill_id", f"{uuid_type} REFERENCES project_files(id)")
     add_column_if_missing("transactions", "uploaded_by_id", f"{uuid_type} REFERENCES users(id)")
     add_column_if_missing("transactions", "category", "VARCHAR(100)")
-    add_column_if_missing("transactions", "reconciliation_status", "VARCHAR(50) DEFAULT 'NOT_READY'")
-    add_column_if_missing("transactions", "vendor", "VARCHAR(150)")
-    add_column_if_missing("transactions", "grant_id", f"{uuid_type} REFERENCES projects(id)")
-    add_column_if_missing("transactions", "reference_number", "VARCHAR(100)")
-    add_column_if_missing("transactions", "is_historical", "BOOLEAN DEFAULT FALSE")
-    add_column_if_missing("transactions", "bank_transaction_id", f"{uuid_type} REFERENCES bank_transactions(id)")
-    add_column_if_missing("transactions", "reconciled_at", "TIMESTAMP")
-    add_column_if_missing("transactions", "match_type", "VARCHAR(50)")
+    add_column_if_missing("transactions", "reconciliation_status", "VARCHAR(50) DEFAULT 'PENDING'")
 
     try:
         with engine.begin() as conn:

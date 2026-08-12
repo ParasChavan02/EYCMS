@@ -41,14 +41,7 @@ class Transaction(Base):
     bill_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("project_files.id", ondelete="CASCADE"), nullable=True)
     uploaded_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    reconciliation_status: Mapped[Optional[str]] = mapped_column(String(50), default="NOT_READY", index=True, nullable=True)
-    vendor: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
-    grant_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
-    reference_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    is_historical: Mapped[bool] = mapped_column(default=False)
-    bank_transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("bank_transactions.id", ondelete="SET NULL"), nullable=True)
-    reconciled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    match_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    reconciliation_status: Mapped[Optional[str]] = mapped_column(String(50), default="PENDING", index=True, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -59,8 +52,7 @@ class Transaction(Base):
 
     # Relationships
     expense: Mapped["Expense"] = relationship(back_populates="transactions")
-    project: Mapped[Optional["Project"]] = relationship("Project", foreign_keys=[project_id])
-    grant: Mapped[Optional["Project"]] = relationship("Project", foreign_keys=[grant_id])
+    project: Mapped[Optional["Project"]] = relationship("Project")
     team: Mapped[Optional["Team"]] = relationship("Team")
     bill: Mapped[Optional["ProjectFile"]] = relationship("ProjectFile")
     uploader: Mapped[Optional["User"]] = relationship("User", foreign_keys=[uploaded_by_id])

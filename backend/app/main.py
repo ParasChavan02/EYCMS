@@ -9,7 +9,6 @@ from app.core.seed import seed_db
 
 from app.auth.routers import auth_router, admin_tokens_router
 from app.admin.routers import admin_router, uc_router, budget_heads_router
-from app.admin.routers.reconciliation import router as reconciliation_router
 from app.accounts.routers import accounts_router
 from app.user.routers import user_router, notifications_router
 from app.support.routers import support_router
@@ -103,6 +102,5 @@ app.include_router(invitations_router, prefix=settings.API_V1_STR)
 app.include_router(reports_router, prefix=settings.API_V1_STR)
 app.include_router(events_router, prefix=settings.API_V1_STR)
 app.include_router(budget_heads_router, prefix=settings.API_V1_STR)
-app.include_router(reconciliation_router, prefix=settings.API_V1_STR)
 
 # No root-level endpoints are exposed to enforce API versioning.

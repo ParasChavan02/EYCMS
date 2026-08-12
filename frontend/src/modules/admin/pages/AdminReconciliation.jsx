@@ -1,917 +1,626 @@
 import React, { useState, useMemo, useEffect } from "react";
-import {
-  Upload,
-  RefreshCw,
-  Download,
-  CheckCircle2,
-  AlertTriangle,
-  Lock,
-  Unlock,
-  Zap,
-  Link2,
-  Unlink,
-  FileSpreadsheet,
-  PlusCircle,
-  Eye,
-  Loader2,
-  ChevronRight,
-  Filter,
-  CheckSquare,
-} from "lucide-react";
-import { useQuery } from "react-query";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../common/hooks/useAuth";
 import { useNotification } from "../../common/hooks/useNotification";
-import { reconciliationService } from "../../../services/reconciliationService";
 import { adminTransactionService } from "../../../services/adminTransactionService";
 import "../../../styles/admin-management.css";
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(amount || 0));
-}
+const PENDING_STATUSES = ["DRAFT", "PENDING", "VERIFIED", "REVISION_REQUESTED"];
 
 function AdminReconciliation() {
-  useAuth();
-  const navigate = useNavigate();
   const { addNotification } = useNotification();
 
-  // Filters
-  const [selectedPeriod, setSelectedPeriod] = useState("ALL");
-  const [matchStatusFilter, setMatchStatusFilter] = useState("ALL");
-  const [searchQuery, setSearchQuery] = useState("");
+  // State
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Bank Statement CSV Import Modal
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importFile, setImportFile] = useState(null);
-  const [isStaging, setIsStaging] = useState(false);
-  const [stagedData, setStagedData] = useState(null);
-  const [isConfirmingImport, setIsConfirmingImport] = useState(false);
 
-  // Auto Match State
-  const [isAutoMatching, setIsAutoMatching] = useState(false);
-  const [autoMatchResult, setAutoMatchResult] = useState(null);
+  // Filters State
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sourceFilter, setSourceFilter] = useState("ALL"); // ALL, MY, USER
 
-  // Manual Match Workspace Modal State
-  const [selectedBankTxn, setSelectedBankTxn] = useState(null);
-  const [selectedLedgerTxnId, setSelectedLedgerTxnId] = useState("");
-  const [matchNotes, setMatchNotes] = useState("");
-  const [isSubmittingMatch, setIsSubmittingMatch] = useState(false);
+  // Detail Modal State
+  const [selectedRec, setSelectedRec] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // Journal Entry Fallback Modal State
-  const [showJournalModal, setShowJournalModal] = useState(false);
-  const [journalBankTxn, setJournalBankTxn] = useState(null);
-  const [journalForm, setJournalForm] = useState({
-    debit_account: "Travel",
-    credit_account: "Bank Account (HDFC)",
-    amount: "",
-    narration: "",
-  });
-  const [isSubmittingJournal, setIsSubmittingJournal] = useState(false);
+  // Review Modal State for user transactions
+  const [selectedTxn, setSelectedTxn] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRemarks, setReviewRemarks] = useState("");
 
-  // Unlock Period Modal State
-  const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const [unlockPeriodName, setUnlockPeriodName] = useState("");
-  const [unlockReason, setUnlockReason] = useState("");
-  const [isSubmittingUnlock, setIsSubmittingUnlock] = useState(false);
-
-  // Fetch Workspace Data (Summary + Bank Transactions + Periods)
-  const activeFilters = useMemo(
-    () => ({
-      period_name: selectedPeriod,
-      match_status: matchStatusFilter,
-      search: searchQuery,
-    }),
-    [selectedPeriod, matchStatusFilter, searchQuery]
-  );
-
-  const {
-    data: workspaceData = { summary: {}, bank_transactions: [], periods: [] },
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useQuery(["admin-reconciliation-workspace", activeFilters], () => reconciliationService.getWorkspace(activeFilters), {
-    refetchInterval: 5000,
-    keepPreviousData: true,
-  });
-
-  const summary = workspaceData.summary || {};
-  const bankTransactions = workspaceData.bank_transactions || [];
-  const periods = workspaceData.periods || [];
-
-  // Available Ledger Candidates query for Manual Match Workspace
-  const { data: ledgerCandidates = [] } = useQuery(
-    ["admin-ledger-candidates"],
-    () => adminTransactionService.getTransactions({ reconciliationStatus: "AWAITING_RECONCILIATION" }),
-    { enabled: Boolean(selectedBankTxn) }
-  );
-
-  // Handle Bank CSV Stage
-  const handleStageBankCSV = async () => {
-    if (!importFile) {
-      addNotification("Please select a bank statement CSV file.", "error", 2000);
-      return;
-    }
-    if (!importFile.name.toLowerCase().endsWith(".csv")) {
-      addNotification("Invalid file format. Only CSV statement files (.csv) are supported.", "error", 3000);
-      return;
-    }
-    setIsStaging(true);
+  // Fetch transactions from backend
+  const fetchTransactions = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const stageRes = await reconciliationService.stageImportBankStatement(importFile);
-      setStagedData(stageRes);
-      addNotification("Bank statement parsed and staged. Please review statistics.", "info", 2000);
+      const data = await adminTransactionService.getTransactions();
+      const mapped = (data || []).map(t => ({
+        ...t,
+        source: t.source || "USER",
+        reconciliation_status: t.reconciliation_status || "PENDING",
+        vendor: t.description?.split(" ")[0] || "Vendor Service",
+        reference_number: `REF-${t.id.substring(0, 6).toUpperCase()}`
+      }));
+      setTransactions(mapped);
     } catch (err) {
-      addNotification(err?.response?.data?.detail || "Failed to parse bank statement CSV.", "error", 2500);
+      setError(err?.response?.data?.error || "Unable to load transaction ledger.");
+      addNotification("Failed to fetch ledger transactions.", "error", 2000);
     } finally {
-      setIsStaging(false);
+      setLoading(false);
     }
   };
 
-  // Handle Bank CSV Confirm
-  const handleConfirmBankCSV = async () => {
-    if (!stagedData || !stagedData.stage_token) return;
-    setIsConfirmingImport(true);
-    try {
-      const res = await reconciliationService.confirmImportBankStatement(stagedData.stage_token, selectedPeriod !== "ALL" ? selectedPeriod : null);
-      addNotification(`Successfully imported ${res.imported} bank transaction(s) into period '${res.period_name}'.`, "success", 2500);
-      setShowImportModal(false);
-      setImportFile(null);
-      setStagedData(null);
-      refetch();
-    } catch (err) {
-      addNotification(err?.response?.data?.detail || "Import confirmation failed.", "error", 2500);
-    } finally {
-      setIsConfirmingImport(false);
-    }
-  };
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
 
-  // Handle Priority Auto-Match Trigger
-  const handleRunAutoMatch = async () => {
-    setIsAutoMatching(true);
-    setAutoMatchResult(null);
-    try {
-      const res = await reconciliationService.autoMatch(selectedPeriod);
-      setAutoMatchResult(res);
-      addNotification(`Priority Auto-Match complete: ${res.matched_count} transaction(s) matched.`, "success", 2500);
-      refetch();
-    } catch (err) {
-      addNotification(err?.response?.data?.detail || "Auto-match failed.", "error", 2500);
-    } finally {
-      setIsAutoMatching(false);
-    }
-  };
 
-  // Handle Manual Match Submit
-  const handleManualMatchSubmit = async () => {
-    if (!selectedBankTxn || !selectedLedgerTxnId) {
-      addNotification("Please select a ledger transaction to match.", "error", 2000);
-      return;
-    }
-    setIsSubmittingMatch(true);
-    try {
-      await reconciliationService.manualMatch(selectedBankTxn.id, selectedLedgerTxnId, matchNotes);
-      addNotification("Manual match recorded successfully.", "success", 2000);
-      setSelectedBankTxn(null);
-      setSelectedLedgerTxnId("");
-      setMatchNotes("");
-      refetch();
-    } catch (err) {
-      addNotification(err?.response?.data?.detail || "Manual match failed.", "error", 2500);
-    } finally {
-      setIsSubmittingMatch(false);
-    }
-  };
 
-  // Handle Unmatch
-  const handleUnmatch = async (bankTxn) => {
-    if (!window.confirm(`Unmatch bank transaction '${bankTxn.bank_txn_id}'?`)) return;
-    try {
-      await reconciliationService.unmatch(bankTxn.id, "Unmatched by user");
-      addNotification("Transaction unmatched.", "info", 2000);
-      refetch();
-    } catch (err) {
-      addNotification(err?.response?.data?.detail || "Unmatch failed.", "error", 2000);
-    }
-  };
+  // Reconciliation cycles grouping
+  const reconciliations = useMemo(() => {
+    const groups = {};
 
-  // Handle Open Journal Entry Modal
-  const openJournalModal = (bankTxn) => {
-    if (bankTxn.amount > (summary.journal_threshold || 10000)) {
-      addNotification(`Journal entry fallback is only allowed for unmatched bank transactions below ₹${(summary.journal_threshold || 10000).toLocaleString()}.`, "error", 3000);
-      return;
-    }
-    setJournalBankTxn(bankTxn);
-    setJournalForm({
-      debit_account: "Travel",
-      credit_account: "Bank Account (HDFC)",
-      amount: String(bankTxn.amount),
-      narration: `Journal entry for bank transaction ${bankTxn.bank_txn_id}`,
+    transactions.forEach((t) => {
+      const d = new Date(t.date);
+      if (isNaN(d.getTime())) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const periodName = d.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+      // Group by period & transaction source (USER or ADMIN)
+      const isSystemAdmin = t.source === "ADMIN" || t.created_by_role?.toUpperCase() === "ADMIN";
+      const txnSource = isSystemAdmin ? "ADMIN" : "USER";
+      const groupKey = `${key}_${txnSource}`;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          id: `REC_LIVE_${groupKey}`,
+          period: periodName,
+          sortDate: new Date(d.getFullYear(), d.getMonth(), 1),
+          status: "Completed",
+          matchedTxn: 0,
+          pendingTxn: 0,
+          failedTxn: 0,
+          completedDate: "",
+          source: txnSource,
+          items: []
+        };
+      }
+
+      const g = groups[groupKey];
+      g.items.push(t);
+
+      if (t.status === "APPROVED" || t.reconciliation_status === "APPROVED" || t.reconciliation_status === "LOCKED") {
+        g.matchedTxn += 1;
+      } else if (t.status === "REJECTED" || t.status === "FAILED") {
+        g.failedTxn += 1;
+      } else {
+        g.pendingTxn += 1;
+      }
+
+      const formattedDate = d.toISOString().slice(0, 10);
+      if (!g.completedDate || formattedDate > g.completedDate) {
+        g.completedDate = formattedDate;
+      }
     });
-    setShowJournalModal(true);
-  };
 
-  // Handle Journal Entry Submit
-  const handleJournalSubmit = async (e) => {
-    e.preventDefault();
-    if (!journalForm.narration.trim()) {
-      addNotification("Narration is mandatory.", "error", 2000);
-      return;
-    }
-    setIsSubmittingJournal(true);
-    try {
-      await reconciliationService.createJournalEntry({
-        bank_transaction_id: journalBankTxn.id,
-        debit_account: journalForm.debit_account,
-        credit_account: journalForm.credit_account,
-        amount: parseFloat(journalForm.amount),
-        narration: journalForm.narration,
+    const liveRuns = Object.values(groups).map((g) => {
+      let status = "Completed";
+      if (g.pendingTxn > 0) {
+        status = "In Review";
+      } else if (g.matchedTxn === 0 && g.failedTxn === 0) {
+        status = "Pending";
+      }
+      return {
+        ...g,
+        status
+      };
+    });
+
+    return liveRuns.sort((a, b) => {
+      const dateA = a.sortDate ? new Date(a.sortDate).getTime() : 0;
+      const dateB = b.sortDate ? new Date(b.sortDate).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA;
+      return a.source.localeCompare(b.source);
+    });
+  }, [transactions]);
+
+  // Filtered reconciliation cycles
+  const filteredReconciliations = useMemo(() => {
+    return reconciliations.filter((r) => {
+      const matchesSearch = r.period.toLowerCase().includes(search.toLowerCase());
+      
+      const matchesStatus =
+        statusFilter === "ALL" ? true : r.status.toUpperCase() === statusFilter.toUpperCase();
+
+      let matchesSource = true;
+      if (sourceFilter === "MY") {
+        matchesSource = r.source === "ADMIN";
+      } else if (sourceFilter === "USER") {
+        matchesSource = r.source === "USER";
+      }
+
+      return matchesSearch && matchesStatus && matchesSource;
+    });
+  }, [reconciliations, search, statusFilter, sourceFilter]);
+
+  // Filtered user transactions
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      // Only show user-submitted transactions
+      const isSystemAdmin = t.source === "ADMIN" || t.created_by_role?.toUpperCase() === "ADMIN";
+      if (isSystemAdmin) return false;
+
+      // Filter by status dropdown
+      let matchesStatus = true;
+      if (statusFilter === "COMPLETED") {
+        matchesStatus = t.status === "APPROVED";
+      } else if (statusFilter === "IN REVIEW") {
+        matchesStatus = PENDING_STATUSES.includes(t.status?.toUpperCase());
+      } else if (statusFilter === "PENDING") {
+        matchesStatus = ["PENDING", "DRAFT"].includes(t.status?.toUpperCase());
+      }
+
+      // Search filter: ID, description, category
+      const dateObj = new Date(t.date);
+      const monthName = isNaN(dateObj.getTime()) ? "" : dateObj.toLocaleString("en-US", { month: "long", year: "numeric" });
+      const matchesSearch =
+        t.id.toLowerCase().includes(search.toLowerCase()) ||
+        t.description?.toLowerCase().includes(search.toLowerCase()) ||
+        (t.category || t.budget_head || "").toLowerCase().includes(search.toLowerCase()) ||
+        monthName.toLowerCase().includes(search.toLowerCase());
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [transactions, search, statusFilter]);
+
+  // Summary Metrics (Stats)
+  const stats = useMemo(() => {
+    if (sourceFilter === "USER") {
+      let matched = 0;
+      let pending = 0;
+      let failed = 0;
+      filteredTransactions.forEach((t) => {
+        if (t.status === "APPROVED") matched++;
+        else if (t.status === "REJECTED" || t.status === "FAILED") failed++;
+        else pending++;
       });
-      addNotification("Journal entry created and bank transaction closed.", "success", 2500);
-      setShowJournalModal(false);
-      setJournalBankTxn(null);
-      refetch();
+      return { matched, pending, failed };
+    } else {
+      return filteredReconciliations.reduce(
+        (acc, r) => {
+          acc.matched += r.matchedTxn;
+          acc.pending += r.pendingTxn;
+          acc.failed += r.failedTxn;
+          return acc;
+        },
+        { matched: 0, pending: 0, failed: 0 }
+      );
+    }
+  }, [sourceFilter, filteredReconciliations, filteredTransactions]);
+
+  // Category budget analytics
+  const categoryBudgets = useMemo(() => {
+    const allocations = {
+      "Venue": 100000,
+      "Food": 50000,
+      "Marketing": 40000,
+      "Travel": 50000,
+      "Printing": 30000,
+      "Equipment": 30000,
+      "Miscellaneous": 50000
+    };
+    
+    const spents = {
+      "Venue": 0, "Food": 0, "Marketing": 0, "Travel": 0, "Printing": 0, "Equipment": 0, "Miscellaneous": 0
+    };
+
+    transactions.forEach(t => {
+      if (t.status === "APPROVED" || t.reconciliation_status === "APPROVED" || t.reconciliation_status === "LOCKED") {
+        let categoryName = "Miscellaneous";
+        const catLower = (t.category || t.budget_head || "").toLowerCase();
+        if (catLower.includes("venue")) categoryName = "Venue";
+        else if (catLower.includes("food") || catLower.includes("refreshment")) categoryName = "Food";
+        else if (catLower.includes("marketing")) categoryName = "Marketing";
+        else if (catLower.includes("travel")) categoryName = "Travel";
+        else if (catLower.includes("printing")) categoryName = "Printing";
+        else if (catLower.includes("equipment")) categoryName = "Equipment";
+        
+        if (spents[categoryName] !== undefined) {
+          spents[categoryName] += t.amount || 0;
+        } else {
+          spents["Miscellaneous"] += t.amount || 0;
+        }
+      }
+    });
+
+    return Object.keys(allocations).map(name => ({
+      name,
+      allocated: allocations[name],
+      spent: spents[name],
+      remaining: allocations[name] - spents[name]
+    }));
+  }, [transactions]);
+
+  // Review user transaction clearance handler
+  const handleReviewTransaction = async (action) => {
+    if (!selectedTxn) return;
+    try {
+      await adminTransactionService.reviewTransaction({
+        transaction_id: selectedTxn.id,
+        action,
+        remarks: reviewRemarks,
+        is_reconciliation: true
+      });
+      addNotification(`Transaction status updated to ${action.toLowerCase()}.`, "success", 2000);
+      setShowReviewModal(false);
+      setSelectedTxn(null);
+      setReviewRemarks("");
+      fetchTransactions(); // Reload transactions
     } catch (err) {
-      addNotification(err?.response?.data?.detail || "Failed to create journal entry.", "error", 2500);
-    } finally {
-      setIsSubmittingJournal(false);
+      addNotification(err?.response?.data?.error || "Failed to update transaction status.", "error", 2000);
     }
   };
 
-  // Handle Confirm Period Batch
-  const handleConfirmBatch = async () => {
-    const periodName = selectedPeriod !== "ALL" ? selectedPeriod : periods[0]?.period_name;
-    if (!periodName) {
-      addNotification("Please select a specific reconciliation period to confirm.", "error", 2000);
-      return;
-    }
-    if (!window.confirm(`Confirm reconciliation batch for period '${periodName}'?`)) return;
-    try {
-      await reconciliationService.confirmPeriod(periodName, "Confirmed by Admin");
-      addNotification(`Period '${periodName}' confirmed successfully.`, "success", 2500);
-      refetch();
-    } catch (err) {
-      addNotification(err?.response?.data?.detail || "Batch confirmation failed.", "error", 3000);
-    }
+  // Export cycle transactions to CSV
+  const exportCycleCsv = (c) => {
+    const header = ["Transaction ID", "Date", "Category", "Description", "Amount", "Status", "Source"];
+    const rows = (c.items || []).map((t) => [
+      t.id,
+      t.date,
+      t.category || t.budget_head || "Miscellaneous",
+      t.description,
+      t.amount,
+      t.status,
+      t.source || "USER"
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reconciliation_report_${c.period.replace(/\s+/g, "_")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
-  // Handle Lock Period
-  const handleLockPeriod = async () => {
-    const periodName = selectedPeriod !== "ALL" ? selectedPeriod : periods[0]?.period_name;
-    if (!periodName) {
-      addNotification("Please select a specific reconciliation period to lock.", "error", 2000);
-      return;
-    }
-    if (!window.confirm(`LOCK reconciliation period '${periodName}'? All matched bank transactions and general ledger records will become READ-ONLY.`)) return;
-    try {
-      await reconciliationService.lockPeriod(periodName, "Locked by Admin");
-      addNotification(`Period '${periodName}' locked. All records are now read-only.`, "success", 2500);
-      refetch();
-    } catch (err) {
-      addNotification(err?.response?.data?.detail || "Period locking failed.", "error", 3000);
-    }
-  };
-
-  // Handle Unlock Period Submit
-  const handleUnlockSubmit = async (e) => {
-    e.preventDefault();
-    if (!unlockReason.trim()) {
-      addNotification("Reason for unlocking is mandatory.", "error", 2000);
-      return;
-    }
-    setIsSubmittingUnlock(true);
-    try {
-      await reconciliationService.unlockPeriod(unlockPeriodName, unlockReason);
-      addNotification(`Period '${unlockPeriodName}' unlocked successfully. Audit log generated.`, "success", 2500);
-      setShowUnlockModal(false);
-      setUnlockReason("");
-      refetch();
-    } catch (err) {
-      addNotification(err?.response?.data?.detail || "Unlock failed.", "error", 2500);
-    } finally {
-      setIsSubmittingUnlock(false);
-    }
-  };
-
-  // Handle Export CSV
-  const handleExportCSV = async () => {
-    try {
-      const { blob, filename } = await reconciliationService.exportReconciliation(activeFilters);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename || "reconciliation_export.csv";
-      link.click();
-      URL.revokeObjectURL(url);
-      addNotification("Reconciliation CSV exported.", "success", 2000);
-    } catch (err) {
-      addNotification("Failed to export reconciliation CSV.", "error", 2000);
-    }
+  const openDetails = (rec) => {
+    setSelectedRec(rec);
+    setShowDetailModal(true);
   };
 
   return (
-    <main className="admin-page" style={{ background: "#f8fafc", padding: "24px", gap: "24px" }}>
-      {/* 1. Page Header & Actions */}
-      <section className="admin-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-        <div>
-          <h1 style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "24px", fontWeight: "800", color: "#0f172a" }}>
-            ⚖️ Bank Reconciliation Workspace
-          </h1>
-          <p style={{ color: "#64748b", margin: "4px 0 0 0" }}>
-            Bank Statement ↔ General Ledger Month-End Matching, Priority Engine, and Lock Verification.
-          </p>
+    <main className="admin-page">
+      <section className="admin-header">
+        <h1>⚖️ Reconciliation Management</h1>
+        <p>Compare bank statements against general ledger transactions. Review user runs and construct admin cycles.</p>
+      </section>
+
+
+
+      {/* STATS GRID / SUMMARY CARDS */}
+      <section className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-label">Matched Transactions</div>
+          <div className="stat-value">{stats.matched}</div>
         </div>
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <button
-            onClick={() => {
-              setImportFile(null);
-              setStagedData(null);
-              setShowImportModal(true);
-            }}
-            className="btn-primary"
-            style={{ background: "linear-gradient(135deg, #10b981, #059669)", display: "flex", alignItems: "center", gap: "6px" }}
-          >
-            <Upload size={16} /> Import Bank Statement CSV
-          </button>
-
-          <button
-            onClick={handleRunAutoMatch}
-            disabled={isAutoMatching}
-            className="btn-primary"
-            style={{ background: "linear-gradient(135deg, #1d5cff, #0f46d8)", display: "flex", alignItems: "center", gap: "6px" }}
-          >
-            <Zap size={16} /> {isAutoMatching ? "Matching..." : "Run Priority Auto-Match"}
-          </button>
-
-          <button
-            onClick={handleConfirmBatch}
-            className="btn-secondary"
-            style={{ background: "#ffffff", border: "1px solid #cbd5e1", display: "flex", alignItems: "center", gap: "6px" }}
-          >
-            <CheckCircle2 size={16} color="#16a34a" /> Confirm Batch
-          </button>
-
-          <button
-            onClick={handleLockPeriod}
-            className="btn-secondary"
-            style={{ background: "#0f172a", color: "#ffffff", border: "1px solid #0f172a", display: "flex", alignItems: "center", gap: "6px" }}
-          >
-            <Lock size={16} /> Lock Period
-          </button>
-
-          <button
-            onClick={handleExportCSV}
-            className="btn-secondary"
-            style={{ background: "#ffffff", border: "1px solid #cbd5e1", display: "flex", alignItems: "center", gap: "6px" }}
-          >
-            <Download size={16} /> Export CSV
-          </button>
+        <div className="stat-card">
+          <div className="stat-label">Pending Transactions</div>
+          <div className="stat-value">{stats.pending}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Failed Transactions</div>
+          <div className="stat-value">{stats.failed}</div>
         </div>
       </section>
 
-      {/* 2. Reconciliation Summary KPIs */}
-      <section className="stats-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px" }}>
-        <article className="stat-card" style={{ borderLeft: "4px solid #3b82f6", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Imported</span>
-          <strong className="stat-value" style={{ color: "#2563eb", fontSize: "20px" }}>{summary.imported || 0}</strong>
-        </article>
-        <article className="stat-card" style={{ borderLeft: "4px solid #f59e0b", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Awaiting</span>
-          <strong className="stat-value" style={{ color: "#d97706", fontSize: "20px" }}>{summary.awaiting_reconciliation || 0}</strong>
-        </article>
-        <article className="stat-card" style={{ borderLeft: "4px solid #10b981", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Auto Matched</span>
-          <strong className="stat-value" style={{ color: "#15803d", fontSize: "20px" }}>{summary.auto_matched || 0}</strong>
-        </article>
-        <article className="stat-card" style={{ borderLeft: "4px solid #06b6d4", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Manually Matched</span>
-          <strong className="stat-value" style={{ color: "#0891b2", fontSize: "20px" }}>{summary.manually_matched || 0}</strong>
-        </article>
-        <article className="stat-card" style={{ borderLeft: "4px solid #ef4444", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Unmatched</span>
-          <strong className="stat-value" style={{ color: "#dc2626", fontSize: "20px" }}>{summary.unmatched || 0}</strong>
-        </article>
-        <article className="stat-card" style={{ borderLeft: "4px solid #8b5cf6", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Variances</span>
-          <strong className="stat-value" style={{ color: "#7c3aed", fontSize: "20px" }}>{summary.variances || 0}</strong>
-        </article>
-        <article className="stat-card" style={{ borderLeft: "4px solid #ec4899", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Journal Entries</span>
-          <strong className="stat-value" style={{ color: "#db2777", fontSize: "20px" }}>{summary.journal_entries || 0}</strong>
-        </article>
-        <article className="stat-card" style={{ borderLeft: "4px solid #15803d", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Confirmed</span>
-          <strong className="stat-value" style={{ color: "#166534", fontSize: "20px" }}>{summary.confirmed || 0}</strong>
-        </article>
-        <article className="stat-card" style={{ borderLeft: "4px solid #0f172a", padding: "12px" }}>
-          <span className="stat-label" style={{ fontSize: "11px", fontWeight: "700", color: "#64748b" }}>Locked</span>
-          <strong className="stat-value" style={{ color: "#0f172a", fontSize: "20px" }}>{summary.locked || 0}</strong>
-        </article>
-      </section>
+      {/* RECONCILIATIONS LIST */}
+      <section className="admin-card">
+        {/* Navigation Tabs */}
+        <div className="tab-nav">
+          <button
+            type="button"
+            className={`tab-chip ${sourceFilter === "ALL" ? "active" : ""}`}
+            onClick={() => setSourceFilter("ALL")}
+          >
+            All Reconciliations
+          </button>
+          <button
+            type="button"
+            className={`tab-chip ${sourceFilter === "MY" ? "active" : ""}`}
+            onClick={() => setSourceFilter("MY")}
+          >
+            My Reconciliations (Admin)
+          </button>
+          <button
+            type="button"
+            className={`tab-chip ${sourceFilter === "USER" ? "active" : ""}`}
+            onClick={() => setSourceFilter("USER")}
+          >
+            User Reconciliations
+          </button>
+        </div>
 
-      {/* 3. Filters & Bank Statement Table */}
-      <section className="admin-card" style={{ padding: "20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-          <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-            <FileSpreadsheet size={18} /> Bank Statement Entries vs General Ledger
-          </h2>
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="filter-select"
-              style={{ padding: "6px 12px", fontSize: "13px", fontWeight: "700", color: "#1d5cff" }}
-            >
-              <option value="ALL">All Periods</option>
-              {periods.map((p) => (
-                <option key={p.id} value={p.period_name}>
-                  {p.period_name} ({p.status})
-                </option>
-              ))}
-            </select>
+        {sourceFilter === "USER" && (
+          <div style={{ marginBottom: "24px", borderBottom: "1px solid #e2e8f0", paddingBottom: "24px" }}>
+            <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#1e293b", marginBottom: "16px" }}>Category-wise Allocated Budget Analytics</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
+              {categoryBudgets.map((b) => {
+                const percent = Math.min(100, Math.round((b.spent / b.allocated) * 100)) || 0;
+                const isOverspent = b.spent > b.allocated;
+                const barColor = isOverspent ? "critical" : percent > 75 ? "warning" : "healthy";
+                return (
+                  <div key={b.name} style={{ display: "flex", flexDirection: "column", gap: "6px", background: "#f8fafc", padding: "16px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "700", color: "#334155" }}>
+                      <span>{b.name}</span>
+                      <span style={{ color: "#475569" }}>{percent}% Spent</span>
+                    </div>
+                    
+                    <div className="progress-inline" style={{ margin: "4px 0" }}>
+                      <div className="progress-track" style={{ background: "#cbd5e1" }}>
+                        <div className={`progress-fill ${barColor}`} style={{ width: `${percent}%` }}></div>
+                      </div>
+                    </div>
 
-            {periods.find((p) => p.period_name === selectedPeriod && p.status === "LOCKED") && (
-              <button
-                onClick={() => {
-                  setUnlockPeriodName(selectedPeriod);
-                  setShowUnlockModal(true);
-                }}
-                className="btn-sm"
-                style={{ background: "#fee2e2", color: "#b91c1c", border: "1px solid #fca5a5", display: "flex", alignItems: "center", gap: "4px" }}
-              >
-                <Unlock size={14} /> Unlock Period
-              </button>
-            )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Allocation:</span>
+                        <strong>₹{b.allocated.toLocaleString("en-IN")}</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>Spent:</span>
+                        <strong>₹{b.spent.toLocaleString("en-IN")}</strong>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed #cbd5e1", paddingTop: "4px", marginTop: "2px" }}>
+                        <span>Remaining:</span>
+                        <strong style={{ color: b.remaining >= 0 ? "#16a34a" : "#ef4444" }}>₹{b.remaining.toLocaleString("en-IN")}</strong>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Filters Bar */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
+        {/* Searching and filtering */}
+        <div className="table-header">
           <input
             type="text"
-            placeholder="Search bank ID, description, ref..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by period..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="search-input"
-            style={{ padding: "8px 12px", fontSize: "13px" }}
           />
-
-          <select value={matchStatusFilter} onChange={(e) => setMatchStatusFilter(e.target.value)} className="filter-select" style={{ padding: "8px 12px", fontSize: "13px" }}>
-            <option value="ALL">All Match Statuses</option>
-            <option value="UNMATCHED">UNMATCHED</option>
-            <option value="AUTO_MATCHED">AUTO_MATCHED</option>
-            <option value="MANUALLY_MATCHED">MANUALLY_MATCHED</option>
-            <option value="JOURNAL_ENTRY">JOURNAL_ENTRY</option>
-            <option value="CONFIRMED">CONFIRMED</option>
-            <option value="LOCKED">LOCKED</option>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="filter-select">
+            <option value="ALL">All Status</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="IN REVIEW">In Review</option>
+            <option value="PENDING">Pending</option>
           </select>
         </div>
 
-        {/* Bank Transactions Table */}
-        <div className="table-wrapper">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Bank Txn ID</th>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Reference</th>
-                <th style={{ textAlign: "right" }}>Debit (₹)</th>
-                <th style={{ textAlign: "right" }}>Credit (₹)</th>
-                <th style={{ textAlign: "right" }}>Amount (₹)</th>
-                <th>Match Status</th>
-                <th>Match Priority / Confidence</th>
-                <th>Linked Ledger Transaction</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr>
-                  <td colSpan="11" style={{ padding: "30px", textAlign: "center", color: "#64748b" }}>
-                    <Loader2 className="animate-spin" style={{ margin: "0 auto 8px auto" }} /> Loading bank statement reconciliation workspace...
-                  </td>
-                </tr>
-              )}
+        {loading && !error && <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>Loading dynamic reconciliation data...</div>}
+        {error && <div style={{ padding: "20px", textAlign: "center", color: "#ef4444" }}>{error}</div>}
 
-              {isError && (
-                <tr>
-                  <td colSpan="11" style={{ padding: "20px", textAlign: "center", color: "#ef4444" }}>
-                    Failed to load reconciliation workspace: {error?.message || "API Error"}
-                  </td>
-                </tr>
-              )}
-
-              {!isLoading && !isError && bankTransactions.length === 0 && (
-                <tr>
-                  <td colSpan="11" className="empty-state">
-                    No bank statement transactions found for selected criteria. Upload a bank statement CSV to begin.
-                  </td>
-                </tr>
-              )}
-
-              {!isLoading &&
-                !isError &&
-                bankTransactions.map((b) => {
-                  const statusColors = {
-                    UNMATCHED: { bg: "#fee2e2", color: "#dc2626" },
-                    AUTO_MATCHED: { bg: "#dcfce7", color: "#15803d" },
-                    MANUALLY_MATCHED: { bg: "#e0f2fe", color: "#0369a1" },
-                    JOURNAL_ENTRY: { bg: "#fce7f3", color: "#be185d" },
-                    CONFIRMED: { bg: "#dcfce7", color: "#166534" },
-                    LOCKED: { bg: "#f1f5f9", color: "#334155" },
-                  };
-                  const stStyle = statusColors[b.match_status] || { bg: "#f1f5f9", color: "#475569" };
-
-                  return (
-                    <tr key={b.id} style={{ background: b.match_status === "LOCKED" ? "#f8fafc" : "#ffffff" }}>
-                      <td style={{ fontFamily: "monospace", fontSize: "11px", fontWeight: "700" }}>{b.bank_txn_id}</td>
-                      <td style={{ fontSize: "12px", whiteSpace: "nowrap" }}>{new Date(b.date).toLocaleDateString("en-IN")}</td>
-                      <td style={{ fontSize: "13px", maxWidth: "200px" }}>{b.description}</td>
-                      <td style={{ fontSize: "12px", color: "#64748b" }}>{b.reference_number || "-"}</td>
-                      <td style={{ textAlign: "right", color: b.debit > 0 ? "#dc2626" : "#64748b", fontWeight: b.debit > 0 ? "700" : "normal" }}>
-                        {b.debit > 0 ? formatCurrency(b.debit) : "-"}
-                      </td>
-                      <td style={{ textAlign: "right", color: b.credit > 0 ? "#16a34a" : "#64748b", fontWeight: b.credit > 0 ? "700" : "normal" }}>
-                        {b.credit > 0 ? formatCurrency(b.credit) : "-"}
-                      </td>
-                      <td style={{ textAlign: "right", fontWeight: "800" }}>{formatCurrency(b.amount)}</td>
-                      <td>
-                        <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: "700", background: stStyle.bg, color: stStyle.color }}>
-                          {b.match_status}
-                        </span>
-                      </td>
-                      <td>
-                        {b.match_confidence ? (
-                          <div style={{ fontSize: "11px" }}>
-                            <span style={{ fontWeight: "700", color: "#1d5cff" }}>{b.match_confidence}</span>
-                            {b.match_type && <span style={{ color: "#64748b", display: "block" }}>{b.match_type}</span>}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: "11px", color: "#94a3b8" }}>-</span>
-                        )}
-                      </td>
-                      <td>
-                        {b.matched_transaction_id ? (
-                          <div style={{ fontSize: "11px" }}>
-                            <button
-                              onClick={() => navigate("/admin/transactions")}
-                              style={{ border: 0, background: "transparent", color: "#1d5cff", fontWeight: "700", cursor: "pointer", textDecoration: "underline" }}
-                            >
-                              Txn #{b.matched_transaction_id.substring(0, 8).toUpperCase()}
-                            </button>
-                            <span style={{ display: "block", color: "#475569" }}>{b.matched_transaction_desc}</span>
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: "11px", color: "#94a3b8" }}>None</span>
-                        )}
-                      </td>
-                      <td style={{ textAlign: "right" }}>
-                        {b.match_status !== "LOCKED" ? (
-                          <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
-                            {b.match_status === "UNMATCHED" ? (
-                              <>
-                                <button onClick={() => setSelectedBankTxn(b)} className="btn-sm" style={{ background: "#eff6ff", color: "#1d5cff", border: "1px solid #bfdbfe" }}>
-                                  Match
-                                </button>
-                                {b.amount <= (summary.journal_threshold || 10000) && (
-                                  <button onClick={() => openJournalModal(b)} className="btn-sm" style={{ background: "#fdf2f8", color: "#db2777", border: "1px solid #fbcfe8" }}>
-                                    + Journal
-                                  </button>
-                                )}
-                              </>
-                            ) : (
-                              <button onClick={() => handleUnmatch(b)} className="btn-sm" style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" }}>
-                                Unmatch
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <span style={{ fontSize: "11px", color: "#94a3b8", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "2px" }}>
-                            <Lock size={12} /> Read-only
+        {!loading && !error && (
+          sourceFilter === "USER" ? (
+            /* USER RECONCILIATIONS TABLE */
+            <div className="table-wrapper">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Transaction ID</th>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTransactions.length > 0 ? (
+                    filteredTransactions.map((t) => (
+                      <tr key={t.id}>
+                        <td style={{ fontWeight: "600" }}>{t.id}</td>
+                        <td>{new Date(t.date).toLocaleDateString("en-IN")}</td>
+                        <td>{t.category || t.budget_head || "Miscellaneous"}</td>
+                        <td>{t.description}</td>
+                        <td>₹{(t.amount || 0).toLocaleString("en-IN")}</td>
+                        <td>
+                          <span className={`status-badge ${t.status?.toUpperCase() === "APPROVED" ? "approved" : t.status?.toUpperCase() === "REJECTED" ? "rejected" : "pending"}`}>
+                            {t.status}
                           </span>
-                        )}
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+                            <button
+                              className="btn-sm"
+                              onClick={() => {
+                                setSelectedTxn(t);
+                                setReviewRemarks(t.admin_remarks || "");
+                                setShowReviewModal(true);
+                              }}
+                            >
+                              Review
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="empty-state">
+                        No user transactions found
                       </td>
                     </tr>
-                  );
-                })}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            /* CYCLES TABLE */
+            <div className="table-wrapper">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Period</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Matched Transactions</th>
+                    <th>Pending Transactions</th>
+                    <th>Failed Transactions</th>
+                    <th>Completed Date</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReconciliations.length > 0 ? (
+                    filteredReconciliations.map((r) => (
+                      <tr key={r.id}>
+                        <td style={{ fontWeight: "600" }}>{r.period}</td>
+                        <td>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "4px 8px",
+                              borderRadius: "4px",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              backgroundColor: r.source === "ADMIN" ? "#f3e8ff" : "#e0f2fe",
+                              color: r.source === "ADMIN" ? "#6b21a8" : "#0369a1",
+                            }}
+                          >
+                            {r.source === "ADMIN" ? "Admin Run" : "User Run"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${r.status === "Completed" ? "approved" : "pending"}`}>
+                            {r.status}
+                          </span>
+                        </td>
+                        <td>{r.matchedTxn}</td>
+                        <td>{r.pendingTxn}</td>
+                        <td>{r.failedTxn}</td>
+                        <td>{r.completedDate || "N/A"}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+                            <button className="btn-sm" onClick={() => exportCycleCsv(r)}>Report</button>
+                            <button className="btn-sm" onClick={() => openDetails(r)}>Details</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="8" className="empty-state">
+                        No reconciliation cycles found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
       </section>
 
-      {/* 4. BANK STATEMENT CSV IMPORT MODAL */}
-      {showImportModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
-          <div className="admin-card" style={{ width: "90%", maxWidth: "750px", padding: "24px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px" }}>
+      {/* Details Modal */}
+      {showDetailModal && selectedRec && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
+          <div className="admin-card" style={{ width: "90%", maxWidth: "600px", padding: "24px", border: "1px solid #cbd5e1" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #e2e8f0" }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>Import Bank Statement CSV (Staging & Deduplication)</h3>
-              <button onClick={() => setShowImportModal(false)} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
+              <h3 style={{ margin: 0, fontSize: "18px", color: "#0f172a" }}>Reconciliation Details - {selectedRec.period} ({selectedRec.source === "ADMIN" ? "Admin Run" : "User Run"})</h3>
+              <button onClick={() => { setShowDetailModal(false); setSelectedRec(null); }} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
             </div>
 
-            {!stagedData ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <p style={{ fontSize: "13px", color: "#475569", margin: 0 }}>
-                  Upload a bank statement CSV file (`.csv`). The system will parse debits/credits, calculate totals, and check for duplicates before writing to the bank transaction ledger.
-                </p>
+            <div className="detail-grid" style={{ marginBottom: "20px" }}>
+              <div className="detail-item">
+                <span>Matched Transactions</span>
+                <strong>{selectedRec.matchedTxn} records</strong>
+              </div>
+              <div className="detail-item">
+                <span>Pending Matches</span>
+                <strong>{selectedRec.pendingTxn} records</strong>
+              </div>
+              <div className="detail-item">
+                <span>Failed Adjustments</span>
+                <strong>{selectedRec.failedTxn} records</strong>
+              </div>
+              <div className="detail-item">
+                <span>Completion Date</span>
+                <strong>{selectedRec.completedDate || "N/A"}</strong>
+              </div>
+            </div>
 
-                <div style={{ border: "2px dashed #cbd5e1", padding: "24px", borderRadius: "8px", textAlign: "center", background: "#f8fafc" }}>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0] || null;
-                      setImportFile(f);
-                    }}
-                    style={{ marginBottom: "12px" }}
-                  />
-                  {importFile && (
-                    <div style={{ fontSize: "12px", fontWeight: "700", color: importFile.name.toLowerCase().endsWith(".csv") ? "#10b981" : "#dc2626" }}>
-                      Selected: {importFile.name}
+            <h4 style={{ margin: "0 0 10px 0", color: "#475569", fontSize: "13px", fontWeight: "600", textTransform: "uppercase" }}>Mapped Entries</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "180px", overflowY: "auto", paddingRight: "4px" }}>
+              {selectedRec.items && selectedRec.items.length > 0 ? (
+                selectedRec.items.map((item, idx) => {
+                  const isDebit = item.amount < 0 || item.type?.toLowerCase() === "debit" || true;
+                  return (
+                    <div key={item.id || idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px", background: "#f8fafc", border: "1px solid #f1f5f9", borderRadius: "8px" }}>
+                      <div>
+                        <span style={{ fontSize: "11px", fontWeight: "600", color: isDebit ? "#991b1b" : "#166534", background: isDebit ? "#fee2e2" : "#dcfce7", padding: "2px 6px", borderRadius: "4px", marginRight: "6px" }}>
+                          {isDebit ? "Debit" : "Credit"}
+                        </span>
+                        <strong style={{ fontSize: "13px", color: "#1e293b" }}>{item.description}</strong>
+                        <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>TXN ID: {item.id} • Category: {item.category || item.budget_head || "N/A"} • Status: {item.status}</div>
+                      </div>
+                      <strong style={{ fontSize: "13px", color: "#0f172a" }}>₹{(item.amount || 0).toLocaleString("en-IN")}</strong>
                     </div>
-                  )}
+                  );
+                })
+              ) : (
+                <div style={{ padding: "10px", textAlign: "center", color: "#64748b", fontSize: "12px" }}>
+                  No transaction entries in this cycle.
                 </div>
-
-                {importFile && !importFile.name.toLowerCase().endsWith(".csv") && (
-                  <div style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#991b1b", padding: "12px", borderRadius: "6px", fontSize: "13px", fontWeight: "600" }}>
-                    ⚠️ Invalid file format: PDF files cannot be parsed as bank statements. Please upload a valid CSV file (.csv).
-                  </div>
-                )}
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const csvData = `date,description,reference_number,debit,credit,amount,bank_txn_id\n2026-05-15,Air India Flight Booking Ref #9921,REF-9921,5000.00,0.00,5000.00,BANK-TXN-5000\n2026-05-18,Local Cab Taxi Fare Site Visit,REF-TAXI-001,2000.00,0.00,2000.00,BANK-TXN-2000\n2026-05-20,Office Stationery Equipment,REF-STAT-002,1500.00,0.00,1500.00,BANK-TXN-1500`;
-                      const blob = new Blob([csvData], { type: "text/csv" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = "sample_bank_statement.csv";
-                      a.click();
-                      URL.revokeObjectURL(url);
-                    }}
-                    className="btn-sm"
-                    style={{ background: "#eff6ff", color: "#1d5cff", border: "1px solid #bfdbfe", padding: "6px 12px" }}
-                  >
-                    📄 Download Sample Bank CSV Template
-                  </button>
-
-                  <div style={{ display: "flex", gap: "10px" }}>
-                    <button onClick={() => setShowImportModal(false)} className="btn-sm" style={{ background: "#cbd5e1", color: "#334155" }}>Cancel</button>
-                    <button
-                      onClick={handleStageBankCSV}
-                      disabled={!importFile || !importFile.name.toLowerCase().endsWith(".csv") || isStaging}
-                      className="btn-primary"
-                      style={{ padding: "8px 20px", opacity: (!importFile || !importFile.name.toLowerCase().endsWith(".csv") || isStaging) ? 0.6 : 1 }}
-                    >
-                      {isStaging ? "Parsing..." : "Stage & Validate Statement"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {/* Statement Staging Metrics */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
-                  <div style={{ background: "#f1f5f9", padding: "10px", borderRadius: "6px", textAlign: "center" }}>
-                    <span style={{ fontSize: "11px", color: "#64748b" }}>Total Rows</span>
-                    <strong style={{ display: "block", fontSize: "16px" }}>{stagedData.total_rows}</strong>
-                  </div>
-                  <div style={{ background: "#fee2e2", padding: "10px", borderRadius: "6px", textAlign: "center" }}>
-                    <span style={{ fontSize: "11px", color: "#991b1b" }}>Total Debits</span>
-                    <strong style={{ display: "block", fontSize: "14px", color: "#dc2626" }}>{formatCurrency(stagedData.total_debits)}</strong>
-                  </div>
-                  <div style={{ background: "#dcfce7", padding: "10px", borderRadius: "6px", textAlign: "center" }}>
-                    <span style={{ fontSize: "11px", color: "#166534" }}>Total Credits</span>
-                    <strong style={{ display: "block", fontSize: "14px", color: "#15803d" }}>{formatCurrency(stagedData.total_credits)}</strong>
-                  </div>
-                  <div style={{ background: "#fef3c7", padding: "10px", borderRadius: "6px", textAlign: "center" }}>
-                    <span style={{ fontSize: "11px", color: "#92400e" }}>Duplicates</span>
-                    <strong style={{ display: "block", fontSize: "16px", color: "#b45309" }}>{stagedData.duplicate_rows}</strong>
-                  </div>
-                  <div style={{ background: "#e0f2fe", padding: "10px", borderRadius: "6px", textAlign: "center" }}>
-                    <span style={{ fontSize: "11px", color: "#0369a1" }}>Date Range</span>
-                    <strong style={{ display: "block", fontSize: "11px", color: "#0284c7" }}>{stagedData.date_range}</strong>
-                  </div>
-                </div>
-
-                {/* Staging Preview Table */}
-                <div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: "6px" }}>
-                  <table className="admin-table" style={{ fontSize: "12px" }}>
-                    <thead>
-                      <tr>
-                        <th>Bank Txn ID</th>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th style={{ textAlign: "right" }}>Debit</th>
-                        <th style={{ textAlign: "right" }}>Credit</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stagedData.preview_rows.map((r) => (
-                        <tr key={r.bank_txn_id} style={{ background: r.is_valid ? "#ffffff" : "#fff1f2" }}>
-                          <td>{r.bank_txn_id}</td>
-                          <td>{new Date(r.date).toLocaleDateString()}</td>
-                          <td>{r.description}</td>
-                          <td style={{ textAlign: "right", color: r.debit > 0 ? "#dc2626" : "#64748b" }}>{r.debit > 0 ? formatCurrency(r.debit) : "-"}</td>
-                          <td style={{ textAlign: "right", color: r.credit > 0 ? "#16a34a" : "#64748b" }}>{r.credit > 0 ? formatCurrency(r.credit) : "-"}</td>
-                          <td>
-                            <span style={{ padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: "700", background: r.is_valid ? "#dcfce7" : "#fee2e2", color: r.is_valid ? "#15803d" : "#dc2626" }}>
-                              {r.is_valid ? "VALID" : "SKIPPED"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                  <button onClick={() => setStagedData(null)} className="btn-sm" style={{ background: "#cbd5e1", color: "#334155" }}>Back</button>
-                  <button onClick={handleConfirmBankCSV} disabled={isConfirmingImport} className="btn-primary" style={{ padding: "8px 20px" }}>
-                    {isConfirmingImport ? "Importing..." : "Confirm Bank Statement Import"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 5. MANUAL MATCH WORKSPACE MODAL */}
-      {selectedBankTxn && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
-          <div className="admin-card" style={{ width: "90%", maxWidth: "800px", padding: "24px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #e2e8f0" }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>Manual Match Workspace</h3>
-              <button onClick={() => setSelectedBankTxn(null)} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
+              )}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
-              {/* Left Side: Bank Transaction */}
-              <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
-                <h4 style={{ margin: "0 0 10px 0", fontSize: "13px", fontWeight: "700", color: "#0f172a" }}>Bank Statement Entry</h4>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "13px" }}>
-                  <div><strong>Bank Txn ID:</strong> {selectedBankTxn.bank_txn_id}</div>
-                  <div><strong>Date:</strong> {new Date(selectedBankTxn.date).toLocaleDateString()}</div>
-                  <div><strong>Description:</strong> {selectedBankTxn.description}</div>
-                  <div><strong>Reference:</strong> {selectedBankTxn.reference_number || "N/A"}</div>
-                  <div><strong>Amount:</strong> <strong style={{ color: "#1d5cff", fontSize: "16px" }}>{formatCurrency(selectedBankTxn.amount)}</strong></div>
-                </div>
-              </div>
-
-              {/* Right Side: Ledger Candidate Selection */}
-              <div style={{ background: "#ffffff", padding: "16px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
-                <h4 style={{ margin: "0 0 10px 0", fontSize: "13px", fontWeight: "700", color: "#0f172a" }}>Select General Ledger Candidate</h4>
-                <select
-                  value={selectedLedgerTxnId}
-                  onChange={(e) => setSelectedLedgerTxnId(e.target.value)}
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px", marginBottom: "12px" }}
-                >
-                  <option value="">-- Choose matching ledger transaction --</option>
-                  {ledgerCandidates.map((cand) => (
-                    <option key={cand.id} value={cand.id}>
-                      ₹{cand.amount} | {cand.budget_line} | {cand.description} ({new Date(cand.date).toLocaleDateString()})
-                    </option>
-                  ))}
-                </select>
-
-                <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569", display: "block", marginBottom: "4px" }}>Match Notes / Remarks</label>
-                <input
-                  type="text"
-                  placeholder="Optional audit notes..."
-                  value={matchNotes}
-                  onChange={(e) => setMatchNotes(e.target.value)}
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-              <button onClick={() => setSelectedBankTxn(null)} className="btn-sm" style={{ background: "#cbd5e1", color: "#334155" }}>Cancel</button>
-              <button onClick={handleManualMatchSubmit} disabled={!selectedLedgerTxnId || isSubmittingMatch} className="btn-primary" style={{ padding: "8px 20px" }}>
-                {isSubmittingMatch ? "Matching..." : "Confirm Manual Match"}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "20px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
+              <button onClick={() => { setShowDetailModal(false); setSelectedRec(null); }} className="btn-primary" style={{ padding: "8px 16px" }}>
+                Close Details
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 6. JOURNAL ENTRY FALLBACK MODAL */}
-      {showJournalModal && journalBankTxn && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
-          <div className="admin-card" style={{ width: "90%", maxWidth: "550px", padding: "24px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px" }}>
+      {/* Review Modal */}
+      {showReviewModal && selectedTxn && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
+          <div className="admin-card" style={{ width: "90%", maxWidth: "500px", padding: "24px", border: "1px solid #cbd5e1" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #e2e8f0" }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>Journal Entry Fallback (Small Unbilled Expense)</h3>
-              <button onClick={() => setShowJournalModal(false)} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
+              <h3 style={{ margin: 0, fontSize: "18px", color: "#0f172a" }}>Review Transaction: {selectedTxn.id}</h3>
+              <button onClick={() => { setShowReviewModal(false); setSelectedTxn(null); }} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px", fontSize: "13px" }}>
+              <div><strong>Description:</strong> {selectedTxn.description}</div>
+              <div><strong>Category:</strong> {selectedTxn.category || selectedTxn.budget_head || "Miscellaneous"}</div>
+              <div><strong>Amount:</strong> ₹{(selectedTxn.amount || 0).toLocaleString("en-IN")}</div>
+              <div><strong>Submitted By:</strong> {selectedTxn.created_by_name || "User"} ({selectedTxn.created_by_email || "N/A"})</div>
+              <div><strong>Current Status:</strong> {selectedTxn.status}</div>
             </div>
 
-            <form onSubmit={handleJournalSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ background: "#fef3c7", padding: "10px", borderRadius: "6px", fontSize: "12px", color: "#92400e" }}>
-                Closing unmatched bank transaction <strong>{journalBankTxn.bank_txn_id}</strong> (₹{journalBankTxn.amount}) via Journal Entry. Narration is mandatory.
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "700", color: "#475569", display: "block", marginBottom: "4px" }}>Debit Account / Expense Head *</label>
-                <select
-                  value={journalForm.debit_account}
-                  onChange={(e) => setJournalForm({ ...journalForm, debit_account: e.target.value })}
-                  required
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                >
-                  <option value="Travel">Travel</option>
-                  <option value="Office Supplies">Office Supplies</option>
-                  <option value="Bank Charges">Bank Charges</option>
-                  <option value="Maintenance">Maintenance</option>
-                  <option value="Miscellaneous">Miscellaneous</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "700", color: "#475569", display: "block", marginBottom: "4px" }}>Credit Account / Cash-Bank *</label>
-                <input
-                  type="text"
-                  value={journalForm.credit_account}
-                  onChange={(e) => setJournalForm({ ...journalForm, credit_account: e.target.value })}
-                  required
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "700", color: "#475569", display: "block", marginBottom: "4px" }}>Amount (₹) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={journalForm.amount}
-                  onChange={(e) => setJournalForm({ ...journalForm, amount: e.target.value })}
-                  required
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "700", color: "#475569", display: "block", marginBottom: "4px" }}>Narration (Mandatory) *</label>
-                <textarea
-                  rows={3}
-                  placeholder="Enter mandatory reason / narration for journal entry..."
-                  value={journalForm.narration}
-                  onChange={(e) => setJournalForm({ ...journalForm, narration: e.target.value })}
-                  required
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button type="button" onClick={() => setShowJournalModal(false)} className="btn-sm" style={{ background: "#cbd5e1", color: "#334155" }}>Cancel</button>
-                <button type="submit" disabled={isSubmittingJournal} className="btn-primary" style={{ padding: "8px 20px" }}>
-                  {isSubmittingJournal ? "Posting..." : "Post Journal Entry & Close Txn"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 7. UNLOCK PERIOD REASON MODAL */}
-      {showUnlockModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", backdropFilter: "blur(4px)", zIndex: 1000, display: "grid", placeItems: "center" }}>
-          <div className="admin-card" style={{ width: "90%", maxWidth: "500px", padding: "24px", background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "12px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", paddingBottom: "12px", borderBottom: "1px solid #e2e8f0" }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>Unlock Reconciliation Period</h3>
-              <button onClick={() => setShowUnlockModal(false)} style={{ border: 0, background: "transparent", cursor: "pointer", fontSize: "1.5rem", color: "#94a3b8" }}>&times;</button>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Admin Remarks / Notes</label>
+              <textarea
+                value={reviewRemarks}
+                onChange={(e) => setReviewRemarks(e.target.value)}
+                placeholder="Enter feedback or approval notes..."
+                rows={3}
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+              />
             </div>
 
-            <form onSubmit={handleUnlockSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div style={{ background: "#fee2e2", padding: "10px", borderRadius: "6px", fontSize: "12px", color: "#991b1b" }}>
-                Unlocking period <strong>{unlockPeriodName}</strong> will restore read-write capability. Mandatory reason required for audit trail.
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "700", color: "#475569", display: "block", marginBottom: "4px" }}>Reason for Unlocking *</label>
-                <textarea
-                  rows={4}
-                  placeholder="State explicit reason for unlocking period..."
-                  value={unlockReason}
-                  onChange={(e) => setUnlockReason(e.target.value)}
-                  required
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button type="button" onClick={() => setShowUnlockModal(false)} className="btn-sm" style={{ background: "#cbd5e1", color: "#334155" }}>Cancel</button>
-                <button type="submit" disabled={isSubmittingUnlock} className="btn-primary" style={{ background: "#dc2626", padding: "8px 20px" }}>
-                  {isSubmittingUnlock ? "Unlocking..." : "Confirm & Log Unlock Action"}
-                </button>
-              </div>
-            </form>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button onClick={() => { setShowReviewModal(false); setSelectedTxn(null); }} className="btn-sm" style={{ background: "#cbd5e1", color: "#334155" }}>Cancel</button>
+              <button onClick={() => handleReviewTransaction("REQUEST_REVISION")} className="btn-sm" style={{ background: "#fef3c7", color: "#d97706", border: "1px solid #fcd34d" }}>Revision</button>
+              <button onClick={() => handleReviewTransaction("REJECT")} className="btn-sm" style={{ background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" }}>Reject</button>
+              <button onClick={() => handleReviewTransaction("APPROVE")} className="btn-sm" style={{ background: "#dcfce7", color: "#16a34a", border: "1px solid #86efac" }}>Approve</button>
+            </div>
           </div>
         </div>
       )}

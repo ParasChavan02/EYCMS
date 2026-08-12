@@ -28,28 +28,6 @@ from app.admin.schemas.budget_heads import (
     BudgetHeadsOverview,
 )
 
-from app.admin.schemas.financial_schemas import (
-    AdminTransactionDashboardCounters,
-    AdminTransactionItem,
-    AdminBillUploadIn,
-    TransactionCsvRowError,
-    TransactionCsvStageResponse,
-    TransactionCsvConfirmIn,
-    ReconciliationSummaryKPIs,
-    BankStatementStageResponse,
-    BankStatementConfirmIn,
-    BankTransactionItem,
-    AutoMatchRequest,
-    AutoMatchResultItem,
-    AutoMatchResponse,
-    ManualMatchRequest,
-    UnmatchRequest,
-    JournalEntryRequest,
-    ConfirmPeriodRequest,
-    LockPeriodRequest,
-    UnlockPeriodRequest,
-)
-
 class AdminDashboardKPIs(BaseModel):
     total_active_users: int
     users_near_deadline: int
@@ -90,6 +68,24 @@ class AdminTransactionReview(BaseModel):
     action: str  # APPROVE, REJECT, REQUEST_REVISION
     remarks: Optional[str] = None
     is_reconciliation: Optional[bool] = False
+
+
+class AdminTransactionItem(BaseModel):
+    id: str
+    budget_head: str
+    amount: float
+    description: str
+    date: datetime
+    status: str
+    created_by_name: str
+    created_by_email: Optional[str] = None
+    created_by_role: Optional[str] = None
+    source: str
+    imported_at: Optional[datetime] = None
+    imported_by_name: Optional[str] = None
+    imported_by_email: Optional[str] = None
+    import_batch_id: Optional[str] = None
+    reconciliation_status: Optional[str] = "PENDING"
 
 
 class AdminTransactionImportError(BaseModel):
@@ -134,22 +130,4 @@ __all__ = [
     "TeamBudgetSummary",
     "BudgetHeadsOverallSummary",
     "BudgetHeadsOverview",
-    "AdminTransactionDashboardCounters",
-    "AdminBillUploadIn",
-    "TransactionCsvRowError",
-    "TransactionCsvStageResponse",
-    "TransactionCsvConfirmIn",
-    "ReconciliationSummaryKPIs",
-    "BankStatementStageResponse",
-    "BankStatementConfirmIn",
-    "BankTransactionItem",
-    "AutoMatchRequest",
-    "AutoMatchResultItem",
-    "AutoMatchResponse",
-    "ManualMatchRequest",
-    "UnmatchRequest",
-    "JournalEntryRequest",
-    "ConfirmPeriodRequest",
-    "LockPeriodRequest",
-    "UnlockPeriodRequest",
 ]

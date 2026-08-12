@@ -13,11 +13,6 @@ from app.admin.schemas import (
     AdminTransactionReview,
     AdminTransactionItem,
     AdminTransactionImportResponse,
-    AdminTransactionImportError,
-    AdminTransactionDashboardCounters,
-    TransactionCsvStageResponse,
-    TransactionCsvConfirmIn,
-    AdminBillUploadIn,
 )
 from app.support.schemas import (
     SupportTicketResponse,
@@ -81,135 +76,30 @@ def list_budget_heads(db: Session = Depends(get_db), current_admin: User = Depen
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.get("/transactions/dashboard-counters", response_model=ResponseEnvelope[AdminTransactionDashboardCounters])
-def get_transaction_dashboard_counters(
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(verify_admin)
-):
-    try:
-        counters = AdminTransactionCsvService.get_dashboard_counters(db)
-        return make_success_response(counters)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
 @router.get("/transactions", response_model=ResponseEnvelope[List[AdminTransactionItem]])
 def list_transactions(
     search: Optional[str] = Query(None, alias="search"),
-    source: Optional[str] = Query(None, alias="source"),
     status_filter: Optional[str] = Query(None, alias="status"),
-    reconciliation_status: Optional[str] = Query(None, alias="reconciliation_status"),
-    grant: Optional[str] = Query(None, alias="grant"),
     budget_head: Optional[str] = Query(None, alias="budget_head"),
-    vendor: Optional[str] = Query(None, alias="vendor"),
     date_from: Optional[str] = Query(None, alias="date_from"),
     date_to: Optional[str] = Query(None, alias="date_to"),
     created_by: Optional[str] = Query(None, alias="created_by"),
-    is_historical: Optional[bool] = Query(None, alias="is_historical"),
     db: Session = Depends(get_db),
-    current_admin: User = Depends(verify_admin)
+    current_admin: User = Depends(require_admin_only)
 ):
     try:
-        parsed_date_from = None
-        if date_from and date_from.strip():
-            try:
-                parsed_date_from = datetime.fromisoformat(date_from.strip())
-            except Exception:
-                pass
-
-        parsed_date_to = None
-        if date_to and date_to.strip():
-            try:
-                parsed_date_to = datetime.fromisoformat(date_to.strip())
-            except Exception:
-                pass
-
+        parsed_date_from = datetime.fromisoformat(date_from) if date_from else None
+        parsed_date_to = datetime.fromisoformat(date_to) if date_to else None
         transactions = AdminTransactionCsvService.list_transactions(
             db=db,
             search=search,
-            source=source,
             status_filter=status_filter,
-            reconciliation_status=reconciliation_status,
-            grant=grant,
             budget_head=budget_head,
-            vendor=vendor,
             date_from=parsed_date_from,
             date_to=parsed_date_to,
             created_by=created_by,
-            is_historical=is_historical,
         )
         return make_success_response(transactions)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-@router.post("/transactions/upload-bill", response_model=ResponseEnvelope[AdminTransactionItem])
-async def admin_upload_bill(
-    request: Request,
-    amount: float = Query(...),
-    budget_line: str = Query(...),
-    vendor: str = Query(...),
-    description: str = Query(...),
-    grant_id: Optional[str] = Query(None),
-    file: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(verify_admin)
-):
-    try:
-        txn = AdminTransactionCsvService.admin_upload_bill(
-            db=db,
-            file=file,
-            amount=amount,
-            budget_line=budget_line,
-            vendor=vendor,
-            description=description,
-            grant_id=grant_id,
-            current_admin=current_admin,
-            ip_address=request.client.host if request.client else None,
-        )
-        return make_success_response(txn)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-@router.post("/transactions/import/stage", response_model=ResponseEnvelope[TransactionCsvStageResponse])
-async def stage_import_transactions(
-    request: Request,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(verify_admin)
-):
-    try:
-        file_bytes = await file.read()
-        result = AdminTransactionCsvService.stage_import_transactions(
-            db=db,
-            file_bytes=file_bytes,
-            filename=file.filename or "transactions.csv",
-            current_admin=current_admin,
-        )
-        return make_success_response(result)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-@router.post("/transactions/import/confirm", response_model=ResponseEnvelope[dict])
-def confirm_import_transactions(
-    payload: TransactionCsvConfirmIn,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_admin: User = Depends(verify_admin)
-):
-    try:
-        result = AdminTransactionCsvService.confirm_import_transactions(
-            db=db,
-            stage_token=payload.stage_token,
-            is_historical=payload.is_historical,
-            current_admin=current_admin,
-            ip_address=request.client.host if request.client else None,
-        )
-        return make_success_response(result)
-    except HTTPException as he:
-        raise he
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -218,30 +108,18 @@ async def import_transactions(
     request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_admin: User = Depends(verify_admin)
+    current_admin: User = Depends(require_admin_only)
 ):
     try:
         file_bytes = await file.read()
-        stage_res = AdminTransactionCsvService.stage_import_transactions(
+        result = AdminTransactionCsvService.import_transactions(
             db=db,
             file_bytes=file_bytes,
             filename=file.filename or "transactions.csv",
             current_admin=current_admin,
-        )
-        confirm_res = AdminTransactionCsvService.confirm_import_transactions(
-            db=db,
-            stage_token=stage_res.stage_token,
-            is_historical=False,
-            current_admin=current_admin,
             ip_address=request.client.host if request.client else None,
         )
-        return make_success_response(AdminTransactionImportResponse(
-            success=True,
-            imported=confirm_res["imported"],
-            skipped=stage_res.invalid_count,
-            errors=[AdminTransactionImportError(row=err.row, reason=err.reason) for err in stage_res.errors],
-            batch_id=stage_res.stage_token,
-        ))
+        return make_success_response(result)
     except HTTPException as he:
         raise he
     except Exception as e:
@@ -251,47 +129,25 @@ async def import_transactions(
 def export_transactions(
     request: Request,
     search: Optional[str] = Query(None, alias="search"),
-    source: Optional[str] = Query(None, alias="source"),
     status_filter: Optional[str] = Query(None, alias="status"),
-    reconciliation_status: Optional[str] = Query(None, alias="reconciliation_status"),
-    grant: Optional[str] = Query(None, alias="grant"),
     budget_head: Optional[str] = Query(None, alias="budget_head"),
-    vendor: Optional[str] = Query(None, alias="vendor"),
     date_from: Optional[str] = Query(None, alias="date_from"),
     date_to: Optional[str] = Query(None, alias="date_to"),
     created_by: Optional[str] = Query(None, alias="created_by"),
-    is_historical: Optional[bool] = Query(None, alias="is_historical"),
     db: Session = Depends(get_db),
-    current_admin: User = Depends(verify_admin)
+    current_admin: User = Depends(require_admin_only)
 ):
     try:
-        parsed_date_from = None
-        if date_from and date_from.strip():
-            try:
-                parsed_date_from = datetime.fromisoformat(date_from.strip())
-            except Exception:
-                pass
-
-        parsed_date_to = None
-        if date_to and date_to.strip():
-            try:
-                parsed_date_to = datetime.fromisoformat(date_to.strip())
-            except Exception:
-                pass
-
+        parsed_date_from = datetime.fromisoformat(date_from) if date_from else None
+        parsed_date_to = datetime.fromisoformat(date_to) if date_to else None
         csv_content = AdminTransactionCsvService.export_transactions(
             db=db,
             search=search,
-            source=source,
             status_filter=status_filter,
-            reconciliation_status=reconciliation_status,
-            grant=grant,
             budget_head=budget_head,
-            vendor=vendor,
             date_from=parsed_date_from,
             date_to=parsed_date_to,
             created_by=created_by,
-            is_historical=is_historical,
             current_admin=current_admin,
             ip_address=request.client.host if request and request.client else None,
         )

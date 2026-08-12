@@ -36,8 +36,6 @@ from app.common.models.team import Team
 from app.common.models.invitation import Invitation
 from app.common.models.user_budget import UserBudgetAllocation, UserBudgetSpending
 from app.common.models.eyc_budget import EYCBudgetAllocation
-from app.common.models.bank_transaction import BankTransaction
-from app.common.models.reconciliation_period import ReconciliationPeriod
 
 __all__ = [
     "Base",
@@ -79,6 +77,4 @@ __all__ = [
     "UserBudgetAllocation",
     "UserBudgetSpending",
     "EYCBudgetAllocation",
-    "BankTransaction",
-    "ReconciliationPeriod",
 ]
