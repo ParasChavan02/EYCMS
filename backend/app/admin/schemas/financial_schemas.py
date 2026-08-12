@@ -23,7 +23,8 @@ class AdminTransactionItem(BaseModel):
     vendor: Optional[str] = None
     grant: Optional[str] = None
     grant_id: Optional[str] = None
-    budget_line: str
+    budget_line: str = "Travel"
+    budget_head: str = "Travel"
     amount: float
     source: str
     bill_id: Optional[str] = None
@@ -34,7 +35,7 @@ class AdminTransactionItem(BaseModel):
     reference_number: Optional[str] = None
     created_by_name: str
     created_by_email: Optional[str] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None
     is_historical: bool = False
     bank_transaction_id: Optional[str] = None
     reconciled_at: Optional[datetime] = None
@@ -52,6 +53,16 @@ class TransactionCsvRowError(BaseModel):
     field: str
     reason: str
 
+class AdminTransactionStagedRow(BaseModel):
+    row_index: int
+    date: str
+    description: str
+    budget_head: str = "Travel"
+    budget_line: str = "Travel"
+    amount: float
+    reference_number: Optional[str] = None
+    is_valid: bool = True
+
 class TransactionCsvStageResponse(BaseModel):
     total_rows: int
     valid_count: int
@@ -61,9 +72,13 @@ class TransactionCsvStageResponse(BaseModel):
     preview_rows: List[dict]
     stage_token: str
 
+AdminTransactionStageResponse = TransactionCsvStageResponse
+
 class TransactionCsvConfirmIn(BaseModel):
     stage_token: str
     is_historical: bool = False
+
+AdminTransactionConfirmIn = TransactionCsvConfirmIn
 
 # ==========================================
 # RECONCILIATION SCHEMAS

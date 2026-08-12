@@ -42,15 +42,14 @@ def run_acceptance_test():
 
         print(f"1. Admin user verified: {admin.name} ({admin.email})")
 
-        # Test admin bill upload with real UploadFile
-        mock_file = UploadFile(
-            filename="sample_flight_bill.pdf",
-            file=io.BytesIO(b"%PDF-1.4 Mock Flight Ticket PDF Content"),
-        )
+        # Test admin bill upload with real file bytes
+        mock_filename = "sample_flight_bill.pdf"
+        mock_file_bytes = b"%PDF-1.4 Mock Flight Ticket PDF Content"
 
         txn_item = AdminTransactionCsvService.admin_upload_bill(
             db=db,
-            file=mock_file,
+            file_bytes=mock_file_bytes,
+            filename=mock_filename,
             amount=5000.0,
             budget_line="Travel",
             vendor="Air India Ltd",

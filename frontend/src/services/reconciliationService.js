@@ -44,9 +44,7 @@ export const reconciliationService = {
   async stageImportBankStatement(file) {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await api.post("/admin/reconciliation/import/stage", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const response = await api.post("/admin/reconciliation/import/stage", formData);
     return extractResponseData(response);
   },
 

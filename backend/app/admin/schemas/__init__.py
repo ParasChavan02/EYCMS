@@ -70,22 +70,7 @@ class AdminTransactionReview(BaseModel):
     is_reconciliation: Optional[bool] = False
 
 
-class AdminTransactionItem(BaseModel):
-    id: str
-    budget_head: str
-    amount: float
-    description: str
-    date: datetime
-    status: str
-    created_by_name: str
-    created_by_email: Optional[str] = None
-    created_by_role: Optional[str] = None
-    source: str
-    imported_at: Optional[datetime] = None
-    imported_by_name: Optional[str] = None
-    imported_by_email: Optional[str] = None
-    import_batch_id: Optional[str] = None
-    reconciliation_status: Optional[str] = "PENDING"
+from app.admin.schemas.financial_schemas import AdminTransactionItem
 
 
 class AdminTransactionImportError(BaseModel):

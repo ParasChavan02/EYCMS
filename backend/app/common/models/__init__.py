@@ -7,6 +7,8 @@ from app.common.models.budget import Budget
 from app.common.models.budget_head import BudgetHead
 from app.common.models.expense import Expense
 from app.common.models.transaction import Transaction, TransactionAttachment
+from app.common.models.bank_transaction import BankTransaction
+from app.common.models.reconciliation_period import ReconciliationPeriod
 from app.common.models.report import QuarterlyReport
 from app.common.models.report_document import ReportDocument
 from app.common.models.report_image import ReportImage
@@ -48,6 +50,8 @@ __all__ = [
     "Expense",
     "Transaction",
     "TransactionAttachment",
+    "BankTransaction",
+    "ReconciliationPeriod",
     "QuarterlyReport",
     "ReportDocument",
     "ReportImage",

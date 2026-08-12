@@ -14,6 +14,10 @@ from app.admin.schemas import (
     AdminTransactionItem,
     AdminTransactionImportResponse,
 )
+from app.admin.schemas.financial_schemas import (
+    AdminTransactionStageResponse,
+    AdminTransactionConfirmIn,
+)
 from app.support.schemas import (
     SupportTicketResponse,
     SupportTicketAssign,
@@ -76,16 +80,32 @@ def list_budget_heads(db: Session = Depends(get_db), current_admin: User = Depen
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+@router.get("/transactions/dashboard-counters", response_model=ResponseEnvelope[dict])
+def get_transaction_dashboard_counters(
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        counters = AdminTransactionCsvService.get_dashboard_counters(db)
+        return make_success_response(counters)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 @router.get("/transactions", response_model=ResponseEnvelope[List[AdminTransactionItem]])
 def list_transactions(
     search: Optional[str] = Query(None, alias="search"),
+    source: Optional[str] = Query(None, alias="source"),
     status_filter: Optional[str] = Query(None, alias="status"),
+    reconciliation_status: Optional[str] = Query(None, alias="reconciliation_status"),
+    grant: Optional[str] = Query(None, alias="grant"),
     budget_head: Optional[str] = Query(None, alias="budget_head"),
+    vendor: Optional[str] = Query(None, alias="vendor"),
     date_from: Optional[str] = Query(None, alias="date_from"),
     date_to: Optional[str] = Query(None, alias="date_to"),
     created_by: Optional[str] = Query(None, alias="created_by"),
+    is_historical: Optional[bool] = Query(None, alias="is_historical"),
     db: Session = Depends(get_db),
-    current_admin: User = Depends(require_admin_only)
+    current_admin: User = Depends(verify_admin)
 ):
     try:
         parsed_date_from = datetime.fromisoformat(date_from) if date_from else None
@@ -93,13 +113,106 @@ def list_transactions(
         transactions = AdminTransactionCsvService.list_transactions(
             db=db,
             search=search,
+            source=source,
             status_filter=status_filter,
+            reconciliation_status=reconciliation_status,
+            grant=grant,
             budget_head=budget_head,
+            vendor=vendor,
             date_from=parsed_date_from,
             date_to=parsed_date_to,
             created_by=created_by,
+            is_historical=is_historical,
         )
         return make_success_response(transactions)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/transactions/upload-bill", response_model=ResponseEnvelope[AdminTransactionItem])
+async def admin_upload_bill(
+    request: Request,
+    amount: Optional[float] = Query(None),
+    budget_line: Optional[str] = Query(None),
+    vendor: Optional[str] = Query(None),
+    description: Optional[str] = Query(None),
+    grant_id: Optional[str] = Query(None),
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        q = request.query_params
+        final_amount = amount if amount is not None else float(q.get("amount", 0))
+        final_budget_line = budget_line or q.get("budget_line", "Travel")
+        final_vendor = vendor or q.get("vendor", "Unspecified Vendor")
+        final_description = description or q.get("description", "Admin Expense")
+        final_grant_id = grant_id or q.get("grant_id")
+
+        file_bytes = None
+        filename = None
+        if file and file.filename:
+            filename = file.filename
+            file_bytes = await file.read()
+
+        txn = AdminTransactionCsvService.admin_upload_bill(
+            db=db,
+            file_bytes=file_bytes,
+            filename=filename,
+            amount=final_amount,
+            budget_line=final_budget_line,
+            vendor=final_vendor,
+            description=final_description,
+            grant_id=final_grant_id,
+            current_admin=current_admin,
+            ip_address=request.client.host if request.client else None,
+        )
+        return make_success_response(txn)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/transactions/import/stage", response_model=ResponseEnvelope[AdminTransactionStageResponse])
+async def stage_import_transactions(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        file_bytes = await file.read()
+        res = AdminTransactionCsvService.stage_import_transactions(
+            db=db,
+            file_bytes=file_bytes,
+            filename=file.filename or "transactions.csv",
+            current_admin=current_admin,
+        )
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@router.post("/transactions/import/confirm", response_model=ResponseEnvelope[dict])
+def confirm_import_transactions(
+    payload: AdminTransactionConfirmIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(verify_admin)
+):
+    try:
+        res = AdminTransactionCsvService.confirm_import_transactions(
+            db=db,
+            stage_token=payload.stage_token,
+            is_historical=payload.is_historical,
+            current_admin=current_admin,
+            ip_address=request.client.host if request.client else None,
+        )
+        return make_success_response(res)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

@@ -35,12 +35,19 @@ class Transaction(Base):
     finance_remarks: Mapped[str] = mapped_column(Text, nullable=True)
     admin_remarks: Mapped[str] = mapped_column(Text, nullable=True)
     
-    # New columns for Bill integration and multi-role audit trail
+    # New columns for Bill integration, Vendor, Grant, and multi-role audit trail
+    vendor: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    grant_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     project_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
     team_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("teams.id", ondelete="SET NULL"), nullable=True)
     bill_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("project_files.id", ondelete="CASCADE"), nullable=True)
     uploaded_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    reference_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    is_historical: Mapped[bool] = mapped_column(default=False)
+    bank_transaction_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("bank_transactions.id", ondelete="SET NULL"), nullable=True)
+    reconciled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    match_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     reconciliation_status: Mapped[Optional[str]] = mapped_column(String(50), default="PENDING", index=True, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -52,7 +59,7 @@ class Transaction(Base):
 
     # Relationships
     expense: Mapped["Expense"] = relationship(back_populates="transactions")
-    project: Mapped[Optional["Project"]] = relationship("Project")
+    project: Mapped[Optional["Project"]] = relationship("Project", foreign_keys=[project_id])
     team: Mapped[Optional["Team"]] = relationship("Team")
     bill: Mapped[Optional["ProjectFile"]] = relationship("ProjectFile")
     uploader: Mapped[Optional["User"]] = relationship("User", foreign_keys=[uploaded_by_id])
